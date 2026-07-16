@@ -167,6 +167,9 @@ void GhostBandAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     float* R = buffer.getNumChannels() > 1 ? buffer.getWritePointer (1) : L;
 
     engine.process (L, R, n);
+
+    for (int b = 0; b < 4; ++b)
+        bandGrDb[b].store (engine.getBandGainReductionDb (b), std::memory_order_relaxed);
 }
 
 //==============================================================================
