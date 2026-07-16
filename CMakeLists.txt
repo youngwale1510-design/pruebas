@@ -1,9 +1,27 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(GhostBand VERSION 0.1.0 LANGUAGES C CXX)
+project(GhostBand VERSION 0.2.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+option(GHOSTBAND_BUILD_JUCE "Fetch JUCE and build the plugin + JUCE tests" ON)
+
+# ---------------------------------------------------------------------------
+# Dependency-free unit tests (no JUCE). Build with just a C++17 compiler:
+#   cmake -B build -DGHOSTBAND_BUILD_JUCE=OFF && cmake --build build
+# ---------------------------------------------------------------------------
+add_executable(GhostBandCompressorTest
+    Tests/CompressorTest.cpp
+    Source/DSP/BandCompressor.cpp)
+target_include_directories(GhostBandCompressorTest PRIVATE Source)
+
+enable_testing()
+add_test(NAME CompressorTest COMMAND GhostBandCompressorTest)
+
+if(NOT GHOSTBAND_BUILD_JUCE)
+    return()
+endif()
 
 # ---------------------------------------------------------------------------
 # JUCE (fetched at configure time). Pin a JUCE 7+ tag.
@@ -17,12 +35,9 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(JUCE)
 
 # ---------------------------------------------------------------------------
-# Phase 1 test target: offline flat-sum (null) test for the crossover.
-# This is header-only DSP + a small console app, so it builds without the
-# plugin sources below.
+# Crossover flat-sum test (uses juce_dsp FFT).
 # ---------------------------------------------------------------------------
-juce_add_console_app(GhostBandTests
-    PRODUCT_NAME "GhostBandTests")
+juce_add_console_app(GhostBandTests PRODUCT_NAME "GhostBandTests")
 
 target_sources(GhostBandTests PRIVATE
     Tests/FlatSumTest.cpp
@@ -30,19 +45,17 @@ target_sources(GhostBandTests PRIVATE
 
 target_include_directories(GhostBandTests PRIVATE Source)
 
-target_compile_definitions(GhostBandTests PRIVATE
-    JUCE_STANDALONE_APPLICATION=0)
-
 target_link_libraries(GhostBandTests PRIVATE
     juce::juce_audio_basics
-    juce::juce_dsp                 # used only for FFT-based magnitude check
+    juce::juce_dsp
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags)
 
+add_test(NAME FlatSumTest COMMAND GhostBandTests)
+
 # ---------------------------------------------------------------------------
-# Plugin target (VST3 + Standalone). Sources land in later phases.
-# Kept here so the project structure is explicit. The referenced plugin
-# .cpp files are added in the next steps (Fase 2+).
+# Plugin target (VST3 + Standalone). Sources land in later phases (processor
+# / editor). Kept here so the project structure is explicit.
 # ---------------------------------------------------------------------------
 # juce_add_plugin(GhostBand
 #     COMPANY_NAME        "GhostAudio"
@@ -57,7 +70,8 @@ target_link_libraries(GhostBandTests PRIVATE
 # target_sources(GhostBand PRIVATE
 #     Source/PluginProcessor.cpp
 #     Source/PluginEditor.cpp
-#     Source/DSP/MultibandCrossover4.cpp)
+#     Source/DSP/MultibandCrossover4.cpp
+#     Source/DSP/BandCompressor.cpp)
 #
 # target_include_directories(GhostBand PRIVATE Source)
 #
