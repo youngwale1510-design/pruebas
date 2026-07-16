@@ -10,8 +10,15 @@
 
 #include "MultibandCrossover4.h"
 
+#include <algorithm>
+
 namespace ghostband
 {
+
+static inline float clampf (float v, float lo, float hi) noexcept
+{
+    return v < lo ? lo : (v > hi ? hi : v);
+}
 
 void MultibandCrossover4::prepare (double sampleRate, int /*maxBlockSize*/)
 {
@@ -22,9 +29,9 @@ void MultibandCrossover4::prepare (double sampleRate, int /*maxBlockSize*/)
     smF2.reset (sampleRate, rampSeconds);
     smF3.reset (sampleRate, rampSeconds);
 
-    smF1.setCurrentAndTargetValue (100.0f);
-    smF2.setCurrentAndTargetValue (1000.0f);
-    smF3.setCurrentAndTargetValue (10000.0f);
+    smF1.setCurrentAndTarget (100.0f);
+    smF2.setCurrentAndTarget (1000.0f);
+    smF3.setCurrentAndTarget (10000.0f);
 
     reset();
     updateCoefficients (100.0f, 1000.0f, 10000.0f);
@@ -43,23 +50,23 @@ void MultibandCrossover4::setCrossoverFrequencies (float f1, float f2, float f3)
 {
     const float nyq  = (float) (fs * 0.5);
     const float minF = 20.0f;
-    const float maxF = juce::jmin (nyq * 0.98f, 20000.0f);
+    const float maxF = std::min (nyq * 0.98f, 20000.0f);
 
-    f1 = juce::jlimit (minF, maxF, f1);
-    f2 = juce::jlimit (minF, maxF, f2);
-    f3 = juce::jlimit (minF, maxF, f3);
+    f1 = clampf (f1, minF, maxF);
+    f2 = clampf (f2, minF, maxF);
+    f3 = clampf (f3, minF, maxF);
 
     // Enforce strict ordering f1 < f2 < f3 with a small ratio gap so the
     // crossovers never collapse onto each other.
     const float gap = 1.05f;
     if (f2 < f1 * gap) f2 = f1 * gap;
     if (f3 < f2 * gap) f3 = f2 * gap;
-    f2 = juce::jmin (f2, maxF);
-    f3 = juce::jmin (f3, maxF);
+    f2 = std::min (f2, maxF);
+    f3 = std::min (f3, maxF);
 
-    smF1.setTargetValue (f1);
-    smF2.setTargetValue (f2);
-    smF3.setTargetValue (f3);
+    smF1.setTarget (f1);
+    smF2.setTarget (f2);
+    smF3.setTarget (f3);
 }
 
 void MultibandCrossover4::updateCoefficients (float f1, float f2, float f3)

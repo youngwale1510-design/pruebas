@@ -33,10 +33,9 @@
 
 #pragma once
 
-#include <juce_audio_basics/juce_audio_basics.h>
-
 #include "LinkwitzRiley4.h"
 #include "Allpass2.h"
+#include "LogSmoother.h"
 
 namespace ghostband
 {
@@ -66,9 +65,9 @@ private:
 
     double fs = 44100.0;
 
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> smF1;
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> smF2;
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> smF3;
+    LogSmoother smF1;
+    LogSmoother smF2;
+    LogSmoother smF3;
 
     LinkwitzRiley4 xoverMid;   // split at f2
     LinkwitzRiley4 xoverLow;   // split at f1 (lower branch)
