@@ -43,6 +43,7 @@ private:
     };
 
     void addKnob (Knob& k, const juce::String& paramId, const juce::String& text);
+    void setRelMode (int mode);
 
     juce::AudioProcessorValueTreeState& apvts;
     int index = 0;
@@ -52,8 +53,10 @@ private:
     Knob gain, thresh, ratio, knee, bite, attack, release;
     std::vector<Knob*> knobs;
 
-    juce::TextButton inBtn { "IN" }, muteBtn { "M" }, autoBtn { "AUTO" };
-    std::unique_ptr<ButtonAtt> inAtt, muteAtt, autoAtt;
+    juce::TextButton inBtn { "IN" }, muteBtn { "M" };
+    juce::TextButton rel1Btn { "REL 1" }, rel2Btn { "REL 2" }, autoBtn { "AUTO" };
+    std::unique_ptr<ButtonAtt> inAtt, muteAtt;
+    std::unique_ptr<juce::ParameterAttachment> relModeAtt;
 
     juce::ComboBox routeBox;
     std::unique_ptr<ComboAtt> routeAtt;

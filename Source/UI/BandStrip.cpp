@@ -30,14 +30,35 @@ BandStrip::BandStrip (juce::AudioProcessorValueTreeState& s, int bandIndex,
     addKnob (release, bandId (index, "release"), "REL");
     knobs = { &gain, &thresh, &ratio, &knee, &bite, &attack, &release };
 
-    for (auto* b : { &inBtn, &muteBtn, &autoBtn })
+    for (auto* b : { &inBtn, &muteBtn })
     {
         b->setClickingTogglesState (true);
         addAndMakeVisible (*b);
     }
-    inAtt   = std::make_unique<ButtonAtt> (apvts, bandId (index, "in"),      inBtn);
-    muteAtt = std::make_unique<ButtonAtt> (apvts, bandId (index, "mute"),    muteBtn);
-    autoAtt = std::make_unique<ButtonAtt> (apvts, bandId (index, "autorel"), autoBtn);
+    inAtt   = std::make_unique<ButtonAtt> (apvts, bandId (index, "in"),   inBtn);
+    muteAtt = std::make_unique<ButtonAtt> (apvts, bandId (index, "mute"), muteBtn);
+
+    // Release-mode radio group (REL1 / REL2 / AUTO) bound to the choice param.
+    for (auto* b : { &rel1Btn, &rel2Btn, &autoBtn })
+    {
+        b->setClickingTogglesState (true);
+        b->setRadioGroupId (100 + index);
+        addAndMakeVisible (*b);
+    }
+    rel1Btn.onClick = [this] { setRelMode (0); };
+    rel2Btn.onClick = [this] { setRelMode (1); };
+    autoBtn.onClick = [this] { setRelMode (2); };
+
+    relModeAtt = std::make_unique<juce::ParameterAttachment> (
+        *apvts.getParameter (bandId (index, "relmode")),
+        [this] (float v)
+        {
+            const int i = (int) (v + 0.5f);
+            rel1Btn.setToggleState (i == 0, juce::dontSendNotification);
+            rel2Btn.setToggleState (i == 1, juce::dontSendNotification);
+            autoBtn.setToggleState (i == 2, juce::dontSendNotification);
+        });
+    relModeAtt->sendInitialUpdate();
 
     routeBox.addItem ("Main", 1);
     routeBox.addItem ("R1", 2);
@@ -46,6 +67,12 @@ BandStrip::BandStrip (juce::AudioProcessorValueTreeState& s, int bandIndex,
     routeAtt = std::make_unique<ComboAtt> (apvts, bandId (index, "route"), routeBox);
 
     addAndMakeVisible (meter);
+}
+
+void BandStrip::setRelMode (int mode)
+{
+    if (relModeAtt)
+        relModeAtt->setValueAsCompleteGesture ((float) mode);
 }
 
 void BandStrip::addKnob (Knob& k, const juce::String& paramId, const juce::String& text)
@@ -93,18 +120,22 @@ void BandStrip::resized()
     area.removeFromLeft (6);
 
     // GR meter on the right (horizontal bar with a caption above).
-    auto meterArea = area.removeFromRight (200);
+    auto meterArea = area.removeFromRight (184);
     grCaption = meterArea.removeFromTop (12);
     meter.setBounds (meterArea.reduced (2, 4));
 
-    // Controls block: IN / M on top, AUTO + Route below.
-    auto controls = area.removeFromRight (150).reduced (4, 6);
-    auto topRow = controls.removeFromTop (controls.getHeight() / 2).reduced (0, 1);
-    inBtn.setBounds   (topRow.removeFromLeft (topRow.getWidth() / 2).reduced (1));
-    muteBtn.setBounds (topRow.reduced (1));
-    auto botRow = controls.reduced (0, 1);
-    autoBtn.setBounds  (botRow.removeFromLeft (botRow.getWidth() / 2).reduced (1));
-    routeBox.setBounds (botRow.reduced (1));
+    // Controls block: 3 rows x 2 cols -> IN/M, REL1/REL2, AUTO/Route.
+    auto controls = area.removeFromRight (172).reduced (4, 5);
+    const int rH = controls.getHeight() / 3;
+    auto row1 = controls.removeFromTop (rH);
+    inBtn.setBounds   (row1.removeFromLeft (row1.getWidth() / 2).reduced (1));
+    muteBtn.setBounds (row1.reduced (1));
+    auto row2 = controls.removeFromTop (rH);
+    rel1Btn.setBounds (row2.removeFromLeft (row2.getWidth() / 2).reduced (1));
+    rel2Btn.setBounds (row2.reduced (1));
+    auto row3 = controls;
+    autoBtn.setBounds  (row3.removeFromLeft (row3.getWidth() / 2).reduced (1));
+    routeBox.setBounds (row3.reduced (1));
 
     // 7 knobs in a horizontal row.
     const int n = (int) knobs.size();

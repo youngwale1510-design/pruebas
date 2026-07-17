@@ -47,6 +47,7 @@ void BandCompressor::reset() noexcept
     bite        = targetBite;
 
     grEnvDb = 0.0f;
+    relStage2 = 0.0f;
     fastEnv = 0.0f;
     slowEnv = 0.0f;
     autoRelState = 0.0f;
@@ -62,7 +63,8 @@ void BandCompressor::setAttackMs (float ms) noexcept
 void BandCompressor::setReleaseMs (float ms) noexcept
 {
     releaseMs = (ms < 1.0f ? 1.0f : ms);
-    releaseCoeff = onePoleCoeff (releaseMs * 0.001f, fs);
+    releaseCoeff  = onePoleCoeff (releaseMs * 0.001f, fs);
+    releaseCoeff2 = onePoleCoeff (releaseMs * 0.002f, fs); // slower tail for REL2
 }
 
 void BandCompressor::updateSmoothedParams() noexcept
@@ -130,20 +132,35 @@ void BandCompressor::processBlock (float* left, float* right, int numSamples) no
         const float staticGr = computeStaticGrDb (levelDb); // >= 0
 
         // Ballistics on the gain-reduction envelope (decoupled smooth).
-        float relCoeff = releaseCoeff;
-        if (autoRelease)
+        if (staticGr > grEnvDb)
         {
-            // Slow follower of reduction -> longer release when sustained.
-            autoRelState = 0.9995f * autoRelState + 0.0005f * staticGr;
+            grEnvDb   = attackCoeff * grEnvDb + (1.0f - attackCoeff) * staticGr; // attack
+            relStage2 = grEnvDb;
+        }
+        else if (releaseMode == 1)
+        {
+            // REL 2: dual-stage release -> smoother, more natural tail.
+            relStage2 = releaseCoeff  * relStage2 + (1.0f - releaseCoeff)  * staticGr;
+            grEnvDb   = releaseCoeff2 * grEnvDb   + (1.0f - releaseCoeff2) * relStage2;
+        }
+        else if (releaseMode == 2)
+        {
+            // AUTO: program-dependent release (longer when reduction sustained).
             float relMsEff = releaseMs * (1.0f + autoRelState * 0.5f);
             if (relMsEff > 2000.0f) relMsEff = 2000.0f;
-            relCoeff = onePoleCoeff (relMsEff * 0.001f, fs);
+            const float rc = onePoleCoeff (relMsEff * 0.001f, fs);
+            grEnvDb   = rc * grEnvDb + (1.0f - rc) * staticGr;
+            relStage2 = grEnvDb;
+        }
+        else
+        {
+            // REL 1: standard single-stage release.
+            grEnvDb   = releaseCoeff * grEnvDb + (1.0f - releaseCoeff) * staticGr;
+            relStage2 = grEnvDb;
         }
 
-        if (staticGr > grEnvDb)
-            grEnvDb = attackCoeff  * grEnvDb + (1.0f - attackCoeff)  * staticGr; // attack
-        else
-            grEnvDb = relCoeff     * grEnvDb + (1.0f - relCoeff)     * staticGr; // release
+        // Sustain follower used by AUTO mode.
+        autoRelState = 0.9995f * autoRelState + 0.0005f * grEnvDb;
 
         float gainLin = 1.0f;
         if (compIn)

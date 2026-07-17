@@ -73,8 +73,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout GhostBandAudioProcessor::cre
         layout.add (floatP (id ("attack"),  pretty + " Attack",  skewRange (0.1f, 100.0f, 10.0f, 0.1f),                 2.5f,  "ms"));
         layout.add (floatP (id ("release"), pretty + " Release", skewRange (10.0f, 1000.0f, 150.0f, 1.0f),              250.0f, "ms"));
 
-        layout.add (std::make_unique<juce::AudioParameterBool> (
-            juce::ParameterID { id ("autorel"), 1 }, pretty + " Auto Rel", false));
+        layout.add (std::make_unique<juce::AudioParameterChoice> (
+            juce::ParameterID { id ("relmode"), 1 }, pretty + " Rel Mode",
+            juce::StringArray { "REL 1", "REL 2", "AUTO" }, 0));
         layout.add (std::make_unique<juce::AudioParameterChoice> (
             juce::ParameterID { id ("route"), 1 }, pretty + " Route",
             juce::StringArray { "Main", "R1", "R2" }, 0));
@@ -144,7 +145,7 @@ void GhostBandAudioProcessor::pushParametersToEngine()
         c.setBite        (raw (bandParamId (b, "bite")));
         c.setAttackMs    (raw (bandParamId (b, "attack")));
         c.setReleaseMs   (raw (bandParamId (b, "release")));
-        c.setAutoRelease (raw (bandParamId (b, "autorel")) > 0.5f);
+        c.setReleaseMode ((int) raw (bandParamId (b, "relmode")));
         c.setCompIn      (raw (bandParamId (b, "in"))   > 0.5f);
         c.setMuted       (raw (bandParamId (b, "mute")) > 0.5f);
         engine.setBandRouting (b, (int) raw (bandParamId (b, "route")));
@@ -209,7 +210,7 @@ void GhostBandAudioProcessor::applyPreset (const GhostBandPreset& p)
         setParam (bandParamId (b, "bite"),    s.bite);
         setParam (bandParamId (b, "attack"),  s.attackMs);
         setParam (bandParamId (b, "release"), s.releaseMs);
-        setParam (bandParamId (b, "autorel"), s.autoRelease ? 1.0f : 0.0f);
+        setParam (bandParamId (b, "relmode"), (float) s.releaseMode);
         setParam (bandParamId (b, "route"),   (float) s.routing);
         setParam (bandParamId (b, "in"),      s.compIn ? 1.0f : 0.0f);
         setParam (bandParamId (b, "mute"),    s.muted ? 1.0f : 0.0f);

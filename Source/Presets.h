@@ -28,7 +28,7 @@ struct BandSettings
     float bite;         // BITE
     float attackMs;     // ATTACK
     float releaseMs;    // REL
-    bool  autoRelease;  // AUTO
+    int   releaseMode;  // 0 = REL1, 1 = REL2, 2 = AUTO
     int   routing;      // 0 = Main, 1 = R1, 2 = R2
     bool  compIn;       // In (compression engaged)
     bool  muted;        // Mute
@@ -53,11 +53,11 @@ inline const GhostBandPreset& factoryDefaultPreset()
         "Factory Default",
         100.0f, 1000.0f, 10000.0f, 0.0f,
         {
-            //  gain  thresh  ratio knee  bite  atk    rel     auto  route in     mute
-            {  0.0f, -24.0f,  2.0f, 0.0f, 0.0f, 2.5f, 250.0f, false, 0,   true,  false },
-            {  0.0f, -24.0f,  2.0f, 0.0f, 0.0f, 2.5f, 250.0f, false, 0,   true,  false },
-            {  0.0f, -24.0f,  2.0f, 0.0f, 0.0f, 2.5f, 250.0f, false, 0,   true,  false },
-            {  0.0f, -24.0f,  2.0f, 0.0f, 0.0f, 2.5f, 250.0f, false, 0,   true,  false },
+            //  gain  thresh  ratio knee  bite  atk    rel    relmode route in     mute
+            {  0.0f, -24.0f,  2.0f, 0.0f, 0.0f, 2.5f, 250.0f, 0,     0,    true,  false },
+            {  0.0f, -24.0f,  2.0f, 0.0f, 0.0f, 2.5f, 250.0f, 0,     0,    true,  false },
+            {  0.0f, -24.0f,  2.0f, 0.0f, 0.0f, 2.5f, 250.0f, 0,     0,    true,  false },
+            {  0.0f, -24.0f,  2.0f, 0.0f, 0.0f, 2.5f, 250.0f, 0,     0,    true,  false },
         }
     };
     return p;
@@ -75,11 +75,11 @@ inline const GhostBandPreset& leadVocalJPreset()
         "Lead Vocal - J",
         100.0f, 1000.0f, 10000.0f, 3.01f,
         {
-            //  gain  thresh   ratio knee  bite  atk    rel     auto  route in     mute
-            {  0.0f, -45.45f,  2.0f, 0.0f, 1.0f, 2.5f, 250.0f, false, 0,   true,  false }, // Low
-            {  0.0f, -23.02f,  2.0f, 0.0f, 1.0f, 2.5f, 250.0f, false, 0,   true,  false }, // LowMid
-            {  0.0f, -23.02f,  2.0f, 0.0f, 1.0f, 2.5f, 250.0f, false, 0,   true,  false }, // HighMid
-            {  0.0f, -12.00f,  2.0f, 0.0f, 1.0f, 2.5f, 250.0f, false, 0,   true,  false }, // High
+            //  gain  thresh   ratio knee  bite  atk    rel    relmode route in     mute
+            {  0.0f, -45.45f,  2.0f, 0.0f, 1.0f, 2.5f, 250.0f, 0,     0,    true,  false }, // Low
+            {  0.0f, -23.02f,  2.0f, 0.0f, 1.0f, 2.5f, 250.0f, 0,     0,    true,  false }, // LowMid
+            {  0.0f, -23.02f,  2.0f, 0.0f, 1.0f, 2.5f, 250.0f, 0,     0,    true,  false }, // HighMid
+            {  0.0f, -12.00f,  2.0f, 0.0f, 1.0f, 2.5f, 250.0f, 0,     0,    true,  false }, // High
         }
     };
     return p;

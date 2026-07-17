@@ -123,6 +123,43 @@ int main()
         allPass &= ok;
     }
 
+    // ---- Test 5: REL 2 (dual-stage) releases slower than REL 1 -------------
+    {
+        auto releaseHalfTime = [&] (int mode) -> int
+        {
+            BandCompressor c;
+            c.prepare (fs);
+            c.setThresholdDb (-30.0f); c.setRatio (4.0f); c.setKneeDb (0.0f);
+            c.setBite (0.0f); c.setAttackMs (1.0f); c.setReleaseMs (100.0f);
+            c.setReleaseMode (mode);
+            c.reset();
+
+            const int N = 20000;
+            std::vector<float> L (N), R (N);
+            const double w = 2.0 * M_PI * 1000.0 / fs;
+            for (int n = 0; n < N; ++n) L[n] = R[n] = (float) std::sin (w * n);
+            c.processBlock (L.data(), R.data(), N);
+            const float steady = c.getGainReductionDb();
+
+            int count = 0;
+            for (int n = 0; n < (int) fs; ++n)
+            {
+                float l = 0.0f, r = 0.0f;
+                c.processBlock (&l, &r, 1);
+                ++count;
+                if (c.getGainReductionDb() < steady * 0.5f) break;
+            }
+            return count;
+        };
+
+        const int t1 = releaseHalfTime (0); // REL 1
+        const int t2 = releaseHalfTime (1); // REL 2
+        const bool ok = t2 > t1;
+        std::printf ("[%s] REL2 dual-stage slower than REL1: t1=%d, t2=%d samples\n",
+                     ok ? "PASS" : "FAIL", t1, t2);
+        allPass &= ok;
+    }
+
     std::printf ("\n%s\n", allPass ? "ALL COMPRESSOR TESTS PASSED" : "SOME TESTS FAILED");
     return allPass ? 0 : 1;
 }

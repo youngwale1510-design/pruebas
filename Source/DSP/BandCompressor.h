@@ -42,7 +42,11 @@ public:
     void setBite        (float b)  noexcept   { targetBite = (b < 0.0f ? 0.0f : b); }
     void setAttackMs    (float ms) noexcept;
     void setReleaseMs   (float ms) noexcept;
-    void setAutoRelease (bool on)  noexcept   { autoRelease = on; }
+
+    // Release mode: 0 = REL 1 (single-stage), 1 = REL 2 (dual-stage / curved),
+    // 2 = AUTO (program-dependent). Mirrors the MC404's AUTO/REL1/REL2 buttons.
+    void setReleaseMode (int mode)  noexcept { releaseMode = (mode < 0 ? 0 : (mode > 2 ? 2 : mode)); }
+    void setAutoRelease (bool on)   noexcept { releaseMode = on ? 2 : 0; } // convenience
 
     // In = compression engaged. When false, the band audio passes through
     // uncompressed (input gain still applies). Mute silences the band.
@@ -70,11 +74,12 @@ private:
 
     // Ballistics.
     float attackMs = 2.5f, releaseMs = 250.0f;
-    float attackCoeff = 0.0f, releaseCoeff = 0.0f;
-    bool  autoRelease = false;
+    float attackCoeff = 0.0f, releaseCoeff = 0.0f, releaseCoeff2 = 0.0f;
+    int   releaseMode = 0; // 0 = REL1, 1 = REL2, 2 = AUTO
 
     // Envelope state.
     float grEnvDb = 0.0f;   // smoothed gain reduction (dB, >= 0)
+    float relStage2 = 0.0f; // intermediate stage for REL2 (dual-stage) release
     float fastEnv = 0.0f;   // fast linear peak follower (for BITE)
     float slowEnv = 0.0f;   // slow linear peak follower (for BITE reference)
     float autoRelState = 0.0f; // slow follower of reduction, for auto release
