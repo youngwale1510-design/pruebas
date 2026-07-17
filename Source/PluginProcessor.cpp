@@ -7,6 +7,7 @@
 */
 
 #include "PluginProcessor.h"
+#include "PluginEditor.h"
 #include "Presets.h"
 
 namespace ghostband
@@ -21,14 +22,14 @@ juce::String bandParamId (int band, const char* name)
 
 static juce::NormalisableRange<float> freqRange (float lo, float hi, float centre)
 {
-    juce::NormalisableRange<float> r (lo, hi);
+    juce::NormalisableRange<float> r (lo, hi, 1.0f);
     r.setSkewForCentre (centre);
     return r;
 }
 
-static juce::NormalisableRange<float> skewRange (float lo, float hi, float centre)
+static juce::NormalisableRange<float> skewRange (float lo, float hi, float centre, float interval)
 {
-    juce::NormalisableRange<float> r (lo, hi);
+    juce::NormalisableRange<float> r (lo, hi, interval);
     r.setSkewForCentre (centre);
     return r;
 }
@@ -52,10 +53,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout GhostBandAudioProcessor::cre
     layout.add (floatP ("x1", "Crossover 1", freqRange (20.0f, 500.0f, 100.0f),   100.0f,   "Hz"));
     layout.add (floatP ("x2", "Crossover 2", freqRange (200.0f, 5000.0f, 1000.0f), 1000.0f, "Hz"));
     layout.add (floatP ("x3", "Crossover 3", freqRange (2000.0f, 20000.0f, 10000.0f), 10000.0f, "Hz"));
-    layout.add (floatP ("output",  "Output",   juce::NormalisableRange<float> (-24.0f, 24.0f), 0.0f, "dB"));
-    layout.add (floatP ("busMain", "Bus Main", juce::NormalisableRange<float> (-60.0f, 12.0f), 0.0f, "dB"));
-    layout.add (floatP ("busR1",   "Bus R1",   juce::NormalisableRange<float> (-60.0f, 12.0f), 0.0f, "dB"));
-    layout.add (floatP ("busR2",   "Bus R2",   juce::NormalisableRange<float> (-60.0f, 12.0f), 0.0f, "dB"));
+    layout.add (floatP ("output",  "Output",   juce::NormalisableRange<float> (-24.0f, 24.0f, 0.1f), 0.0f, "dB"));
+    layout.add (floatP ("busMain", "Bus Main", juce::NormalisableRange<float> (-60.0f, 12.0f, 0.1f), 0.0f, "dB"));
+    layout.add (floatP ("busR1",   "Bus R1",   juce::NormalisableRange<float> (-60.0f, 12.0f, 0.1f), 0.0f, "dB"));
+    layout.add (floatP ("busR2",   "Bus R2",   juce::NormalisableRange<float> (-60.0f, 12.0f, 0.1f), 0.0f, "dB"));
 
     // ---- Per band ----------------------------------------------------------
     for (int b = 0; b < 4; ++b)
@@ -63,13 +64,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout GhostBandAudioProcessor::cre
         const juce::String pretty = juce::String ("Band ") + juce::String (b + 1);
         auto id = [b] (const char* n) { return bandParamId (b, n); };
 
-        layout.add (floatP (id ("gain"),    pretty + " Gain",    juce::NormalisableRange<float> (-24.0f, 24.0f),  0.0f,  "dB"));
-        layout.add (floatP (id ("thresh"),  pretty + " Thresh",  juce::NormalisableRange<float> (-60.0f, 0.0f),  -24.0f, "dB"));
-        layout.add (floatP (id ("ratio"),   pretty + " Comp",    skewRange (1.0f, 20.0f, 4.0f),                   2.0f,  ":1"));
-        layout.add (floatP (id ("knee"),    pretty + " Knee",    juce::NormalisableRange<float> (0.0f, 24.0f),    0.0f,  "dB"));
-        layout.add (floatP (id ("bite"),    pretty + " Bite",    juce::NormalisableRange<float> (0.0f, 10.0f),    0.0f,  ""));
-        layout.add (floatP (id ("attack"),  pretty + " Attack",  skewRange (0.1f, 100.0f, 10.0f),                 2.5f,  "ms"));
-        layout.add (floatP (id ("release"), pretty + " Release", skewRange (10.0f, 1000.0f, 150.0f),              250.0f, "ms"));
+        layout.add (floatP (id ("gain"),    pretty + " Gain",    juce::NormalisableRange<float> (-24.0f, 24.0f, 0.1f),  0.0f,  "dB"));
+        layout.add (floatP (id ("thresh"),  pretty + " Thresh",  juce::NormalisableRange<float> (-60.0f, 0.0f, 0.01f), -24.0f, "dB"));
+        layout.add (floatP (id ("ratio"),   pretty + " Comp",    skewRange (1.0f, 20.0f, 4.0f, 0.1f),                   2.0f,  ":1"));
+        layout.add (floatP (id ("knee"),    pretty + " Knee",    juce::NormalisableRange<float> (0.0f, 24.0f, 0.1f),    0.0f,  "dB"));
+        layout.add (floatP (id ("bite"),    pretty + " Bite",    juce::NormalisableRange<float> (0.0f, 10.0f, 0.1f),    0.0f,  ""));
+        layout.add (floatP (id ("attack"),  pretty + " Attack",  skewRange (0.1f, 100.0f, 10.0f, 0.1f),                 2.5f,  "ms"));
+        layout.add (floatP (id ("release"), pretty + " Release", skewRange (10.0f, 1000.0f, 150.0f, 1.0f),              250.0f, "ms"));
 
         layout.add (std::make_unique<juce::AudioParameterBool> (
             juce::ParameterID { id ("autorel"), 1 }, pretty + " Auto Rel", false));
@@ -175,7 +176,7 @@ void GhostBandAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 //==============================================================================
 juce::AudioProcessorEditor* GhostBandAudioProcessor::createEditor()
 {
-    return new juce::GenericAudioProcessorEditor (*this);
+    return new GhostBandAudioProcessorEditor (*this);
 }
 
 //==============================================================================

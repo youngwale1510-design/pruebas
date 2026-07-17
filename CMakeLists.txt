@@ -79,6 +79,8 @@ juce_add_plugin(GhostBand
 
 target_sources(GhostBand PRIVATE
     Source/PluginProcessor.cpp
+    Source/PluginEditor.cpp
+    Source/UI/BandStrip.cpp
     ${GHOSTBAND_DSP_SOURCES})
 
 target_include_directories(GhostBand PRIVATE Source)
@@ -91,5 +93,26 @@ target_compile_definitions(GhostBand PUBLIC
 target_link_libraries(GhostBand PRIVATE
     juce::juce_audio_utils
     juce::juce_dsp
+    juce::juce_recommended_config_flags
+    juce::juce_recommended_warning_flags)
+
+# ---------------------------------------------------------------------------
+# Headless UI render helper (dev-only; verifies editor layout to a PNG).
+# ---------------------------------------------------------------------------
+juce_add_console_app(GhostBandRender PRODUCT_NAME "GhostBandRender")
+target_sources(GhostBandRender PRIVATE
+    Tests/RenderUi.cpp
+    Source/PluginProcessor.cpp
+    Source/PluginEditor.cpp
+    Source/UI/BandStrip.cpp
+    ${GHOSTBAND_DSP_SOURCES})
+target_include_directories(GhostBandRender PRIVATE Source)
+target_compile_definitions(GhostBandRender PRIVATE
+    JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0
+    JUCE_STANDALONE_APPLICATION=1)
+target_link_libraries(GhostBandRender PRIVATE
+    juce::juce_audio_utils
+    juce::juce_dsp
+    juce::juce_gui_extra
     juce::juce_recommended_config_flags
     juce::juce_recommended_warning_flags)
