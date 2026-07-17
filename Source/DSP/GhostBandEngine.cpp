@@ -55,6 +55,11 @@ void GhostBandEngine::setCrossoverFrequencies (float f1, float f2, float f3)
     xoverR.setCrossoverFrequencies (f1, f2, f3);
 }
 
+void GhostBandEngine::setInputGainDb (float db) noexcept
+{
+    inputGain = dbToLin (db);
+}
+
 void GhostBandEngine::setOutputGainDb (float db) noexcept
 {
     outputGain = dbToLin (db);
@@ -77,6 +82,12 @@ void GhostBandEngine::process (float* left, float* right, int numSamples)
     // Guard against a block larger than we prepared for.
     if (numSamples > maxBlock)
         numSamples = maxBlock;
+
+    // 0) Global input gain.
+    if (inputGain != 1.0f)
+    {
+        for (int i = 0; i < numSamples; ++i) { left[i] *= inputGain; right[i] *= inputGain; }
+    }
 
     // 1) Split each channel into 4 bands.
     float* bandPtrsL[numBands];

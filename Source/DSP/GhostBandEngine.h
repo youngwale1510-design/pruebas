@@ -42,6 +42,7 @@ public:
 
     // ---- Global controls ---------------------------------------------------
     void setCrossoverFrequencies (float f1, float f2, float f3);
+    void setInputGainDb (float db) noexcept;
     void setOutputGainDb (float db) noexcept;
     void setBusGainDb (int bus, float db) noexcept;   // bus 0..2
 
@@ -64,6 +65,7 @@ private:
 
     int   routing[numBands] = { Main, Main, Main, Main };
     float busGain[numBuses] = { 1.0f, 1.0f, 1.0f };
+    float inputGain  = 1.0f;
     float outputGain = 1.0f;
 
     // Working buffers (allocated in prepare()).

@@ -42,6 +42,10 @@ private:
     juce::Label titleLabel;
     juce::ComboBox presetBox;
 
+    juce::Slider inputKnob;
+    juce::Label  inputLabel;
+    std::unique_ptr<SliderAtt> inputAtt;
+
     juce::Slider outputKnob;
     juce::Label  outputLabel;
     std::unique_ptr<SliderAtt> outputAtt;

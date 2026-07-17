@@ -53,6 +53,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout GhostBandAudioProcessor::cre
     layout.add (floatP ("x1", "Crossover 1", freqRange (20.0f, 500.0f, 100.0f),   100.0f,   "Hz"));
     layout.add (floatP ("x2", "Crossover 2", freqRange (200.0f, 5000.0f, 1000.0f), 1000.0f, "Hz"));
     layout.add (floatP ("x3", "Crossover 3", freqRange (2000.0f, 20000.0f, 10000.0f), 10000.0f, "Hz"));
+    layout.add (floatP ("input",   "Input",    juce::NormalisableRange<float> (-24.0f, 24.0f, 0.1f), 0.0f, "dB"));
     layout.add (floatP ("output",  "Output",   juce::NormalisableRange<float> (-24.0f, 24.0f, 0.1f), 0.0f, "dB"));
     layout.add (floatP ("busMain", "Bus Main", juce::NormalisableRange<float> (-60.0f, 12.0f, 0.1f), 0.0f, "dB"));
     layout.add (floatP ("busR1",   "Bus R1",   juce::NormalisableRange<float> (-60.0f, 12.0f, 0.1f), 0.0f, "dB"));
@@ -127,6 +128,7 @@ void GhostBandAudioProcessor::pushParametersToEngine()
     };
 
     engine.setCrossoverFrequencies (raw ("x1"), raw ("x2"), raw ("x3"));
+    engine.setInputGainDb (raw ("input"));
     engine.setOutputGainDb (raw ("output"));
     engine.setBusGainDb (0, raw ("busMain"));
     engine.setBusGainDb (1, raw ("busR1"));
@@ -191,6 +193,7 @@ void GhostBandAudioProcessor::applyPreset (const GhostBandPreset& p)
     setParam ("x1", p.xover1Hz);
     setParam ("x2", p.xover2Hz);
     setParam ("x3", p.xover3Hz);
+    setParam ("input", 0.0f);
     setParam ("output", p.outputDb);
     setParam ("busMain", 0.0f);
     setParam ("busR1", 0.0f);

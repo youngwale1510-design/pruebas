@@ -21,8 +21,8 @@ class GrMeter : public juce::Component,
                 private juce::Timer
 {
 public:
-    explicit GrMeter (std::function<float()> readerIn, float maxDbIn = 24.0f)
-        : reader (std::move (readerIn)), maxDb (maxDbIn)
+    explicit GrMeter (std::function<float()> readerIn, float maxDbIn = 24.0f, bool horizontalIn = false)
+        : reader (std::move (readerIn)), maxDb (maxDbIn), horizontal (horizontalIn)
     {
         startTimerHz (30);
     }
@@ -41,7 +41,10 @@ public:
         if (norm > 0.001f)
         {
             auto fill = b.reduced (2.0f);
-            fill = fill.withHeight (fill.getHeight() * norm);
+            if (horizontal)
+                fill = fill.withWidth (fill.getWidth() * norm);
+            else
+                fill = fill.withHeight (fill.getHeight() * norm);
             g.setColour (Colours::meterGr);
             g.fillRoundedRectangle (fill, 1.0f);
         }
@@ -59,6 +62,7 @@ private:
 
     std::function<float()> reader;
     float maxDb = 24.0f;
+    bool  horizontal = false;
     float smoothed = 0.0f;
 };
 

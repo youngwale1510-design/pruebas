@@ -24,7 +24,8 @@ class BandStrip : public juce::Component
 {
 public:
     BandStrip (juce::AudioProcessorValueTreeState& apvts, int bandIndex,
-               const juce::String& title, std::function<float()> grReader);
+               const juce::String& title, juce::Colour tabColour,
+               std::function<float()> grReader);
 
     void paint (juce::Graphics& g) override;
     void resized() override;
@@ -46,6 +47,7 @@ private:
     juce::AudioProcessorValueTreeState& apvts;
     int index = 0;
     juce::String bandTitle;
+    juce::Colour tabColour;
 
     Knob gain, thresh, ratio, knee, bite, attack, release;
     std::vector<Knob*> knobs;
@@ -57,6 +59,7 @@ private:
     std::unique_ptr<ComboAtt> routeAtt;
 
     GrMeter meter;
+    juce::Rectangle<int> grCaption;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BandStrip)
 };

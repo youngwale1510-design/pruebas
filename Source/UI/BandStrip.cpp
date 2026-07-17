@@ -16,9 +16,10 @@ static juce::String bandId (int band, const char* name)
 }
 
 BandStrip::BandStrip (juce::AudioProcessorValueTreeState& s, int bandIndex,
-                      const juce::String& title, std::function<float()> grReader)
-    : apvts (s), index (bandIndex), bandTitle (title),
-      meter (std::move (grReader))
+                      const juce::String& title, juce::Colour tab,
+                      std::function<float()> grReader)
+    : apvts (s), index (bandIndex), bandTitle (title), tabColour (tab),
+      meter (std::move (grReader), 24.0f, true)
 {
     addKnob (gain,    bandId (index, "gain"),    "GAIN");
     addKnob (thresh,  bandId (index, "thresh"),  "THRESH");
@@ -70,42 +71,49 @@ void BandStrip::paint (juce::Graphics& g)
     g.setColour (Colours::panelEdge);
     g.drawRoundedRectangle (b.reduced (0.5f), 5.0f, 1.0f);
 
-    g.setColour (Colours::accent);
-    g.setFont (juce::Font (13.0f, juce::Font::bold));
-    g.drawText (bandTitle, getLocalBounds().removeFromTop (22), juce::Justification::centred, false);
+    // Left tab: colored accent bar + band name.
+    auto tab = getLocalBounds().reduced (6).removeFromLeft (52);
+    g.setColour (tabColour);
+    g.fillRoundedRectangle (tab.removeFromLeft (4).toFloat(), 2.0f);
+    g.setColour (Colours::text);
+    g.setFont (juce::Font (12.0f, juce::Font::bold));
+    g.drawFittedText (bandTitle, tab.reduced (2), juce::Justification::centred, 2);
+
+    // "GR" caption above the meter.
+    g.setColour (Colours::textDim);
+    g.setFont (juce::Font (9.0f));
+    g.drawText ("GAIN REDUCTION", grCaption, juce::Justification::centredLeft, false);
 }
 
 void BandStrip::resized()
 {
     auto area = getLocalBounds().reduced (6);
-    area.removeFromTop (22); // title
 
-    // GR meter on the right edge.
-    auto meterArea = area.removeFromRight (14);
-    meter.setBounds (meterArea.reduced (0, 2));
-    area.removeFromRight (4);
+    area.removeFromLeft (52); // tab (drawn in paint)
+    area.removeFromLeft (6);
 
-    // Bottom row: In / Mute / Auto + Route.
-    auto bottom = area.removeFromBottom (46);
-    auto btnRow = bottom.removeFromTop (22);
-    const int bw = btnRow.getWidth() / 3;
-    inBtn.setBounds   (btnRow.removeFromLeft (bw).reduced (1));
-    muteBtn.setBounds (btnRow.removeFromLeft (bw).reduced (1));
-    autoBtn.setBounds (btnRow.reduced (1));
-    routeBox.setBounds (bottom.reduced (1, 2));
+    // GR meter on the right (horizontal bar with a caption above).
+    auto meterArea = area.removeFromRight (200);
+    grCaption = meterArea.removeFromTop (12);
+    meter.setBounds (meterArea.reduced (2, 4));
 
-    // Knob grid: 2 columns.
-    const int cols = 2;
-    const int rows = 4; // 7 knobs -> 4 rows (last cell empty)
-    const int cw = area.getWidth() / cols;
-    const int rh = area.getHeight() / rows;
-    for (size_t i = 0; i < knobs.size(); ++i)
+    // Controls block: IN / M on top, AUTO + Route below.
+    auto controls = area.removeFromRight (150).reduced (4, 6);
+    auto topRow = controls.removeFromTop (controls.getHeight() / 2).reduced (0, 1);
+    inBtn.setBounds   (topRow.removeFromLeft (topRow.getWidth() / 2).reduced (1));
+    muteBtn.setBounds (topRow.reduced (1));
+    auto botRow = controls.reduced (0, 1);
+    autoBtn.setBounds  (botRow.removeFromLeft (botRow.getWidth() / 2).reduced (1));
+    routeBox.setBounds (botRow.reduced (1));
+
+    // 7 knobs in a horizontal row.
+    const int n = (int) knobs.size();
+    const int cw = area.getWidth() / n;
+    for (int i = 0; i < n; ++i)
     {
-        const int r = (int) i / cols;
-        const int c = (int) i % cols;
-        juce::Rectangle<int> cell (area.getX() + c * cw, area.getY() + r * rh, cw, rh);
-        auto& k = *knobs[i];
-        k.label.setBounds (cell.removeFromTop (12));
+        juce::Rectangle<int> cell (area.getX() + i * cw, area.getY(), cw, area.getHeight());
+        auto& k = *knobs[(size_t) i];
+        k.label.setBounds (cell.removeFromTop (13));
         k.slider.setBounds (cell.reduced (2));
     }
 }
