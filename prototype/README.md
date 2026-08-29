@@ -13,6 +13,27 @@ Es un único archivo autocontenido. Basta con abrir `prototype/index.html` en el
 
 > El sonido arranca tras el primer clic (política de autoplay del navegador).
 
+## Sonido REAL: cargar y analizar tus audios
+
+Además de los samples mock, puedes cargar **audios reales** y la app los analiza de verdad
+en el navegador (sin servidor):
+
+- **Cargar**: botón ↑ de la barra, o **arrastra archivos de audio** sobre la ventana. Aparecen
+  en la pestaña **MINE** con un badge `REAL` y su waveform real dibujada del buffer.
+- **Detección de tonalidad (key)**: FFT → *chroma* (perfil de clases de altura) → algoritmo
+  **Krumhansl-Schmuckler** para estimar tónica y modo (mayor/menor). Ej. `Am`, `C#m`, `G`.
+- **Detección de BPM**: envolvente de energía → función de *onset* → **autocorrelación** para
+  hallar el tempo dominante (rango 70–180 BPM).
+- **Transposición en vivo**: al girar los knobs mientras suena un audio real:
+  - **KEY** transpone el sample desde su key detectada hacia la key de sesión.
+  - **PITCH** añade semitonos encima.
+  - **BPM** estira el tempo hacia el target.
+  El chip ámbar `▶ E · 128 BPM` muestra en tiempo real la key y BPM resultantes.
+
+> **Acoplamiento pitch/tempo**: se usa `playbackRate`, así que subir el tono también acelera un
+> poco (y viceversa). El pitch-shift / time-stretch independiente es trabajo del VST real en
+> JUCE; aquí el objetivo es validar UX y ver el análisis reaccionar.
+
 ## Qué se puede probar
 
 - **Header**: nombre del plugin + selector de presets con flechas ‹ › (dummy).

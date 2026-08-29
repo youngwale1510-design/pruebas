@@ -20,6 +20,7 @@
     --indigo: #6366f1;
     --cyan: #22d3ee;
     --cyan-dim: #0e7490;
+    --amber: #fbbf24;
     --text: #e6e4f5;
     --text-dim: #8b88a8;
     --text-faint: #5a5776;
@@ -47,20 +48,15 @@
     overflow: hidden;
   }
 
-  /* ---- Plugin window: tall floating VST panel ---- */
   .plugin {
     width: 420px;
-    height: min(860px, calc(100vh - 40px));
+    height: min(880px, calc(100vh - 40px));
     display: flex;
     flex-direction: column;
-    background:
-      linear-gradient(160deg, rgba(28, 26, 48, 0.92), rgba(14, 13, 26, 0.96));
+    background: linear-gradient(160deg, rgba(28, 26, 48, 0.92), rgba(14, 13, 26, 0.96));
     border: 1px solid var(--stroke);
     border-radius: 20px;
-    box-shadow:
-      0 30px 80px rgba(0, 0, 0, 0.65),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05),
-      0 0 60px rgba(99, 102, 241, 0.08);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 60px rgba(99, 102, 241, 0.08);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     overflow: hidden;
@@ -68,236 +64,124 @@
   }
   .plugin::before {
     content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 20px;
-    padding: 1px;
+    position: absolute; inset: 0; border-radius: 20px; padding: 1px;
     background: linear-gradient(160deg, rgba(139, 92, 246, 0.4), transparent 40%, transparent 70%, rgba(34, 211, 238, 0.3));
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
+    -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none;
   }
 
-  /* ---- Header ---- */
+  /* Header */
   .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px 12px;
-    border-bottom: 1px solid var(--stroke);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 12px; border-bottom: 1px solid var(--stroke);
     background: linear-gradient(180deg, rgba(40, 36, 70, 0.4), transparent);
   }
   .brand { display: flex; align-items: center; gap: 10px; }
   .logo-dot {
     width: 28px; height: 28px; border-radius: 8px;
     background: conic-gradient(from 220deg, var(--violet), var(--cyan), var(--indigo), var(--violet));
-    box-shadow: var(--glow-violet);
-    position: relative;
+    box-shadow: var(--glow-violet); position: relative;
   }
-  .logo-dot::after {
-    content: ''; position: absolute; inset: 5px; border-radius: 4px;
-    background: var(--bg-1);
-  }
+  .logo-dot::after { content: ''; position: absolute; inset: 5px; border-radius: 4px; background: var(--bg-1); }
   .brand-name { font-weight: 800; font-size: 15px; letter-spacing: 0.5px; }
   .brand-name span { color: var(--cyan); }
   .brand-sub { font-size: 9px; color: var(--text-faint); letter-spacing: 2px; text-transform: uppercase; font-weight: 600; }
 
-  .preset {
-    display: flex; align-items: center; gap: 6px;
-    background: var(--glass);
-    border: 1px solid var(--stroke);
-    border-radius: 10px;
-    padding: 5px 6px;
-  }
-  .preset button {
-    width: 22px; height: 22px; border: none; border-radius: 6px;
-    background: rgba(255,255,255,0.04); color: var(--text-dim);
-    cursor: pointer; font-size: 12px; display: grid; place-items: center;
-    transition: all 0.15s;
-  }
+  .preset { display: flex; align-items: center; gap: 6px; background: var(--glass); border: 1px solid var(--stroke); border-radius: 10px; padding: 5px 6px; }
+  .preset button { width: 22px; height: 22px; border: none; border-radius: 6px; background: rgba(255,255,255,0.04); color: var(--text-dim); cursor: pointer; font-size: 12px; display: grid; place-items: center; transition: all 0.15s; }
   .preset button:hover { background: var(--violet); color: #fff; box-shadow: var(--glow-violet); }
-  .preset-name {
-    font-family: var(--mono); font-size: 11px; min-width: 92px; text-align: center;
-    color: var(--text); font-weight: 700; letter-spacing: 0.3px;
-  }
+  .preset-name { font-family: var(--mono); font-size: 11px; min-width: 92px; text-align: center; color: var(--text); font-weight: 700; letter-spacing: 0.3px; }
 
-  /* ---- Tabs ---- */
-  .tabs {
-    display: flex; gap: 4px; padding: 10px 12px;
-    overflow-x: auto; scrollbar-width: none;
-    border-bottom: 1px solid var(--stroke);
-  }
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; padding: 10px 12px; overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--stroke); }
   .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    flex: 0 0 auto;
-    display: flex; flex-direction: column; align-items: center; gap: 3px;
-    padding: 7px 11px; border-radius: 10px;
-    background: transparent; border: 1px solid transparent;
-    color: var(--text-faint); cursor: pointer; transition: all 0.18s;
-    font-size: 9px; font-weight: 700; letter-spacing: 0.6px;
-  }
+  .tab { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 11px; border-radius: 10px; background: transparent; border: 1px solid transparent; color: var(--text-faint); cursor: pointer; transition: all 0.18s; font-size: 9px; font-weight: 700; letter-spacing: 0.6px; }
   .tab svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; }
   .tab:hover { color: var(--text-dim); background: rgba(255,255,255,0.03); }
-  .tab.active {
-    color: #fff;
-    background: linear-gradient(160deg, rgba(139,92,246,0.28), rgba(34,211,238,0.14));
-    border-color: var(--stroke-hi);
-    box-shadow: inset 0 0 12px rgba(139,92,246,0.2);
-  }
+  .tab.active { color: #fff; background: linear-gradient(160deg, rgba(139,92,246,0.28), rgba(34,211,238,0.14)); border-color: var(--stroke-hi); box-shadow: inset 0 0 12px rgba(139,92,246,0.2); }
   .tab.active svg { stroke: var(--cyan); }
 
-  /* ---- Search + Magic ---- */
+  /* Toolbar */
   .toolbar { display: flex; gap: 8px; padding: 12px; }
-  .search {
-    flex: 1; display: flex; align-items: center; gap: 8px;
-    background: var(--glass); border: 1px solid var(--stroke);
-    border-radius: 10px; padding: 0 12px;
-  }
+  .search { flex: 1; display: flex; align-items: center; gap: 8px; background: var(--glass); border: 1px solid var(--stroke); border-radius: 10px; padding: 0 12px; }
   .search:focus-within { border-color: var(--cyan); box-shadow: var(--glow-cyan); }
   .search svg { width: 14px; height: 14px; stroke: var(--text-faint); fill: none; stroke-width: 2; }
-  .search input {
-    flex: 1; background: none; border: none; outline: none;
-    color: var(--text); font-family: var(--sans); font-size: 12px; padding: 9px 0;
-  }
+  .search input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-family: var(--sans); font-size: 12px; padding: 9px 0; }
   .search input::placeholder { color: var(--text-faint); }
-  .magic {
-    display: flex; align-items: center; gap: 6px;
-    padding: 0 14px; border: none; border-radius: 10px; cursor: pointer;
-    background: linear-gradient(135deg, var(--violet), var(--indigo));
-    color: #fff; font-weight: 800; font-size: 11px; letter-spacing: 0.5px;
-    box-shadow: var(--glow-violet); transition: transform 0.12s, box-shadow 0.2s;
-  }
+  .icon-btn { display: grid; place-items: center; width: 38px; border: none; border-radius: 10px; cursor: pointer; background: var(--glass); border: 1px solid var(--stroke); color: var(--cyan); transition: all 0.15s; }
+  .icon-btn:hover { border-color: var(--cyan); box-shadow: var(--glow-cyan); }
+  .icon-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .magic { display: flex; align-items: center; gap: 6px; padding: 0 14px; border: none; border-radius: 10px; cursor: pointer; background: linear-gradient(135deg, var(--violet), var(--indigo)); color: #fff; font-weight: 800; font-size: 11px; letter-spacing: 0.5px; box-shadow: var(--glow-violet); transition: transform 0.12s, box-shadow 0.2s; }
   .magic:hover { transform: translateY(-1px); box-shadow: 0 0 26px rgba(139,92,246,0.75); }
   .magic:active { transform: translateY(0) scale(0.97); }
   .magic svg { width: 14px; height: 14px; fill: #fff; }
 
-  /* ---- Sample list ---- */
-  .list {
-    flex: 1; overflow-y: auto; padding: 4px 12px 12px;
-    display: flex; flex-direction: column; gap: 8px;
-    scrollbar-width: thin; scrollbar-color: rgba(139,92,246,0.4) transparent;
-  }
+  /* List */
+  .list { flex: 1; overflow-y: auto; padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; scrollbar-color: rgba(139,92,246,0.4) transparent; }
   .list::-webkit-scrollbar { width: 6px; }
   .list::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.4); border-radius: 3px; }
 
-  .card {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center; gap: 10px;
-    padding: 9px 11px;
-    background: var(--glass);
-    border: 1px solid var(--stroke);
-    border-radius: 12px;
-    cursor: grab;
-    transition: border-color 0.18s, box-shadow 0.18s, transform 0.1s, background 0.18s;
-    position: relative;
-  }
+  .card { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 9px 11px; background: var(--glass); border: 1px solid var(--stroke); border-radius: 12px; cursor: grab; transition: border-color 0.18s, box-shadow 0.18s, transform 0.1s, background 0.18s; position: relative; }
   .card:hover { border-color: var(--stroke-hi); background: var(--glass-hi); }
   .card.dragging { opacity: 0.5; cursor: grabbing; transform: scale(0.98); }
-  .card.magic-hit {
-    border-color: var(--cyan);
-    box-shadow: var(--glow-cyan), inset 0 0 20px rgba(34,211,238,0.12);
-    animation: magicPulse 0.6s ease;
-  }
-  @keyframes magicPulse {
-    0% { transform: scale(1); } 40% { transform: scale(1.02); } 100% { transform: scale(1); }
-  }
+  .card.magic-hit { border-color: var(--cyan); box-shadow: var(--glow-cyan), inset 0 0 20px rgba(34,211,238,0.12); animation: magicPulse 0.6s ease; }
+  @keyframes magicPulse { 0% { transform: scale(1); } 40% { transform: scale(1.02); } 100% { transform: scale(1); } }
   .card.playing { border-color: var(--violet); box-shadow: var(--glow-violet); }
+  .card.analyzing { opacity: 0.7; }
 
-  .play-btn {
-    width: 34px; height: 34px; flex: 0 0 auto;
-    border: 1px solid var(--stroke-hi); border-radius: 9px;
-    background: rgba(139,92,246,0.12); color: #fff; cursor: pointer;
-    display: grid; place-items: center; transition: all 0.15s;
-  }
+  .play-btn { width: 34px; height: 34px; flex: 0 0 auto; border: 1px solid var(--stroke-hi); border-radius: 9px; background: rgba(139,92,246,0.12); color: #fff; cursor: pointer; display: grid; place-items: center; transition: all 0.15s; }
   .play-btn:hover { background: var(--violet); box-shadow: var(--glow-violet); }
   .play-btn svg { width: 13px; height: 13px; fill: #fff; }
 
   .card-mid { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
-  .card-name {
-    font-size: 12px; font-weight: 600; color: var(--text);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
+  .card-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+  .real-badge { font-family: var(--mono); font-size: 7px; font-weight: 700; padding: 1px 4px; border-radius: 4px; background: rgba(251,191,36,0.16); color: var(--amber); border: 1px solid rgba(251,191,36,0.3); letter-spacing: 0.5px; flex: 0 0 auto; }
   .wave { width: 100%; height: 22px; display: block; }
-  .card-meta { display: flex; gap: 8px; align-items: center; }
-  .chip {
-    font-family: var(--mono); font-size: 9px; font-weight: 700;
-    padding: 2px 6px; border-radius: 5px; letter-spacing: 0.3px;
-    background: rgba(255,255,255,0.04); border: 1px solid var(--stroke);
-    color: var(--text-dim);
-  }
+  .card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .chip { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 5px; letter-spacing: 0.3px; background: rgba(255,255,255,0.04); border: 1px solid var(--stroke); color: var(--text-dim); }
   .chip.bpm { color: var(--cyan); border-color: rgba(34,211,238,0.25); }
   .chip.key { color: var(--violet); border-color: rgba(139,92,246,0.3); }
+  .chip.live { color: var(--amber); border-color: rgba(251,191,36,0.35); background: rgba(251,191,36,0.08); }
 
   .card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-  .toggle {
-    display: flex; align-items: center; font-family: var(--mono);
-    font-size: 8px; font-weight: 700; border-radius: 6px; overflow: hidden;
-    border: 1px solid var(--stroke); cursor: pointer; user-select: none;
-  }
+  .toggle { display: flex; align-items: center; font-family: var(--mono); font-size: 8px; font-weight: 700; border-radius: 6px; overflow: hidden; border: 1px solid var(--stroke); cursor: pointer; user-select: none; }
   .toggle span { padding: 3px 7px; transition: all 0.15s; color: var(--text-faint); }
   .toggle .dry.on { background: rgba(34,211,238,0.18); color: var(--cyan); }
   .toggle .fx.on { background: rgba(139,92,246,0.25); color: #fff; box-shadow: inset 0 0 8px rgba(139,92,246,0.4); }
 
-  /* ---- Knobs panel ---- */
-  .knobs {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 8px; padding: 14px 16px 16px;
-    border-top: 1px solid var(--stroke);
-    background: linear-gradient(0deg, rgba(30,26,54,0.5), transparent);
-  }
+  /* Knobs */
+  .knobs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 12px 16px 8px; border-top: 1px solid var(--stroke); background: linear-gradient(0deg, rgba(30,26,54,0.5), transparent); }
   .knob-cell { display: flex; flex-direction: column; align-items: center; gap: 7px; }
-  .knob {
-    width: 66px; height: 66px; position: relative; cursor: ns-resize;
-    touch-action: none;
-  }
-  .knob svg { width: 100%; height: 100%; transform: rotate(0deg); }
+  .knob { width: 64px; height: 64px; position: relative; cursor: ns-resize; touch-action: none; }
+  .knob svg { width: 100%; height: 100%; }
   .knob-label { font-size: 9px; font-weight: 700; letter-spacing: 1px; color: var(--text-faint); }
-  .knob-val {
-    font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--cyan);
-    min-height: 16px;
-  }
+  .knob-val { font-family: var(--mono); font-size: 13px; font-weight: 700; min-height: 16px; }
   .knob-cell.pitch .knob-val { color: var(--cyan); }
   .knob-cell.key .knob-val { color: var(--violet); }
   .knob-cell.bpm .knob-val { color: #a5f3fc; }
 
-  /* ---- Toast ---- */
-  .toast-wrap {
-    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
-    display: flex; flex-direction: column; gap: 8px; align-items: center;
-    pointer-events: none; z-index: 50; width: 90%;
-  }
-  .toast {
-    display: flex; align-items: center; gap: 9px;
-    padding: 10px 14px; border-radius: 11px;
-    background: rgba(20,18,38,0.92); border: 1px solid var(--stroke-hi);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5), var(--glow-violet);
-    backdrop-filter: blur(12px);
-    font-size: 11px; font-weight: 600; color: var(--text);
-    animation: toastIn 0.25s ease, toastOut 0.3s ease 2.2s forwards;
-  }
+  .footnote { padding: 2px 16px 12px; text-align: center; font-size: 8.5px; color: var(--text-faint); letter-spacing: 0.2px; line-height: 1.4; }
+  .footnote b { color: var(--text-dim); font-weight: 700; }
+
+  /* Toast */
+  .toast-wrap { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; z-index: 50; width: 90%; }
+  .toast { display: flex; align-items: center; gap: 9px; padding: 10px 14px; border-radius: 11px; background: rgba(20,18,38,0.94); border: 1px solid var(--stroke-hi); box-shadow: 0 10px 30px rgba(0,0,0,0.5), var(--glow-violet); backdrop-filter: blur(12px); font-size: 11px; font-weight: 600; color: var(--text); animation: toastIn 0.25s ease, toastOut 0.3s ease 2.6s forwards; }
   .toast svg { width: 15px; height: 15px; flex: 0 0 auto; }
-  .toast .t-sub { font-family: var(--mono); font-size: 9px; color: var(--text-dim); }
+  .toast .t-sub { font-family: var(--mono); font-size: 9px; color: var(--text-dim); margin-top: 2px; }
   @keyframes toastIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes toastOut { to { opacity: 0; transform: translateY(-8px); } }
 
-  /* ---- Drop zone hint ---- */
-  .plugin.drag-active::after {
-    content: '⤓  Suelta para exportar el sample';
-    position: absolute; inset: 0; display: grid; place-items: center;
-    background: rgba(10,8,24,0.55); backdrop-filter: blur(3px);
-    border: 2px dashed var(--cyan); border-radius: 20px; margin: 8px;
-    color: var(--cyan); font-weight: 800; font-size: 13px; letter-spacing: 0.5px;
-    box-shadow: inset var(--glow-cyan); pointer-events: none; z-index: 40;
-  }
+  /* Import / export drop states */
+  .plugin.export-active::after { content: '⤓  Suelta para EXPORTAR el sample'; position: absolute; inset: 8px; display: grid; place-items: center; background: rgba(10,8,24,0.55); backdrop-filter: blur(3px); border: 2px dashed var(--cyan); border-radius: 16px; color: var(--cyan); font-weight: 800; font-size: 13px; letter-spacing: 0.5px; box-shadow: inset var(--glow-cyan); pointer-events: none; z-index: 40; }
+  .plugin.import-active::after { content: '⤒  Suelta tus audios para IMPORTAR y analizar'; position: absolute; inset: 8px; display: grid; place-items: center; background: rgba(10,8,24,0.6); backdrop-filter: blur(4px); border: 2px dashed var(--amber); border-radius: 16px; color: var(--amber); font-weight: 800; font-size: 13px; letter-spacing: 0.5px; box-shadow: inset 0 0 18px rgba(251,191,36,0.4); pointer-events: none; z-index: 41; text-align: center; padding: 0 30px; }
 
-  .empty { text-align: center; color: var(--text-faint); font-size: 12px; padding: 40px 20px; }
+  .empty { text-align: center; color: var(--text-faint); font-size: 12px; padding: 40px 20px; line-height: 1.6; }
+  .spinner { width: 13px; height: 13px; border: 2px solid rgba(251,191,36,0.3); border-top-color: var(--amber); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
   <div class="plugin" id="plugin">
-    <!-- HEADER -->
     <div class="header">
       <div class="brand">
         <div class="logo-dot"></div>
@@ -313,25 +197,25 @@
       </div>
     </div>
 
-    <!-- TABS -->
     <div class="tabs" id="tabs"></div>
 
-    <!-- TOOLBAR -->
     <div class="toolbar">
       <label class="search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
         <input id="search" type="text" placeholder="Buscar sample…" autocomplete="off" />
       </label>
+      <button class="icon-btn" id="loadBtn" title="Cargar audios reales">
+        <svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 20h16"/></svg>
+      </button>
       <button class="magic" id="magicBtn">
         <svg viewBox="0 0 24 24"><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8z"/><circle cx="18" cy="17" r="1.4"/><circle cx="6" cy="18" r="1"/></svg>
         MAGIC
       </button>
+      <input type="file" id="fileInput" accept="audio/*" multiple hidden />
     </div>
 
-    <!-- LIST -->
     <div class="list" id="list"></div>
 
-    <!-- KNOBS -->
     <div class="knobs">
       <div class="knob-cell pitch">
         <div class="knob" id="knobPitch" data-min="-12" data-max="12" data-val="0" data-step="1"></div>
@@ -349,6 +233,10 @@
         <div class="knob-val" id="valBpm">120</div>
       </div>
     </div>
+    <div class="footnote">
+      Los audios <b>importados</b> se analizan (key + BPM reales). Los knobs transponen y estiran el preview en vivo.<br/>
+      Nota: pitch y tempo van <b>acoplados</b> (playbackRate) — el pitch-shift independiente lo hará el VST en JUCE.
+    </div>
 
     <div class="toast-wrap" id="toastWrap"></div>
   </div>
@@ -356,16 +244,17 @@
 <script>
 /* ============================================================
    FXLAB Proto — Sample Browser VST (UI/UX prototype)
-   Mock data + Web Audio API preview (simple tones)
+   Mock samples (synth tones) + REAL audio import with
+   live key/BPM analysis and transposition via Web Audio API.
    ============================================================ */
 
-// ---------- Mock data ----------
 const CATEGORIES = [
   { id: 'all',       label: 'ALL FX',    icon: 'grid' },
   { id: 'accent',    label: 'ACCENT',    icon: 'zap' },
   { id: 'ambience',  label: 'AMBIENCE',  icon: 'cloud' },
   { id: 'breakdown', label: 'BREAKDOWN', icon: 'scissors' },
   { id: 'crash',     label: 'CRASH',     icon: 'burst' },
+  { id: 'mine',      label: 'MINE',      icon: 'star' },
 ];
 
 const ICONS = {
@@ -374,32 +263,23 @@ const ICONS = {
   cloud:    '<path d="M6 16a4 4 0 010-8 5 5 0 019.6-1A4 4 0 0117 16z"/>',
   scissors: '<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><path d="M8 8l12 8M8 16 20 8"/>',
   burst:    '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>',
+  star:     '<path d="M12 3l2.4 5 5.6.8-4 3.9 1 5.5L12 15.8 7 18.9l1-5.5-4-3.9 5.6-.8z"/>',
 };
 
-const KEYS = ['C','C#m','D','Dm','Ebm','E','Fm','F#m','G','G#m','Am','Bbm','Bm','A','Gm'];
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const KEYS_MOCK = ['C','C#m','D','Dm','Ebm','E','Fm','F#m','G','G#m','Am','Bbm','Bm','A','Gm'];
 
 const SAMPLE_NAMES = [
-  ['Reggaeton Kick Dark', 'accent'],
-  ['Vocal Chop Perreo', 'accent'],
-  ['808 Slide Deep', 'accent'],
-  ['Dembow Snare Punch', 'accent'],
-  ['Neon Riser Sweep', 'ambience'],
-  ['Vinyl Rain Texture', 'ambience'],
-  ['Sub Drone Midnight', 'ambience'],
-  ['Airy Pad Wash', 'ambience'],
-  ['Reverse Cymbal Pull', 'breakdown'],
-  ['Tape Stop Glitch', 'breakdown'],
-  ['Filter Drop Impact', 'breakdown'],
-  ['Silence Cut FX', 'breakdown'],
-  ['Impact Crash Boom', 'crash'],
-  ['White Noise Blast', 'crash'],
-  ['Metal Hit Shatter', 'crash'],
-  ['Cinematic Downer', 'crash'],
-  ['Perc Roll Latino', 'accent'],
-  ['Ghost Vocal Hook', 'ambience'],
-  ['Trap Hat Skitter', 'accent'],
-  ['Ocean Verb Tail', 'ambience'],
+  ['Reggaeton Kick Dark', 'accent'], ['Vocal Chop Perreo', 'accent'],
+  ['808 Slide Deep', 'accent'], ['Dembow Snare Punch', 'accent'],
+  ['Neon Riser Sweep', 'ambience'], ['Vinyl Rain Texture', 'ambience'],
+  ['Sub Drone Midnight', 'ambience'], ['Airy Pad Wash', 'ambience'],
+  ['Reverse Cymbal Pull', 'breakdown'], ['Tape Stop Glitch', 'breakdown'],
+  ['Filter Drop Impact', 'breakdown'], ['Silence Cut FX', 'breakdown'],
+  ['Impact Crash Boom', 'crash'], ['White Noise Blast', 'crash'],
+  ['Metal Hit Shatter', 'crash'], ['Cinematic Downer', 'crash'],
+  ['Perc Roll Latino', 'accent'], ['Ghost Vocal Hook', 'ambience'],
+  ['Trap Hat Skitter', 'accent'], ['Ocean Verb Tail', 'ambience'],
 ];
 
 const PRESETS = ['INIT', 'PERREO INTENSO', 'DARK CLUB', 'LATIN TRAP', 'AMBIENT CHILL', 'FESTIVAL DROP'];
@@ -407,16 +287,12 @@ const PRESETS = ['INIT', 'PERREO INTENSO', 'DARK CLUB', 'LATIN TRAP', 'AMBIENT C
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-// build sample objects
-const SAMPLES = SAMPLE_NAMES.map((s, i) => ({
-  id: i,
-  name: s[0],
-  category: s[1],
-  bpm: rand(85, 150),
-  key: pick(KEYS),
-  fx: Math.random() > 0.5,      // DRY / FX state
-  seed: Math.random() * 1000,   // waveform seed
-  tone: 180 + Math.random() * 340, // base frequency for preview tone
+let uid = 0;
+const SAMPLES = SAMPLE_NAMES.map(s => ({
+  id: uid++, name: s[0], category: s[1],
+  bpm: rand(85, 150), key: pick(KEYS_MOCK),
+  fx: Math.random() > 0.5, seed: Math.random() * 1000,
+  tone: 180 + Math.random() * 340, real: false,
 }));
 
 // ---------- State ----------
@@ -427,7 +303,8 @@ const knobState = { pitch: 0, key: 0, bpm: 120 };
 
 // ---------- Web Audio ----------
 let audioCtx = null;
-let currentNodes = null;
+let currentNodes = null;   // { osc/src, gain }
+let activeSource = null;   // AudioBufferSourceNode currently playing (real)
 let playingId = null;
 
 function ensureAudio() {
@@ -436,93 +313,265 @@ function ensureAudio() {
   return audioCtx;
 }
 
+const ICON_PLAY = '<path d="M6 4l14 8-14 8z"/>';
+const ICON_STOP = '<rect x="5" y="5" width="14" height="14" rx="2"/>';
+
+function setCardPlaying(id, on) {
+  const el = document.querySelector('.card[data-id="' + id + '"]');
+  if (!el) return;
+  el.classList.toggle('playing', on);
+  const pb = el.querySelector('.play-btn svg');
+  if (pb) pb.innerHTML = on ? ICON_STOP : ICON_PLAY;
+}
+
 function stopPreview() {
-  if (currentNodes) {
-    try { currentNodes.osc.stop(); } catch (e) {}
-    currentNodes = null;
-  }
-  if (playingId !== null) {
-    const el = document.querySelector('.card[data-id="' + playingId + '"]');
-    if (el) el.classList.remove('playing');
-    const pb = el && el.querySelector('.play-btn svg');
-    if (pb) pb.innerHTML = ICON_PLAY;
-    playingId = null;
-  }
+  if (currentNodes) { try { currentNodes.node.stop(); } catch (e) {} }
+  if (playingId !== null) { setCardPlaying(playingId, false); updateLiveReadout(playingId, false); }
+  currentNodes = null; activeSource = null; playingId = null;
 }
 
-// pitch/bpm knobs modulate playbackRate-style multiplier on the preview tone
-function pitchMultiplier() {
-  const semis = knobState.pitch;
-  const bpmRatio = knobState.bpm / 120;         // tempo target approximation
-  return Math.pow(2, semis / 12) * (0.85 + 0.3 * (bpmRatio - 1) + 1 - 1);
+// total semitone shift applied to a real sample (session-key match + pitch offset)
+function totalSemis(sample) {
+  let shift = knobState.pitch;
+  if (sample.real && sample.detKeyPc != null) {
+    let diff = knobState.key - sample.detKeyPc;      // move detected key -> session key
+    diff = ((diff % 12) + 12) % 12;
+    if (diff > 6) diff -= 12;                          // nearest transposition
+    shift += diff;
+  }
+  return shift;
+}
+function playbackRateFor(sample) {
+  const semis = totalSemis(sample);
+  const tempo = knobState.bpm / (sample.real ? sample.detBpm : knobState.bpm); // real: stretch to target
+  return Math.pow(2, semis / 12) * tempo;
 }
 
-function playPreview(sample) {
+function playReal(sample) {
   const ctx = ensureAudio();
   stopPreview();
+  const src = ctx.createBufferSource();
+  src.buffer = sample.buffer;
+  src.playbackRate.value = playbackRateFor(sample);
+  const gain = ctx.createGain();
+  // FX toggle = a gentle lowpass+resonance vs clean
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = sample.fx ? 2200 : 18000;
+  filter.Q.value = sample.fx ? 4 : 0.5;
+  gain.gain.value = 0.9;
+  src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+  src.start();
+  src.onended = () => { if (playingId === sample.id) { setCardPlaying(sample.id, false); updateLiveReadout(sample.id, false); currentNodes = null; activeSource = null; playingId = null; } };
+  currentNodes = { node: src, gain }; activeSource = src; playingId = sample.id;
+  setCardPlaying(sample.id, true); updateLiveReadout(sample.id, true);
+}
 
+// synth preview for mock samples (no real buffer)
+function pitchMultiplier() {
+  const semis = knobState.pitch + (knobState.key); // key knob nudges tone too
+  const bpmRatio = knobState.bpm / 120;
+  return Math.pow(2, semis / 12) * (0.9 + 0.2 * (bpmRatio - 1));
+}
+function playSynth(sample) {
+  const ctx = ensureAudio();
+  stopPreview();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   const filter = ctx.createBiquadFilter();
-
-  // FX toggle changes timbre: FX = filtered/resonant, DRY = clean
   osc.type = sample.fx ? 'sawtooth' : 'triangle';
   filter.type = 'lowpass';
   filter.frequency.value = sample.fx ? 1400 : 6000;
   filter.Q.value = sample.fx ? 8 : 0.7;
-
   const baseFreq = sample.tone * pitchMultiplier();
   const now = ctx.currentTime;
   osc.frequency.setValueAtTime(baseFreq, now);
-  // little downward blip so it reads as a "hit"
   osc.frequency.exponentialRampToValueAtTime(Math.max(60, baseFreq * 0.6), now + 0.35);
-
   gain.gain.setValueAtTime(0.0001, now);
   gain.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
   gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.55);
-
   osc.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
-  osc.start(now);
-  osc.stop(now + 0.6);
-
-  currentNodes = { osc, gain };
-  osc.onended = () => {
-    if (playingId === sample.id) {
-      const el = document.querySelector('.card[data-id="' + sample.id + '"]');
-      if (el) { el.classList.remove('playing'); const pb = el.querySelector('.play-btn svg'); if (pb) pb.innerHTML = ICON_PLAY; }
-      playingId = null;
-    }
-  };
-
-  playingId = sample.id;
-  const el = document.querySelector('.card[data-id="' + sample.id + '"]');
-  if (el) { el.classList.add('playing'); const pb = el.querySelector('.play-btn svg'); if (pb) pb.innerHTML = ICON_STOP; }
+  osc.start(now); osc.stop(now + 0.6);
+  osc.onended = () => { if (playingId === sample.id) { setCardPlaying(sample.id, false); currentNodes = null; playingId = null; } };
+  currentNodes = { node: osc, gain }; playingId = sample.id;
+  setCardPlaying(sample.id, true);
 }
 
-const ICON_PLAY = '<path d="M6 4l14 8-14 8z"/>';
-const ICON_STOP = '<rect x="5" y="5" width="14" height="14" rx="2"/>';
+function playPreview(sample) {
+  if (sample.real && sample.buffer) playReal(sample);
+  else playSynth(sample);
+}
 
-// ---------- Waveform generator (SVG path from seed) ----------
-function waveformPath(seed, samples = 48, w = 240, h = 22) {
+// ---------- Live readout while playing (shifted key/bpm) ----------
+function updateLiveReadout(id, on) {
+  const el = document.querySelector('.card[data-id="' + id + '"] .card-meta');
+  const sample = SAMPLES.find(s => s.id === id);
+  if (!el || !sample || !sample.real) return;
+  let live = el.querySelector('.chip.live');
+  if (!on || sample.detKeyPc == null) { if (live) live.remove(); return; }
+  const semis = totalSemis(sample);
+  const resPc = ((sample.detKeyPc + semis) % 12 + 12) % 12;
+  const resKey = NOTES[resPc] + (sample.detMinor ? 'm' : '');
+  const resBpm = Math.round(sample.detBpm * playbackRateFor(sample));
+  if (!live) { live = document.createElement('span'); live.className = 'chip live'; el.appendChild(live); }
+  live.textContent = '▶ ' + resKey + ' · ' + resBpm + ' BPM';
+}
+
+// ---------- Analysis: FFT ----------
+function fft(re, im) {
+  const n = re.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) { const tr = re[i]; re[i] = re[j]; re[j] = tr; const ti = im[i]; im[i] = im[j]; im[j] = ti; }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len, wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let cr = 1, ci = 0;
+      for (let k = 0; k < len / 2; k++) {
+        const a = i + k, b = a + len / 2;
+        const vr = re[b] * cr - im[b] * ci, vi = re[b] * ci + im[b] * cr;
+        re[b] = re[a] - vr; im[b] = im[a] - vi;
+        re[a] += vr; im[a] += vi;
+        const ncr = cr * wr - ci * wi; ci = cr * wi + ci * wr; cr = ncr;
+      }
+    }
+  }
+}
+
+function toMono(buffer) {
+  const ch = buffer.numberOfChannels;
+  const out = new Float32Array(buffer.length);
+  for (let c = 0; c < ch; c++) {
+    const d = buffer.getChannelData(c);
+    for (let i = 0; i < d.length; i++) out[i] += d[i] / ch;
+  }
+  return out;
+}
+
+// Krumhansl-Schmuckler key detection from a chroma vector
+const KS_MAJOR = [6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
+const KS_MINOR = [6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+
+function detectKey(mono, sr) {
+  const N = 4096, hop = 4096;
+  const win = new Float32Array(N);
+  for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (N - 1));
+  const re = new Float32Array(N), im = new Float32Array(N);
+  const chroma = new Float32Array(12);
+  const maxLen = Math.min(mono.length, sr * 30);
+  for (let start = 0; start + N <= maxLen; start += hop) {
+    for (let i = 0; i < N; i++) { re[i] = mono[start + i] * win[i]; im[i] = 0; }
+    fft(re, im);
+    for (let k = 2; k < N / 2; k++) {
+      const f = k * sr / N;
+      if (f < 55 || f > 2000) continue;
+      const mag = Math.sqrt(re[k] * re[k] + im[k] * im[k]);
+      const midi = Math.round(69 + 12 * Math.log2(f / 440));
+      const pc = ((midi % 12) + 12) % 12;
+      chroma[pc] += mag;
+    }
+  }
+  // correlate with rotated profiles
+  function corr(profile, rot) {
+    let a = 0, b = 0, c = 0, ma = 0, mp = 0;
+    for (let i = 0; i < 12; i++) { ma += chroma[i]; mp += profile[i]; }
+    ma /= 12; mp /= 12;
+    for (let i = 0; i < 12; i++) {
+      const x = chroma[(i + rot) % 12] - ma, y = profile[i] - mp;
+      a += x * y; b += x * x; c += y * y;
+    }
+    return b && c ? a / Math.sqrt(b * c) : -1;
+  }
+  let best = -2, root = 0, minor = false;
+  for (let r = 0; r < 12; r++) {
+    const cm = corr(KS_MAJOR, r); if (cm > best) { best = cm; root = r; minor = false; }
+    const cn = corr(KS_MINOR, r); if (cn > best) { best = cn; root = r; minor = true; }
+  }
+  return { pc: root, minor, name: NOTES[root] + (minor ? 'm' : ''), conf: best };
+}
+
+// Onset-envelope autocorrelation BPM
+function detectBPM(mono, sr) {
+  const hop = Math.max(1, Math.floor(sr * 0.01)); // 10ms
+  const frames = Math.floor(mono.length / hop);
+  const env = new Float32Array(frames);
+  for (let i = 0; i < frames; i++) {
+    let s = 0; for (let j = 0; j < hop; j++) { const v = mono[i * hop + j] || 0; s += v * v; }
+    env[i] = Math.sqrt(s / hop);
+  }
+  const nov = new Float32Array(frames);
+  for (let i = 1; i < frames; i++) { const d = env[i] - env[i - 1]; nov[i] = d > 0 ? d : 0; }
+  const fps = sr / hop;
+  let best = 0, bestBpm = 120;
+  for (let bpm = 70; bpm <= 180; bpm++) {
+    const lag = Math.round(fps * 60 / bpm);
+    if (lag < 1 || lag >= frames) continue;
+    let sum = 0;
+    for (let i = lag; i < frames; i++) sum += nov[i] * nov[i - lag];
+    if (sum > best) { best = sum; bestBpm = bpm; }
+  }
+  return bestBpm;
+}
+
+// waveform path from real buffer peaks
+function waveformFromBuffer(buffer, buckets = 48, w = 240, h = 22) {
+  const data = buffer.getChannelData(0);
+  const block = Math.floor(data.length / buckets) || 1;
+  const mid = h / 2, peaks = [];
+  for (let b = 0; b < buckets; b++) {
+    let peak = 0;
+    for (let i = 0; i < block; i++) { const v = Math.abs(data[b * block + i] || 0); if (v > peak) peak = v; }
+    peaks.push(peak);
+  }
+  const max = Math.max(...peaks, 0.001);
+  const step = w / buckets;
+  let d = '';
+  for (let i = 0; i <= buckets; i++) { const a = (peaks[i] || 0) / max * (mid - 1); d += (i === 0 ? 'M' : 'L') + (i * step).toFixed(1) + ' ' + (mid - a).toFixed(1) + ' '; }
+  for (let i = buckets; i >= 0; i--) { const a = (peaks[i] || 0) / max * (mid - 1); d += 'L' + (i * step).toFixed(1) + ' ' + (mid + a).toFixed(1) + ' '; }
+  return d + 'Z';
+}
+
+// synthetic waveform for mock samples
+function waveformSeed(seed, samples = 48, w = 240, h = 22) {
   let s = seed;
   const rng = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
-  const mid = h / 2;
+  const mid = h / 2, step = w / samples, env = i => Math.sin((i / samples) * Math.PI);
   let d = '';
-  const step = w / samples;
-  const env = i => Math.sin((i / samples) * Math.PI); // amplitude envelope
-  for (let i = 0; i <= samples; i++) {
-    const amp = (rng() * 0.9 + 0.1) * env(i) * (mid - 1);
-    const x = (i * step).toFixed(1);
-    const yTop = (mid - amp).toFixed(1);
-    d += (i === 0 ? 'M' : 'L') + x + ' ' + yTop + ' ';
-  }
-  for (let i = samples; i >= 0; i--) {
-    const amp = (((seed + i * 7) % 100) / 100 * 0.7 + 0.2) * env(i) * (mid - 1);
-    const x = (i * step).toFixed(1);
-    const yBot = (mid + amp).toFixed(1);
-    d += 'L' + x + ' ' + yBot + ' ';
-  }
+  for (let i = 0; i <= samples; i++) { const a = (rng() * 0.9 + 0.1) * env(i) * (mid - 1); d += (i === 0 ? 'M' : 'L') + (i * step).toFixed(1) + ' ' + (mid - a).toFixed(1) + ' '; }
+  for (let i = samples; i >= 0; i--) { const a = (((seed + i * 7) % 100) / 100 * 0.7 + 0.2) * env(i) * (mid - 1); d += 'L' + (i * step).toFixed(1) + ' ' + (mid + a).toFixed(1) + ' '; }
   return d + 'Z';
+}
+
+// ---------- Import & analyze real audio ----------
+async function importFiles(files) {
+  const ctx = ensureAudio();
+  for (const file of files) {
+    if (!file.type.startsWith('audio') && !/\.(wav|mp3|ogg|flac|m4a|aac)$/i.test(file.name)) continue;
+    const id = uid++;
+    const sample = { id, name: file.name.replace(/\.[^.]+$/, ''), category: 'mine', real: true, analyzing: true, fx: false, buffer: null, bpm: '…', key: '…' };
+    SAMPLES.unshift(sample);
+    if (activeCat === 'mine' || activeCat === 'all') renderList();
+    toast('<div class="spinner"></div>', 'Analizando…', sample.name);
+    try {
+      const arr = await file.arrayBuffer();
+      const buffer = await ctx.decodeAudioData(arr);
+      const mono = toMono(buffer);
+      const key = detectKey(mono, buffer.sampleRate);
+      const bpm = detectBPM(mono, buffer.sampleRate);
+      sample.buffer = buffer; sample.analyzing = false;
+      sample.detKeyPc = key.pc; sample.detMinor = key.minor;
+      sample.key = key.name; sample.detBpm = bpm; sample.bpm = bpm;
+      renderList();
+      toast('✅', 'Analizado: ' + sample.key + ' · ' + bpm + ' BPM', sample.name);
+    } catch (e) {
+      sample.analyzing = false; sample.key = 'error'; sample.bpm = '—';
+      renderList();
+      toast('⚠️', 'No se pudo decodificar', sample.name);
+    }
+  }
 }
 
 // ---------- Render ----------
@@ -530,44 +579,45 @@ const listEl = document.getElementById('list');
 const tabsEl = document.getElementById('tabs');
 
 function renderTabs() {
-  tabsEl.innerHTML = CATEGORIES.map(c => `
-    <button class="tab ${c.id === activeCat ? 'active' : ''}" data-cat="${c.id}">
-      <svg viewBox="0 0 24 24">${ICONS[c.icon]}</svg>
-      ${c.label}
+  tabsEl.innerHTML = CATEGORIES.map(c =>
+    `<button class="tab ${c.id === activeCat ? 'active' : ''}" data-cat="${c.id}">
+      <svg viewBox="0 0 24 24">${ICONS[c.icon]}</svg>${c.label}
     </button>`).join('');
 }
 
 function filtered() {
   return SAMPLES.filter(s =>
     (activeCat === 'all' || s.category === activeCat) &&
-    s.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()));
 }
 
 function renderList() {
   const items = filtered();
   if (!items.length) {
-    listEl.innerHTML = '<div class="empty">Sin resultados en esta categoría 🌀</div>';
+    listEl.innerHTML = activeCat === 'mine'
+      ? '<div class="empty">Aún no has importado audios.<br/>Pulsa ↑ o arrastra archivos de audio aquí 🎧</div>'
+      : '<div class="empty">Sin resultados en esta categoría 🌀</div>';
     return;
   }
-  listEl.innerHTML = items.map(s => `
-    <div class="card" data-id="${s.id}" draggable="true">
-      <button class="play-btn" title="Play / Stop">
+  listEl.innerHTML = items.map(s => {
+    const wavePath = s.real && s.buffer ? waveformFromBuffer(s.buffer) : waveformSeed(s.seed || s.id * 137);
+    const analyzing = s.analyzing;
+    return `
+    <div class="card ${analyzing ? 'analyzing' : ''}" data-id="${s.id}" draggable="${!analyzing}">
+      <button class="play-btn" title="Play / Stop" ${analyzing ? 'disabled' : ''}>
         <svg viewBox="0 0 24 24">${playingId === s.id ? ICON_STOP : ICON_PLAY}</svg>
       </button>
       <div class="card-mid">
-        <div class="card-name">${s.name}</div>
+        <div class="card-name">${s.name}${s.real ? '<span class="real-badge">REAL</span>' : ''}</div>
         <svg class="wave" viewBox="0 0 240 22" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="wg${s.id}" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#8b5cf6"/>
-            </linearGradient>
-          </defs>
-          <path d="${waveformPath(s.seed)}" fill="url(#wg${s.id})" opacity="0.85"/>
+          <defs><linearGradient id="wg${s.id}" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="${s.real ? '#fbbf24' : '#22d3ee'}"/><stop offset="1" stop-color="#8b5cf6"/>
+          </linearGradient></defs>
+          <path d="${wavePath}" fill="url(#wg${s.id})" opacity="0.85"/>
         </svg>
         <div class="card-meta">
-          <span class="chip bpm">${s.bpm} BPM</span>
-          <span class="chip key">${s.key}</span>
+          <span class="chip bpm">${analyzing ? '⋯' : s.bpm} BPM</span>
+          <span class="chip key">${analyzing ? '⋯' : s.key}</span>
         </div>
       </div>
       <div class="card-right">
@@ -576,45 +626,37 @@ function renderList() {
           <span class="fx ${s.fx ? 'on' : ''}">FX</span>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+  if (playingId !== null) updateLiveReadout(playingId, true);
 }
 
 // ---------- Events ----------
 tabsEl.addEventListener('click', e => {
-  const btn = e.target.closest('.tab');
-  if (!btn) return;
-  activeCat = btn.dataset.cat;
-  renderTabs(); renderList();
+  const btn = e.target.closest('.tab'); if (!btn) return;
+  activeCat = btn.dataset.cat; renderTabs(); renderList();
 });
-
-document.getElementById('search').addEventListener('input', e => {
-  searchQuery = e.target.value;
-  renderList();
-});
+document.getElementById('search').addEventListener('input', e => { searchQuery = e.target.value; renderList(); });
 
 listEl.addEventListener('click', e => {
-  const card = e.target.closest('.card');
-  if (!card) return;
+  const card = e.target.closest('.card'); if (!card) return;
   const id = +card.dataset.id;
   const sample = SAMPLES.find(s => s.id === id);
-
-  // toggle DRY/FX
+  if (sample.analyzing) return;
   const tog = e.target.closest('.toggle');
   if (tog) {
     sample.fx = !sample.fx;
     tog.querySelector('.dry').classList.toggle('on', !sample.fx);
     tog.querySelector('.fx').classList.toggle('on', sample.fx);
+    if (playingId === id && activeSource) playPreview(sample); // re-trigger with new timbre
     return;
   }
-
-  // play / stop
   if (e.target.closest('.play-btn')) {
-    if (playingId === id) { stopPreview(); }
-    else { playPreview(sample); }
+    if (playingId === id) stopPreview(); else playPreview(sample);
   }
 });
 
-// ---------- Preset selector ----------
+// Preset
 const presetNameEl = document.getElementById('presetName');
 function setPreset(delta) {
   presetIdx = (presetIdx + delta + PRESETS.length) % PRESETS.length;
@@ -624,137 +666,114 @@ function setPreset(delta) {
 document.getElementById('presetPrev').onclick = () => setPreset(-1);
 document.getElementById('presetNext').onclick = () => setPreset(1);
 
-// ---------- MAGIC ----------
+// MAGIC
 document.getElementById('magicBtn').addEventListener('click', () => {
-  const pool = filtered();
+  const pool = filtered().filter(s => !s.analyzing);
   if (!pool.length) { toast('🌀', 'Nada que elegir', 'Cambia de categoría'); return; }
   const chosen = pick(pool);
   renderList();
   const el = document.querySelector('.card[data-id="' + chosen.id + '"]');
-  if (el) {
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    el.classList.add('magic-hit');
-    setTimeout(() => el.classList.remove('magic-hit'), 700);
-  }
+  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('magic-hit'); setTimeout(() => el.classList.remove('magic-hit'), 700); }
   playPreview(chosen);
   toast('✨', 'MAGIC pick', chosen.name + ' · ' + chosen.bpm + ' BPM · ' + chosen.key);
 });
 
-// ---------- Knobs (drag to rotate) ----------
+// Load button + file input
+document.getElementById('loadBtn').onclick = () => document.getElementById('fileInput').click();
+document.getElementById('fileInput').addEventListener('change', e => { importFiles([...e.target.files]); e.target.value = ''; });
+
+// ---------- Knobs ----------
 function fmtKnob(id, val) {
   if (id === 'knobPitch') return (val >= 0 ? '+' : '') + val + ' st';
   if (id === 'knobKey')   return NOTES[val];
-  if (id === 'knobBpm')   return String(val);
+  return String(val);
 }
-function knobStateKey(id) { return id === 'knobPitch' ? 'pitch' : id === 'knobKey' ? 'key' : 'bpm'; }
+function knobKeyName(id) { return id === 'knobPitch' ? 'pitch' : id === 'knobKey' ? 'key' : 'bpm'; }
+function polar(cx, cy, r, angDeg) { const a = (angDeg - 90) * Math.PI / 180; return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) }; }
 
 function drawKnob(el) {
   const min = +el.dataset.min, max = +el.dataset.max, val = +el.dataset.val;
-  const frac = (val - min) / (max - min);
-  const startA = 135, sweep = 270;
-  const ang = startA + frac * sweep;
-  const r = 26, cx = 33, cy = 33;
-  // arc track + value arc
-  function arc(a0, a1, radius) {
-    const p0 = polar(cx, cy, radius, a0), p1 = polar(cx, cy, radius, a1);
-    const large = (a1 - a0) > 180 ? 1 : 0;
-    return `M ${p0.x} ${p0.y} A ${radius} ${radius} 0 ${large} 1 ${p1.x} ${p1.y}`;
-  }
-  const ind = polar(cx, cy, r - 4, ang);
-  const indInner = polar(cx, cy, 10, ang);
+  const frac = (val - min) / (max - min), startA = 135, sweep = 270, ang = startA + frac * sweep;
+  const r = 25, cx = 32, cy = 32;
+  function arc(a0, a1, radius) { const p0 = polar(cx, cy, radius, a0), p1 = polar(cx, cy, radius, a1); const large = (a1 - a0) > 180 ? 1 : 0; return `M ${p0.x} ${p0.y} A ${radius} ${radius} 0 ${large} 1 ${p1.x} ${p1.y}`; }
+  const ind = polar(cx, cy, r - 4, ang), indInner = polar(cx, cy, 9, ang);
   const color = el.id === 'knobKey' ? '#8b5cf6' : el.id === 'knobBpm' ? '#a5f3fc' : '#22d3ee';
-  el.innerHTML = `
-    <svg viewBox="0 0 66 66">
-      <circle cx="33" cy="33" r="30" fill="rgba(10,8,22,0.6)" stroke="rgba(140,130,255,0.14)"/>
-      <circle cx="33" cy="33" r="19" fill="rgba(30,26,54,0.7)" stroke="rgba(255,255,255,0.05)"/>
-      <path d="${arc(startA, startA + sweep, r)}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3" stroke-linecap="round"/>
-      <path d="${arc(startA, ang, r)}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" style="filter:drop-shadow(0 0 4px ${color})"/>
-      <line x1="${indInner.x}" y1="${indInner.y}" x2="${ind.x}" y2="${ind.y}" stroke="${color}" stroke-width="2.5" stroke-linecap="round" style="filter:drop-shadow(0 0 3px ${color})"/>
-    </svg>`;
-}
-function polar(cx, cy, r, angDeg) {
-  const a = (angDeg - 90) * Math.PI / 180;
-  return { x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) };
+  el.innerHTML = `<svg viewBox="0 0 64 64">
+    <circle cx="32" cy="32" r="29" fill="rgba(10,8,22,0.6)" stroke="rgba(140,130,255,0.14)"/>
+    <circle cx="32" cy="32" r="18" fill="rgba(30,26,54,0.7)" stroke="rgba(255,255,255,0.05)"/>
+    <path d="${arc(startA, startA + sweep, r)}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="3" stroke-linecap="round"/>
+    <path d="${arc(startA, ang, r)}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" style="filter:drop-shadow(0 0 4px ${color})"/>
+    <line x1="${indInner.x}" y1="${indInner.y}" x2="${ind.x}" y2="${ind.y}" stroke="${color}" stroke-width="2.5" stroke-linecap="round" style="filter:drop-shadow(0 0 3px ${color})"/>
+  </svg>`;
 }
 
 function setupKnob(id, valElId) {
-  const el = document.getElementById(id);
-  const valEl = document.getElementById(valElId);
+  const el = document.getElementById(id), valEl = document.getElementById(valElId);
   const min = +el.dataset.min, max = +el.dataset.max, step = +el.dataset.step;
   drawKnob(el);
-
   let dragging = false, startY = 0, startVal = 0;
   const update = v => {
     v = Math.max(min, Math.min(max, Math.round(v / step) * step));
-    el.dataset.val = v;
-    knobState[knobStateKey(id)] = v;
-    valEl.textContent = fmtKnob(id, v);
-    drawKnob(el);
+    el.dataset.val = v; knobState[knobKeyName(id)] = v;
+    valEl.textContent = fmtKnob(id, v); drawKnob(el);
+    // live-apply to a playing real sample
+    if (playingId !== null && activeSource) {
+      const s = SAMPLES.find(x => x.id === playingId);
+      if (s && s.real) { activeSource.playbackRate.value = playbackRateFor(s); updateLiveReadout(s.id, true); }
+    }
   };
-  const onMove = e => {
-    if (!dragging) return;
-    const y = (e.touches ? e.touches[0].clientY : e.clientY);
-    const dy = startY - y;                       // up = increase
-    const range = max - min;
-    update(startVal + (dy / 140) * range);       // 140px = full sweep
-    e.preventDefault();
-  };
+  const onMove = e => { if (!dragging) return; const y = e.touches ? e.touches[0].clientY : e.clientY; update(startVal + ((startY - y) / 140) * (max - min)); e.preventDefault(); };
   const onUp = () => { dragging = false; document.body.style.cursor = ''; };
-  const onDown = e => {
-    dragging = true;
-    startY = (e.touches ? e.touches[0].clientY : e.clientY);
-    startVal = +el.dataset.val;
-    document.body.style.cursor = 'ns-resize';
-    e.preventDefault();
-  };
+  const onDown = e => { dragging = true; startY = e.touches ? e.touches[0].clientY : e.clientY; startVal = +el.dataset.val; document.body.style.cursor = 'ns-resize'; e.preventDefault(); };
   el.addEventListener('mousedown', onDown);
   el.addEventListener('touchstart', onDown, { passive: false });
   window.addEventListener('mousemove', onMove);
   window.addEventListener('touchmove', onMove, { passive: false });
   window.addEventListener('mouseup', onUp);
   window.addEventListener('touchend', onUp);
-  // wheel fine-tune
-  el.addEventListener('wheel', e => {
-    update(+el.dataset.val + (e.deltaY < 0 ? step : -step));
-    e.preventDefault();
-  }, { passive: false });
+  el.addEventListener('wheel', e => { update(+el.dataset.val + (e.deltaY < 0 ? step : -step)); e.preventDefault(); }, { passive: false });
 }
 
-// ---------- Drag & drop "export" simulation ----------
+// ---------- Drag & drop: export (out) + import (in) ----------
 const pluginEl = document.getElementById('plugin');
 let dragSampleId = null;
 
 listEl.addEventListener('dragstart', e => {
-  const card = e.target.closest('.card');
-  if (!card) return;
-  dragSampleId = +card.dataset.id;
-  card.classList.add('dragging');
-  e.dataTransfer.setData('text/plain', SAMPLES[dragSampleId].name);
+  const card = e.target.closest('.card'); if (!card) return;
+  dragSampleId = +card.dataset.id; card.classList.add('dragging');
+  e.dataTransfer.setData('text/plain', SAMPLES.find(s => s.id === dragSampleId).name);
   e.dataTransfer.effectAllowed = 'copy';
 });
 listEl.addEventListener('dragend', e => {
-  const card = e.target.closest('.card');
-  if (card) card.classList.remove('dragging');
-  pluginEl.classList.remove('drag-active');
-
-  // If released outside the list area -> "export"
-  const listRect = listEl.getBoundingClientRect();
-  const x = e.clientX, y = e.clientY;
-  const outside = x < listRect.left || x > listRect.right || y < listRect.top || y > listRect.bottom;
+  const card = e.target.closest('.card'); if (card) card.classList.remove('dragging');
+  pluginEl.classList.remove('export-active');
+  const r = listEl.getBoundingClientRect();
+  const outside = e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
   if (outside && dragSampleId !== null) {
-    const s = SAMPLES[dragSampleId];
+    const s = SAMPLES.find(x => x.id === dragSampleId);
     toast('⤓', 'Sample exportado', s.name + '  →  ' + s.bpm + ' BPM · ' + s.key);
-    console.log('[FXLAB] EXPORT drag-out:', { name: s.name, bpm: s.bpm, key: s.key, fx: s.fx });
+    console.log('[FXLAB] EXPORT drag-out:', { name: s.name, bpm: s.bpm, key: s.key, fx: s.fx, real: s.real });
   }
   dragSampleId = null;
 });
-// show drop hint when dragging over the window chrome (outside list)
 pluginEl.addEventListener('dragover', e => {
+  // importing external files?
+  if (e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files')) {
+    pluginEl.classList.add('import-active'); e.preventDefault(); return;
+  }
   if (dragSampleId === null) return;
-  const listRect = listEl.getBoundingClientRect();
-  const outside = e.clientY < listRect.top || e.clientY > listRect.bottom;
-  pluginEl.classList.toggle('drag-active', outside);
+  const r = listEl.getBoundingClientRect();
+  pluginEl.classList.toggle('export-active', e.clientY < r.top || e.clientY > r.bottom);
   e.preventDefault();
+});
+pluginEl.addEventListener('dragleave', e => { if (e.target === pluginEl || !pluginEl.contains(e.relatedTarget)) pluginEl.classList.remove('import-active'); });
+pluginEl.addEventListener('drop', e => {
+  pluginEl.classList.remove('import-active');
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+    e.preventDefault();
+    if (activeCat !== 'all') { activeCat = 'mine'; renderTabs(); }
+    importFiles([...e.dataTransfer.files]);
+  }
 });
 
 // ---------- Toast ----------
@@ -762,14 +781,13 @@ const toastWrap = document.getElementById('toastWrap');
 function toast(icon, title, sub) {
   const t = document.createElement('div');
   t.className = 'toast';
-  t.innerHTML = `<span style="font-size:15px">${icon}</span><div><div>${title}</div>${sub ? `<div class="t-sub">${sub}</div>` : ''}</div>`;
+  t.innerHTML = `<span style="font-size:15px;display:grid;place-items:center;width:15px">${icon}</span><div><div>${title}</div>${sub ? `<div class="t-sub">${sub}</div>` : ''}</div>`;
   toastWrap.appendChild(t);
-  setTimeout(() => t.remove(), 2600);
+  setTimeout(() => t.remove(), 3000);
 }
 
 // ---------- Init ----------
-renderTabs();
-renderList();
+renderTabs(); renderList();
 setupKnob('knobPitch', 'valPitch');
 setupKnob('knobKey', 'valKey');
 setupKnob('knobBpm', 'valBpm');
