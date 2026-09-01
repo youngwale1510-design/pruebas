@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Control, SceneDocument } from '../model/scene';
 import { emptyScene, makeId, defaultKnob, defaultParam } from '../model/defaults';
+import { KnobConfig, defaultKnobConfig } from '../model/knobConfig';
 
 interface AppState {
   scene: SceneDocument;
@@ -11,6 +12,7 @@ interface AppState {
   addKnob: () => void;
   updateControl: (id: string, patch: Partial<Control>) => void;
   moveControl: (id: string, x: number, y: number) => void;
+  setKnob3d: (id: string, cfg: KnobConfig | undefined) => void;
   setScene: (scene: SceneDocument) => void;
   setPreview: (cpp: string) => void;
 }
@@ -59,6 +61,18 @@ export const useStore = create<AppState>((set) => ({
       },
     })),
 
+  setKnob3d: (id, cfg) =>
+    set((s) => ({
+      scene: {
+        ...s.scene,
+        controls: s.scene.controls.map((c) =>
+          c.id === id ? { ...c, knob3d: cfg, type: cfg ? 'IBKnobControl' : c.type } : c,
+        ),
+      },
+    })),
+
   setScene: (scene) => set({ scene, selectedId: null }),
   setPreview: (cpp) => set({ previewCpp: cpp }),
 }));
+
+export { defaultKnobConfig };

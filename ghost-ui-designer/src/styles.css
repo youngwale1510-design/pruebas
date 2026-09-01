@@ -65,6 +65,20 @@ body {
 .panel .row { display: flex; gap: 6px; }
 .panel .row .small { flex: 1; }
 
+.k3 fieldset { border: 1px solid var(--border); border-radius: 6px; margin: 8px 0; padding: 8px; }
+.k3 legend { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #a9a9b4; padding: 0 4px; }
+.k3-field { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; font-size: 11px; color: #a9a9b4; }
+.k3-field:last-child { margin-bottom: 0; }
+.k3-field b { color: var(--accent); font-weight: 500; }
+.k3-preview { display: flex; justify-content: center; padding: 8px 0; }
+.k3-quick { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+.k3-quick button {
+  font-size: 11px; padding: 4px 8px; border-radius: 999px; cursor: pointer;
+  background: #2f2f37; color: var(--text); border: 1px solid var(--border);
+}
+.k3-quick button:hover { border-color: var(--accent); }
+.hint { color: #6b7079; font-size: 12px; }
+
 .cpp-preview {
   margin-top: 20px;
   padding: 12px;

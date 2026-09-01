@@ -26,10 +26,25 @@ de marcadores.
 - ✅ **Export de bundle**: `.cpp` (round-trip) + header de recursos + `resources/*.png`.
 - ✅ Pruebas headless — 14/14 (round-trip, luz, geometría de capa, filmstrip, recursos).
 
+### Fase 3 — pipeline 3D → filmstrip (realismo)
+- ✅ **Constructor por partes** del knob (`src/model/knobConfig.ts`): base / cuerpo /
+  tope / indicador, con forma, material, tamaño y giro por slot + luz global.
+- ✅ **Render 3D real con Three.js** (`src/render3d/`): geometría extruida por pieza,
+  materiales físicos (metal/plástico/cromo/latón), reflejos de entorno de estudio,
+  luz global como `DirectionalLight` y sombra de contacto.
+- ✅ **Horneado 3D → filmstrip** (`bake.ts`): renderiza N frames girando (con
+  supersampling) a un sprite sheet PNG, que el export usa para `IBKnobControl`.
+- ✅ **Preview 3D en vivo** (`Knob3DView`) + panel editable (`Knob3DPanel`), con el
+  MISMO motor que hornea → editor idéntico al plugin.
+- ✅ Geometría/apilado/frames/luz como funciones puras testeadas (20/20 tests).
+
+> El render 3D necesita WebGL: se ve al ejecutar la app (`npm run electron:dev`),
+> no en los tests headless. Three.js se empaqueta localmente (sin depender de CDN).
+
 ### Pendiente (siguientes fases)
-Texturas/materiales importables, más tipos de control (slider/botón bitmap),
-máscaras y ajustes de color por capa, editor de la pila de efectos en la UI, y
-export PNG del diseño completo con alfa.
+HDRI real importable para reflejos, texturas normal/roughness (torneado/cepillado
+reales), tapa abombada por lathe, más tipos de control (slider/botón), y export PNG
+del diseño completo con alfa.
 
 > Verificación headless: `npm test` y `npx tsc -p tsconfig.core.json --noEmit`
 > cubren el núcleo (modelo + codegen + render) sin necesidad de la GUI.

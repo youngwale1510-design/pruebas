@@ -19,8 +19,9 @@ export function bitmapFile(id: string): string {
   return `${id}.png`;
 }
 
-/** Nº de frames del filmstrip de un control (default 61). */
+/** Nº de frames del filmstrip de un control (prioriza el knob 3D; default 61). */
 export function controlFrames(c: Control): number {
+  if (c.knob3d && c.knob3d.frames > 0) return Math.round(c.knob3d.frames);
   const f = c.props.frames;
   return typeof f === 'number' && f > 0 ? Math.round(f) : 61;
 }

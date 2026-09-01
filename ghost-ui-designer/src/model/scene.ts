@@ -2,6 +2,8 @@
 // Este tipo es EXACTAMENTE lo que se serializa al archivo de proyecto .ghostui
 // y también lo que se embebe (por control) en los marcadores del .cpp.
 
+import { KnobConfig } from './knobConfig';
+
 export const GHOSTUI_VERSION = 1 as const;
 
 export type BlendMode =
@@ -97,6 +99,9 @@ export interface Control {
   props: Record<string, number | string | boolean>;
   layers: Layer[];
   effects: Effect[];
+  /** Configuración del knob 3D (opción B con horneado 3D→filmstrip). Si está
+   *  presente, el export hornea el filmstrip con el pipeline 3D. */
+  knob3d?: KnobConfig;
 }
 
 export interface ParamDef {

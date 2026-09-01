@@ -1,4 +1,4 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["src/model", "src/codegen", "src/render", "test"]
+  "include": ["src/model", "src/codegen", "src/render", "src/render3d/geometry.ts", "test"]
 }
