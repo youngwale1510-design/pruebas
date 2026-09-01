@@ -157,17 +157,25 @@ export function drawNoise(
   const amount = num(e, 'amount', 0.08);
   const w = Math.max(1, Math.round(bounds.w));
   const h = Math.max(1, Math.round(bounds.h));
-  const img = ctx.createImageData(w, h);
+  // putImageData ignora clip, rotación y escala del ctx; por eso el ruido se pinta
+  // en un canvas auxiliar y se compone con drawImage, que sí los respeta.
+  const tmp = document.createElement('canvas');
+  tmp.width = w;
+  tmp.height = h;
+  const tctx = tmp.getContext('2d');
+  if (!tctx) return;
+  const img = tctx.createImageData(w, h);
   for (let i = 0; i < img.data.length; i += 4) {
     const n = (Math.random() * 255) | 0;
     img.data[i] = img.data[i + 1] = img.data[i + 2] = n;
     img.data[i + 3] = (amount * 255) | 0;
   }
+  tctx.putImageData(img, 0, 0);
   ctx.save();
   pathFn(ctx);
   ctx.clip();
   ctx.globalCompositeOperation = 'overlay';
-  ctx.putImageData(img, Math.round(bounds.x), Math.round(bounds.y));
+  ctx.drawImage(tmp, bounds.x, bounds.y, bounds.w, bounds.h);
   ctx.restore();
 }
 
