@@ -1,4 +1,5 @@
 import { useStore } from '../app/store';
+import { exportBundle } from '../app/exportBundle';
 
 export function Toolbar() {
   const scene = useStore((s) => s.scene);
@@ -18,13 +19,13 @@ export function Toolbar() {
     if (res) setScene(res.scene);
   };
 
-  const exportCpp = async () => {
-    // En una versión completa se recuerda la ruta; aquí se pide al guardar proyecto.
-    const p = await window.ghost.saveProject(scene);
-    if (p) {
-      const cppPath = p.replace(/\.ghostui$/, '.cpp');
-      const { merged } = await window.ghost.exportCpp(scene, cppPath);
-      alert(`C++ ${merged ? 'actualizado (round-trip)' : 'generado'}: ${cppPath}`);
+  const doExport = async () => {
+    const res = await exportBundle(scene);
+    if (res) {
+      alert(
+        `Bundle ${res.merged ? 'actualizado (round-trip)' : 'generado'} en:\n${res.dir}\n` +
+          `(.cpp + _resources.h + resources/*.png)`,
+      );
     }
   };
 
@@ -33,7 +34,7 @@ export function Toolbar() {
       <strong>Ghost UI Designer</strong>
       <button onClick={addKnob}>+ Knob</button>
       <button onClick={preview}>Vista previa C++</button>
-      <button onClick={exportCpp}>Exportar C++</button>
+      <button onClick={doExport}>Exportar bundle</button>
       <span className="spacer" />
       <button onClick={openProject}>Abrir</button>
       <button onClick={saveProject}>Guardar</button>

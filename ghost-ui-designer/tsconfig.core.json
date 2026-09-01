@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["src/model", "src/codegen", "src/render", "test"]
+}

@@ -37,6 +37,15 @@ export interface ColorAdjust {
   contrast: number; // -100..100
 }
 
+export type LayerShape = 'ellipse' | 'rect' | 'roundRect';
+
+/** Animación de la capa en función del valor del control (0..1). */
+export interface LayerAnim {
+  mode: 'none' | 'rotate';
+  minDeg?: number; // ángulo en value=0 (por defecto -135)
+  maxDeg?: number; // ángulo en value=1 (por defecto  135)
+}
+
 export interface Layer {
   id: string;
   name: string;
@@ -50,6 +59,16 @@ export interface Layer {
   maskAssetId?: string;
   color?: Partial<ColorAdjust>;
   effects: Effect[];
+
+  // --- Geometría de la capa (relativa al rect del control) ---
+  shape?: LayerShape;
+  /** Inset por lado como fracción de la dimensión menor (0..0.5). */
+  inset?: number;
+  /** Rect explícito en coordenadas normalizadas (0..1) del control; tiene
+   *  prioridad sobre `inset`. Útil para indicadores/pointers. */
+  rectNorm?: { x: number; y: number; w: number; h: number };
+  cornerRadius?: number;
+  anim?: LayerAnim;
 }
 
 /** Tipos de control nativos de iPlug2 soportados por el codegen. */

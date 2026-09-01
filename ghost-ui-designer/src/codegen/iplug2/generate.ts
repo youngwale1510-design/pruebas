@@ -4,6 +4,7 @@
 
 import { GHOSTUI_VERSION, Control, ParamDef, SceneDocument } from '../../model/scene';
 import { encodeControlData, MARK } from '../markers';
+import { bitmapResId, controlFrames } from './resources';
 
 /** "gain" -> "kGain" (tag de parámetro estilo iPlug2). */
 export function paramTag(id: string): string {
@@ -32,12 +33,15 @@ function attachLine(c: Control): string {
     case 'IVButtonControl':
       return `  pGraphics->AttachControl(new IVButtonControl(${rect}, SplashClickActionFunc, ${label}), ${ctrlTag(c.id)});`;
     case 'IBKnobControl': {
-      const bmp = String(c.props.bitmap ?? 'KNOB_FN');
-      return `  pGraphics->AttachControl(new IBKnobControl(${rect}, pGraphics->LoadBitmap(${bmp}), ${tag}), ${ctrlTag(c.id)});`;
+      // Opción B: filmstrip rasterizado desde el editor (look Canvas Audio).
+      const res = bitmapResId(c.id);
+      const frames = controlFrames(c);
+      return `  pGraphics->AttachControl(new IBKnobControl(${c.rect.x}, ${c.rect.y}, pGraphics->LoadBitmap(${res}, ${frames}), ${tag}), ${ctrlTag(c.id)});`;
     }
     case 'IBitmapControl': {
-      const bmp = String(c.props.bitmap ?? 'BG_FN');
-      return `  pGraphics->AttachControl(new IBitmapControl(${c.rect.x}, ${c.rect.y}, pGraphics->LoadBitmap(${bmp}), ${tag}), ${ctrlTag(c.id)});`;
+      const res = bitmapResId(c.id);
+      const frames = controlFrames(c);
+      return `  pGraphics->AttachControl(new IBitmapControl(${c.rect.x}, ${c.rect.y}, pGraphics->LoadBitmap(${res}, ${frames}), ${tag}), ${ctrlTag(c.id)});`;
     }
     default:
       return `  // TODO: tipo de control no soportado: ${c.type}`;

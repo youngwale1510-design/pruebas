@@ -1,6 +1,14 @@
 // Contrato compartido entre main y renderer para los canales IPC.
 import type { Control, SceneDocument } from '../src/model/scene';
 
+/** PNG de filmstrip generado en el renderer (identidad visual garantizada). */
+export interface FilmstripPng {
+  controlId: string;
+  file: string;
+  frames: number;
+  dataUri: string;
+}
+
 export interface GhostApi {
   /** Guarda la escena a un .ghostui (JSON). Devuelve la ruta o null si se cancela. */
   saveProject(scene: SceneDocument, suggestedPath?: string): Promise<string | null>;
@@ -12,6 +20,14 @@ export interface GhostApi {
   importCpp(path: string): Promise<{ found: boolean; controls: Control[] }>;
   /** Vista previa del C++ generado (sin escribir a disco). */
   previewCpp(scene: SceneDocument, existingSource: string | null): Promise<string>;
+  /**
+   * Exporta el bundle completo a un directorio elegido por el usuario:
+   * <plugin>.cpp (round-trip), <plugin>_resources.h y resources/<control>.png.
+   */
+  exportBundle(
+    scene: SceneDocument,
+    assets: FilmstripPng[],
+  ): Promise<{ dir: string; merged: boolean } | null>;
 }
 
 export const IPC = {
@@ -20,4 +36,5 @@ export const IPC = {
   exportCpp: 'ghost:exportCpp',
   importCpp: 'ghost:importCpp',
   previewCpp: 'ghost:previewCpp',
+  exportBundle: 'ghost:exportBundle',
 } as const;

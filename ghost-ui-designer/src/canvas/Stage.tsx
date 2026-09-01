@@ -1,6 +1,6 @@
 import { Layer, Rect, Stage as KonvaStage } from 'react-konva';
 import { useStore } from '../app/store';
-import { KnobControl } from './KnobControl';
+import { ControlImage } from './ControlImage';
 
 export function Stage() {
   const scene = useStore((s) => s.scene);
@@ -22,10 +22,11 @@ export function Stage() {
         <Layer>
           <Rect width={width} height={height} fill={bg} />
           {scene.controls.map((c) => (
-            <KnobControl
+            <ControlImage
               key={c.id}
               control={c}
-              light={scene.light}
+              scene={scene}
+              value={0.5}
               selected={c.id === selectedId}
               onSelect={() => select(c.id)}
               onMove={(x, y) => moveControl(c.id, x, y)}

@@ -9,6 +9,8 @@ const api: GhostApi = {
   importCpp: (path) => ipcRenderer.invoke(IPC.importCpp, path),
   previewCpp: (scene, existingSource) =>
     ipcRenderer.invoke(IPC.previewCpp, scene, existingSource),
+  exportBundle: (scene, assets) =>
+    ipcRenderer.invoke(IPC.exportBundle, scene, assets),
 };
 
 contextBridge.exposeInMainWorld('ghost', api);

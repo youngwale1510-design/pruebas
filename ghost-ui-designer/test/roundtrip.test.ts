@@ -7,6 +7,7 @@ function sceneWithKnob() {
   const scene = emptyScene('GhostBand');
   scene.params.push(defaultParam('gain', 'Gain'));
   const knob = defaultKnob('knob_gain', 'Gain', 'gain');
+  knob.type = 'IVKnobControl';
   knob.rect = { x: 30, y: 40, w: 90, h: 110 };
   scene.controls.push(knob);
   return scene;
@@ -28,6 +29,9 @@ describe('round-trip iPlug2', () => {
     expect(c.type).toBe('IVKnobControl');
     expect(c.paramId).toBe('gain');
     expect(c.rect).toEqual({ x: 30, y: 40, w: 90, h: 110 });
+    // Las capas pseudo-3D sobreviven al round-trip por el payload embebido.
+    expect(c.layers.length).toBeGreaterThan(0);
+    expect(c.layers.some((l) => l.anim?.mode === 'rotate')).toBe(true);
   });
 
   it('preserva el código escrito a mano fuera de la región', () => {

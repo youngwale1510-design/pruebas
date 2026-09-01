@@ -1,11 +1,12 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import type { SceneDocument } from '../src/model/scene';
 import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
-import { IPC } from './ipc-contract';
+import { generateResourcesHeader } from '../src/codegen/iplug2/resources';
+import { IPC, type FilmstripPng } from './ipc-contract';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -65,6 +66,43 @@ ipcMain.handle(IPC.importCpp, async (_e, target: string) => {
 ipcMain.handle(IPC.previewCpp, async (_e, scene: SceneDocument, existing: string | null) => {
   return writeSceneToSource(scene, existing).source;
 });
+
+ipcMain.handle(
+  IPC.exportBundle,
+  async (_e, scene: SceneDocument, assets: FilmstripPng[]) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'createDirectory'],
+      title: 'Carpeta de destino del bundle',
+    });
+    if (canceled || filePaths.length === 0) return null;
+    const dir = filePaths[0];
+    const name = scene.meta.pluginName || 'Plugin';
+
+    // 1) C++ con round-trip (preserva el código a mano si el archivo ya existe).
+    const cppPath = path.join(dir, `${name}.cpp`);
+    const existing = existsSync(cppPath) ? await readFile(cppPath, 'utf8') : null;
+    const { source, merged } = writeSceneToSource(scene, existing);
+    await writeFile(cppPath, source, 'utf8');
+
+    // 2) Cabecera de recursos.
+    await writeFile(
+      path.join(dir, `${name}_resources.h`),
+      generateResourcesHeader(scene),
+      'utf8',
+    );
+
+    // 3) PNGs de filmstrip (rasterizados en el renderer).
+    if (assets.length > 0) {
+      const resDir = path.join(dir, 'resources');
+      await mkdir(resDir, { recursive: true });
+      for (const a of assets) {
+        const b64 = a.dataUri.replace(/^data:image\/png;base64,/, '');
+        await writeFile(path.join(resDir, a.file), Buffer.from(b64, 'base64'));
+      }
+    }
+    return { dir, merged };
+  },
+);
 
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => {
