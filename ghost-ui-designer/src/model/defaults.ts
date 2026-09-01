@@ -61,13 +61,17 @@ export function defaultKnobLayers(): Layer[] {
     layer('Ring', {
       inset: 0.06,
       fill: '#3a3a42',
-      effects: [fx('gradientOverlay', { type: 'linear', from: 'rgba(255,255,255,0.18)', to: 'rgba(0,0,0,0.28)' })],
+      effects: [
+        fx('gradientOverlay', { type: 'linear', from: 'rgba(255,255,255,0.18)', to: 'rgba(0,0,0,0.28)' }),
+        fx('bevel', { size: 4 }),
+      ],
     }),
     layer('Cap', {
       inset: 0.2,
       fill: '#4a4a54',
       effects: [
         fx('gradientOverlay', { type: 'radial', from: 'rgba(255,255,255,0.22)', to: 'rgba(0,0,0,0.15)' }),
+        fx('bevel', { size: 6 }),
         fx('innerShadow', { distance: 2, blur: 5, color: 'rgba(0,0,0,0.5)' }),
         fx('noise', { amount: 0.05 }),
       ],

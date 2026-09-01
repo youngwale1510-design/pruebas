@@ -70,7 +70,12 @@ export function drawInnerShadow(
   ctx.restore();
 }
 
-/** Bisel/emboss: highlight en el lado de la luz, sombra en el opuesto. */
+/**
+ * Bisel/emboss direccional. Reilumina toda la cara de la capa a lo largo del eje
+ * de la luz (highlight en el lado iluminado, sombra en el opuesto) y remata el
+ * borde con un rim direccional. La fuerza escala con la intensidad de la luz, de
+ * modo que ángulo e intensidad tienen un efecto claramente visible.
+ */
 export function drawBevel(
   ctx: Ctx,
   pathFn: PathFn,
@@ -79,26 +84,35 @@ export function drawBevel(
   light: LightVectors,
 ) {
   const size = num(e, 'size', 3);
-  const hi = str(e, 'highlight', 'rgba(255,255,255,0.45)');
-  const lo = str(e, 'shadow', 'rgba(0,0,0,0.45)');
+  const inten = light.intensity;
+  const cx = bounds.x + bounds.w / 2;
+  const cy = bounds.y + bounds.h / 2;
+  const r = Math.max(bounds.w, bounds.h) / 2;
+  // (dx,dy) apunta DESDE la luz; el lado iluminado es el opuesto.
+  const lx = cx - light.dx * r;
+  const ly = cy - light.dy * r;
+  const sx = cx + light.dx * r;
+  const sy = cy + light.dy * r;
+
   ctx.save();
   pathFn(ctx);
   ctx.clip();
-  const cx = bounds.x + bounds.w / 2;
-  const cy = bounds.y + bounds.h / 2;
-  const r = Math.max(bounds.w, bounds.h);
-  const g = ctx.createLinearGradient(
-    cx - light.dx * r,
-    cy - light.dy * r,
-    cx + light.dx * r,
-    cy + light.dy * r,
-  );
-  g.addColorStop(0, hi);
-  g.addColorStop(0.5, 'rgba(0,0,0,0)');
-  g.addColorStop(1, lo);
   ctx.globalCompositeOperation = 'source-atop';
-  ctx.lineWidth = size * 2;
-  ctx.strokeStyle = g;
+
+  // 1) Reiluminado de la cara.
+  const g = ctx.createLinearGradient(lx, ly, sx, sy);
+  g.addColorStop(0, str(e, 'highlight', `rgba(255,255,255,${0.15 + 0.55 * inten})`));
+  g.addColorStop(0.5, 'rgba(0,0,0,0)');
+  g.addColorStop(1, str(e, 'shadow', `rgba(0,0,0,${0.15 + 0.6 * inten})`));
+  ctx.fillStyle = g;
+  ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+
+  // 2) Rim del borde biselado.
+  const gr = ctx.createLinearGradient(lx, ly, sx, sy);
+  gr.addColorStop(0, `rgba(255,255,255,${0.2 + 0.5 * inten})`);
+  gr.addColorStop(1, `rgba(0,0,0,${0.2 + 0.5 * inten})`);
+  ctx.lineWidth = size;
+  ctx.strokeStyle = gr;
   pathFn(ctx);
   ctx.stroke();
   ctx.restore();
