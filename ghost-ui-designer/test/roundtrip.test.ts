@@ -1,0 +1,92 @@
+import { describe, expect, it } from 'vitest';
+import { emptyScene, defaultKnob, defaultParam } from '../src/model/defaults';
+import { writeSceneToSource, readSceneFromSource } from '../src/codegen/roundtrip';
+import { parseControlsFromBody } from '../src/codegen/iplug2/parse';
+
+function sceneWithKnob() {
+  const scene = emptyScene('GhostBand');
+  scene.params.push(defaultParam('gain', 'Gain'));
+  const knob = defaultKnob('knob_gain', 'Gain', 'gain');
+  knob.rect = { x: 30, y: 40, w: 90, h: 110 };
+  scene.controls.push(knob);
+  return scene;
+}
+
+describe('round-trip iPlug2', () => {
+  it('genera desde cero y vuelve a leer el mismo control', () => {
+    const scene = sceneWithKnob();
+    const { source, merged } = writeSceneToSource(scene, null);
+    expect(merged).toBe(false);
+    expect(source).toContain('IVKnobControl');
+    expect(source).toContain('IRECT(30, 40, 120, 150)');
+
+    const parsed = readSceneFromSource(source);
+    expect(parsed.found).toBe(true);
+    expect(parsed.controls).toHaveLength(1);
+    const c = parsed.controls[0];
+    expect(c.id).toBe('knob_gain');
+    expect(c.type).toBe('IVKnobControl');
+    expect(c.paramId).toBe('gain');
+    expect(c.rect).toEqual({ x: 30, y: 40, w: 90, h: 110 });
+  });
+
+  it('preserva el código escrito a mano fuera de la región', () => {
+    const scene = sceneWithKnob();
+    const first = writeSceneToSource(scene, null).source;
+
+    // Simula edición manual del usuario dentro del mLayoutFunc, fuera de la región.
+    const handEdited = first.replace(
+      'const IRECT b = pGraphics->GetBounds();',
+      'const IRECT b = pGraphics->GetBounds();\n  pGraphics->AttachControl(new ITextControl(b, "HECHO A MANO"));',
+    );
+    expect(handEdited).toContain('HECHO A MANO');
+
+    // El usuario mueve el knob en el editor y regenera.
+    scene.controls[0].rect.x = 200;
+    const { source, merged } = writeSceneToSource(scene, handEdited);
+
+    expect(merged).toBe(true);
+    // Se preservó el código a mano...
+    expect(source).toContain('HECHO A MANO');
+    // ...y se actualizó el bloque gestionado.
+    expect(source).toContain('IRECT(200, 40, 290, 150)');
+    expect(source).not.toContain('IRECT(30, 40, 120, 150)');
+
+    // Y sigue siendo legible de vuelta.
+    const parsed = readSceneFromSource(source);
+    expect(parsed.controls[0].rect.x).toBe(200);
+  });
+
+  it('reconstruye múltiples controles y respeta el orden', () => {
+    const scene = emptyScene();
+    ['a', 'b', 'c'].forEach((k, i) => {
+      const knob = defaultKnob(`knob_${k}`, k.toUpperCase(), k);
+      knob.rect.x = i * 100;
+      scene.controls.push(knob);
+    });
+    const { source } = writeSceneToSource(scene, null);
+    const parsed = readSceneFromSource(source);
+    expect(parsed.controls.map((c) => c.id)).toEqual([
+      'knob_a',
+      'knob_b',
+      'knob_c',
+    ]);
+  });
+
+  it('el payload sobrevive a caracteres problemáticos en el nombre', () => {
+    const scene = emptyScene();
+    const knob = defaultKnob('knob_x', 'Weird "*/ name\n con salto', 'x');
+    scene.controls.push(knob);
+    const { source } = writeSceneToSource(scene, null);
+    const [c] = parseControlsFromBody(source);
+    expect(c.name).toBe('Weird "*/ name\n con salto');
+  });
+
+  it('idempotencia: regenerar sin cambios produce el mismo archivo', () => {
+    const scene = sceneWithKnob();
+    const a = writeSceneToSource(scene, null).source;
+    const b = writeSceneToSource(scene, a).source;
+    const c = writeSceneToSource(scene, b).source;
+    expect(c).toBe(b);
+  });
+});

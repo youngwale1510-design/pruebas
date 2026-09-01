@@ -1,0 +1,78 @@
+:root {
+  color-scheme: dark;
+  --bg: #17171a;
+  --panel: #232329;
+  --border: #34343c;
+  --text: #e6e6ea;
+  --accent: #4c9aff;
+}
+
+* { box-sizing: border-box; }
+body, html, #root { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.4 system-ui, sans-serif;
+}
+
+.app { display: flex; flex-direction: column; height: 100vh; }
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.toolbar .spacer { flex: 1; }
+.toolbar button {
+  background: #2f2f37;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.toolbar button:hover { border-color: var(--accent); }
+
+.body { display: flex; flex: 1; overflow: hidden; }
+.stage-area { flex: 1; overflow: auto; padding: 24px; }
+.canvas-wrap {
+  display: inline-block;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  background: #000;
+}
+
+.sidebar {
+  width: 280px;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  overflow: auto;
+}
+.panel { padding: 12px; }
+.panel h3 { margin: 0 0 10px; font-size: 13px; }
+.panel label { display: block; margin-bottom: 8px; font-size: 11px; color: #a9a9b4; }
+.panel input, .panel select {
+  width: 100%;
+  margin-top: 3px;
+  padding: 4px 6px;
+  background: #1b1b20;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.panel .row { display: flex; gap: 6px; }
+.panel .row .small { flex: 1; }
+
+.cpp-preview {
+  margin-top: 20px;
+  padding: 12px;
+  background: #0e0e11;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-height: 40vh;
+  overflow: auto;
+  font: 12px/1.5 ui-monospace, monospace;
+  white-space: pre;
+}
