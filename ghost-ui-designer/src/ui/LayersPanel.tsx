@@ -1,18 +1,82 @@
 import { useStore } from '../app/store';
 import { EffectType, Layer, LayerShape } from '../model/scene';
 import { makeId } from '../model/defaults';
+import { MATERIALS, MaterialId } from '../model/materials';
 
 const SHAPES: [LayerShape, string][] = [
   ['ellipse', 'Círculo'], ['scalloped', 'Estriado'], ['polygon', 'Polígono'],
   ['roundRect', 'Redondeado'], ['rect', 'Rectángulo'], ['wedge', 'Punta'],
 ];
 const EFFECTS: [EffectType, string][] = [
-  ['dropShadow', 'sombra'], ['bevel', 'bisel'], ['dish', 'domo'], ['recess', 'hueco'],
-  ['env', 'entorno'], ['grooves', 'torneado'], ['brushed', 'cepillado'], ['spun', 'metal'],
-  ['knurl', 'moleteado'], ['rim', 'luz borde'],
-  ['specular', 'reflejo'], ['gradientOverlay', 'degradado'], ['noise', 'ruido'],
+  ['dropShadow', 'sombra'], ['contactShadow', 'contacto'], ['extrude', 'grosor'],
+  ['bevel', 'bisel'], ['chamfer', 'chaflán'], ['facet', 'facetas'], ['dish', 'domo'], ['recess', 'hueco'],
+  ['env', 'entorno'], ['chrome', 'cromo'], ['cylinder', 'cilindro'],
+  ['grooves', 'torneado'], ['brushed', 'cepillado'], ['spun', 'metal'],
+  ['knurl', 'moleteado'], ['rim', 'luz borde'], ['sheen', 'brillo ancho'],
+  ['specular', 'reflejo'], ['emissive', 'LED'], ['gradientOverlay', 'degradado'], ['noise', 'ruido'],
   ['innerShadow', 'sombra int'], ['glow', 'glow'],
 ];
+
+type ParamSpec =
+  | { key: string; label: string; min: number; max: number; step: number; def: number }
+  | { key: string; label: string; color: true; def: string }
+  | { key: string; label: string; bool: true; def: boolean };
+
+/** Parámetros editables por tipo de efecto (los reflejos tienen su propio editor). */
+const EFFECT_PARAMS: Partial<Record<EffectType, ParamSpec[]>> = {
+  dropShadow: [
+    { key: 'distance', label: 'Distancia', min: 0, max: 20, step: 0.5, def: 4 },
+    { key: 'blur', label: 'Desenfoque', min: 0, max: 40, step: 1, def: 8 },
+  ],
+  contactShadow: [
+    { key: 'size', label: 'Tamaño', min: 0.5, max: 10, step: 0.5, def: 3 },
+    { key: 'strength', label: 'Fuerza', min: 0, max: 1, step: 0.05, def: 0.8 },
+  ],
+  extrude: [{ key: 'height', label: 'Altura (px)', min: 1, max: 16, step: 1, def: 4 }],
+  bevel: [{ key: 'size', label: 'Tamaño', min: 0.5, max: 12, step: 0.5, def: 3 }],
+  chamfer: [
+    { key: 'steps', label: 'Anillos', min: 1, max: 5, step: 1, def: 3 },
+    { key: 'width', label: 'Ancho', min: 1, max: 8, step: 0.5, def: 3 },
+  ],
+  facet: [{ key: 'width', label: 'Ancho de cara', min: 0.1, max: 0.6, step: 0.02, def: 0.32 }],
+  dish: [{ key: 'offset', label: 'Desplazamiento', min: 0, max: 1, step: 0.05, def: 0.4 }],
+  recess: [
+    { key: 'depth', label: 'Profundidad', min: 0, max: 1, step: 0.05, def: 0.6 },
+    { key: 'lip', label: 'Labio', min: 0, max: 5, step: 0.2, def: 2.2 },
+  ],
+  chrome: [
+    { key: 'strength', label: 'Fuerza', min: 0, max: 1, step: 0.05, def: 1 },
+    { key: 'horizon', label: 'Horizonte', min: 0.2, max: 0.8, step: 0.02, def: 0.5 },
+    { key: 'curve', label: 'Curvatura (esfera)', min: 0, max: 1, step: 0.05, def: 1 },
+  ],
+  cylinder: [
+    { key: 'gloss', label: 'Brillo', min: 0, max: 2, step: 0.1, def: 1 },
+    { key: 'cap', label: 'Tapa', min: 0, max: 1, step: 0.05, def: 1 },
+  ],
+  grooves: [{ key: 'step', label: 'Paso', min: 1, max: 8, step: 0.2, def: 2.4 }],
+  knurl: [
+    { key: 'depth', label: 'Profundidad', min: 0.05, max: 0.4, step: 0.01, def: 0.16 },
+    { key: 'strength', label: 'Fuerza', min: 0, max: 1, step: 0.05, def: 0.5 },
+  ],
+  rim: [{ key: 'size', label: 'Tamaño', min: 0.5, max: 8, step: 0.5, def: 3 }],
+  sheen: [
+    { key: 'strength', label: 'Fuerza', min: 0, max: 1, step: 0.05, def: 0.35 },
+    { key: 'width', label: 'Ancho', min: 0.05, max: 0.6, step: 0.01, def: 0.35 },
+    { key: 'pos', label: 'Posición', min: 0, max: 1, step: 0.02, def: 0.3 },
+  ],
+  emissive: [
+    { key: 'color', label: 'Color', color: true, def: '#ff3020' },
+    { key: 'strength', label: 'Intensidad', min: 0, max: 1.5, step: 0.05, def: 1 },
+    { key: 'radius', label: 'Halo', min: 1, max: 5, step: 0.1, def: 2.2 },
+    { key: 'followValue', label: 'Enciende con el valor', bool: true, def: true },
+  ],
+  noise: [{ key: 'amount', label: 'Cantidad', min: 0, max: 0.4, step: 0.01, def: 0.08 }],
+  innerShadow: [
+    { key: 'distance', label: 'Distancia', min: 0, max: 12, step: 0.5, def: 3 },
+    { key: 'blur', label: 'Desenfoque', min: 0, max: 30, step: 1, def: 6 },
+  ],
+  glow: [{ key: 'blur', label: 'Desenfoque', min: 0, max: 40, step: 1, def: 12 }],
+};
 
 export function LayersPanel() {
   const scene = useStore((s) => s.scene);
@@ -25,6 +89,7 @@ export function LayersPanel() {
   const addEffect = useStore((s) => s.addEffect);
   const removeEffect = useStore((s) => s.removeEffect);
   const updateEffect = useStore((s) => s.updateEffect);
+  const setMaterial = useStore((s) => s.setMaterial);
 
   const control = scene.controls.find((c) => c.id === selectedId);
   if (!control) return null;
@@ -175,6 +240,17 @@ export function LayersPanel() {
               </div>
             )}
 
+            <label className="k3-field" style={{ marginTop: 6 }}>
+              <span>Material (preset)</span>
+              <select value="" onChange={(ev) => {
+                const m = MATERIALS.find((x) => x.id === (ev.target.value as MaterialId));
+                if (m) setMaterial(control.id, l.id, m.id, m.fill);
+              }}>
+                <option value="">Aplicar material…</option>
+                {MATERIALS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+              </select>
+            </label>
+
             <div className="chips" style={{ marginTop: 6 }}>
               {EFFECTS.map(([type, label]) => {
                 const on = l.effects.some((e) => e.type === type);
@@ -184,6 +260,36 @@ export function LayersPanel() {
                 );
               })}
             </div>
+
+            {/* Parámetros de los efectos activos */}
+            {l.effects.filter((e) => e.enabled && EFFECT_PARAMS[e.type]).map((e) => (
+              <div key={e.id} style={{ borderTop: '1px solid var(--line-soft)', paddingTop: 6, marginTop: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--muted)' }}>{EFFECTS.find((x) => x[0] === e.type)?.[1] ?? e.type}</span>
+                {EFFECT_PARAMS[e.type]!.map((p) => {
+                  if ('color' in p) {
+                    const v = typeof e.params[p.key] === 'string' ? (e.params[p.key] as string) : p.def;
+                    return (
+                      <label key={p.key} className="k3-field"><span>{p.label}</span>
+                        <input type="color" value={v.startsWith('#') ? v : p.def}
+                          onChange={(ev) => updateEffect(control.id, l.id, e.id, { ...e.params, [p.key]: ev.target.value })} /></label>
+                    );
+                  }
+                  if ('bool' in p) {
+                    const v = typeof e.params[p.key] === 'boolean' ? (e.params[p.key] as boolean) : p.def;
+                    return (
+                      <label key={p.key} className="chk"><input type="checkbox" checked={v}
+                        onChange={(ev) => updateEffect(control.id, l.id, e.id, { ...e.params, [p.key]: ev.target.checked })} /><span>{p.label}</span></label>
+                    );
+                  }
+                  const v = typeof e.params[p.key] === 'number' ? (e.params[p.key] as number) : p.def;
+                  return (
+                    <label key={p.key} className="k3-field"><span>{p.label} <b>{Number.isInteger(p.step) ? v : v.toFixed(2)}</b></span>
+                      <input type="range" min={p.min} max={p.max} step={p.step} value={v}
+                        onChange={(ev) => updateEffect(control.id, l.id, e.id, { ...e.params, [p.key]: Number(ev.target.value) })} /></label>
+                  );
+                })}
+              </div>
+            ))}
 
             {/* Luces / reflejos extra (cada reflejo con su ángulo) */}
             <div style={{ marginTop: 8 }}>

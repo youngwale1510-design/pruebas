@@ -5,6 +5,19 @@
 
 import { Effect, EffectType } from '../model/scene';
 import { LightVectors } from './light';
+import { parseColor, rgba, shade } from './color';
+
+/** Datos extra que el compositor pasa a los efectos (geometría/relleno de la capa). */
+export interface EffectHints {
+  lobes?: number;             // estrías (knurl)
+  sides?: number;             // lados del polígono (facet)
+  fill?: string;              // color de relleno de la capa (extrude, cylinder)
+  axisRad?: number;           // eje del cilindro (rad); por defecto el lado largo
+  tip?: { x: number; y: number }; // palanca: extremo donde va la tapa
+  pivot?: { x: number; y: number }; // palanca: punto de giro
+  r?: number;                 // palanca: radio de la cápsula
+  value?: number;             // valor del control (emissive followValue)
+}
 
 type Ctx = CanvasRenderingContext2D;
 type PathFn = (ctx: Ctx) => void;
@@ -445,18 +458,368 @@ export function drawKnurl(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: Light
   ctx.restore();
 }
 
+
+/** Pared lateral: la pieza tiene altura. Copias del contorno desplazadas hacia
+ *  abajo con sombreado lateral según la luz. Va DEBAJO del relleno. */
+export function drawExtrude(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors, fill?: string) {
+  const light = effLight(e, gl);
+  const height = Math.max(1, Math.round(num(e, 'height', 4) * (0.6 + 0.8 * (1 - (light.elev ?? 0.5)))));
+  const base = parseColor(fill);
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
+  // Iluminación de la pared: lado hacia la luz más claro, opuesto más oscuro.
+  const lx = cx - light.dx * r, ly = cy - light.dy * r, sx = cx + light.dx * r, sy = cy + light.dy * r;
+  ctx.save();
+  const g = ctx.createLinearGradient(lx, ly, sx, sy);
+  g.addColorStop(0, shade(base, 0.55 + 0.25 * light.intensity));
+  g.addColorStop(0.5, shade(base, 0.42));
+  g.addColorStop(1, shade(base, 0.22 + 0.15 * (light.fill ?? 0)));
+  ctx.fillStyle = g;
+  for (let i = height; i >= 1; i--) {
+    ctx.save();
+    ctx.translate(0, i);
+    pathFn(ctx);
+    ctx.fill();
+    ctx.restore();
+  }
+  // Oscurecimiento hacia la base de la pared (oclusión) + filo inferior.
+  ctx.save();
+  ctx.translate(0, height);
+  pathFn(ctx);
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+  ctx.stroke();
+  ctx.restore();
+  ctx.restore();
+}
+
+/** Oclusión de contacto: sombra corta y densa alrededor + sesgo a favor de la luz. */
+export function drawContactShadow(ctx: Ctx, pathFn: PathFn, e: Effect, gl: LightVectors) {
+  const light = effLight(e, gl);
+  const size = num(e, 'size', 3);
+  const strength = num(e, 'strength', 0.8);
+  ctx.save();
+  ctx.globalCompositeOperation = 'multiply';
+  // 1) ambiente: todo alrededor
+  ctx.shadowColor = `rgba(0,0,0,${0.6 * strength})`;
+  ctx.shadowBlur = size * 1.6;
+  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = size * 0.4;
+  ctx.fillStyle = 'rgba(0,0,0,1)';
+  pathFn(ctx); ctx.fill();
+  // 2) contacto direccional (muy corto, muy oscuro)
+  ctx.shadowColor = `rgba(0,0,0,${0.9 * strength})`;
+  ctx.shadowBlur = size * 0.8;
+  ctx.shadowOffsetX = light.dx * size * 0.8; ctx.shadowOffsetY = light.dy * size * 0.8 + size * 0.5;
+  pathFn(ctx); ctx.fill();
+  ctx.restore();
+}
+
+/** Cilindro: sombreado transversal al eje (oscuro-claro-oscuro con franja
+ *  especular) y tapa plana en el extremo `tip` si se conoce (palanca). */
+export function drawCylinder(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors, h: EffectHints) {
+  const light = effLight(e, gl);
+  const inten = light.intensity;
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+  let axis = h.axisRad;
+  if (axis == null) {
+    if (h.tip && h.r != null) axis = Math.atan2(h.tip.y - cy, h.tip.x - cx);
+    else axis = b.h >= b.w ? Math.PI / 2 : 0;
+  }
+  // perpendicular al eje
+  const px = -Math.sin(axis), py = Math.cos(axis);
+  const half = (h.r != null ? h.r : Math.min(b.w, b.h) / 2);
+  // Escorzo: cuanto más corta la palanca (apunta a la cámara), menos sombreado
+  // transversal y la tapa se abre hasta ser un círculo completo.
+  const len = h.tip && h.pivot ? Math.hypot(h.tip.x - h.pivot.x, h.tip.y - h.pivot.y) : Infinity;
+  const k = h.r != null && Number.isFinite(len) ? Math.min(1, len / (h.r * 2.5)) : 1;
+  // ¿hacia qué lado transversal cae la luz? (dx,dy) apunta DESDE la luz.
+  const side = -(light.dx * px + light.dy * py); // >0: la luz viene por +perp
+  const hiT = 0.5 + 0.22 * side; // posición de la franja brillante (0..1 a lo ancho)
+  const x0 = cx - px * half, y0 = cy - py * half, x1 = cx + px * half, y1 = cy + py * half;
+  ctx.save();
+  pathFn(ctx);
+  ctx.clip();
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  const dark = `rgba(0,0,0,${(0.35 + 0.3 * inten) * k})`;
+  g.addColorStop(0, side > 0 ? `rgba(0,0,0,${(0.15 + 0.2 * inten) * k})` : dark);
+  g.addColorStop(Math.max(0.02, hiT - 0.22), 'rgba(0,0,0,0)');
+  g.addColorStop(hiT, `rgba(255,255,255,${(0.35 + 0.45 * inten) * k})`);
+  g.addColorStop(Math.min(0.98, hiT + 0.16), 'rgba(0,0,0,0)');
+  g.addColorStop(1, side > 0 ? dark : `rgba(0,0,0,${(0.15 + 0.2 * inten) * k})`);
+  ctx.globalCompositeOperation = 'overlay';
+  ctx.fillStyle = g;
+  ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
+  // franja especular nítida
+  const gs = ctx.createLinearGradient(x0, y0, x1, y1);
+  gs.addColorStop(Math.max(0, hiT - 0.06), 'rgba(255,255,255,0)');
+  gs.addColorStop(hiT, `rgba(255,255,255,${(0.25 + 0.4 * inten) * num(e, 'gloss', 1) * k})`);
+  gs.addColorStop(Math.min(1, hiT + 0.05), 'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = gs;
+  ctx.fillRect(b.x - 2, b.y - 2, b.w + 4, b.h + 4);
+  // Tapa plana del extremo (elipse en escorzo), más clara y con filo brillante.
+  if (h.tip && h.r != null && num(e, 'cap', 1) > 0) {
+    const r = h.r, squash = 1 - (1 - 0.45 * num(e, 'cap', 1)) * k;
+    const base = parseColor(h.fill);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.beginPath();
+    ctx.ellipse(h.tip.x, h.tip.y, r * 0.96, r * squash, axis + Math.PI / 2, 0, Math.PI * 2);
+    const cg = ctx.createLinearGradient(h.tip.x - light.dx * r, h.tip.y - light.dy * r, h.tip.x + light.dx * r, h.tip.y + light.dy * r);
+    cg.addColorStop(0, shade(base, 1.45));
+    cg.addColorStop(1, shade(base, 0.95));
+    ctx.fillStyle = cg;
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = `rgba(255,255,255,${0.3 + 0.4 * inten})`;
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** Facetas planas: cada lado del polígono con un tono uniforme según su
+ *  orientación respecto a la luz, con borde duro entre caras. */
+export function drawFacet(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors, sides = 6) {
+  const light = effLight(e, gl);
+  const inten = light.intensity;
+  const n = Math.max(3, Math.round(sides));
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, rx = b.w / 2, ry = b.h / 2;
+  const inner = 1 - num(e, 'width', 0.32); // anillo de caras; el centro queda plano
+  const lit = { x: -light.dx, y: -light.dy };
+  ctx.save();
+  pathFn(ctx);
+  ctx.clip();
+  for (let i = 0; i < n; i++) {
+    const a0 = -Math.PI / 2 + (i / n) * Math.PI * 2, a1 = -Math.PI / 2 + ((i + 1) / n) * Math.PI * 2;
+    const v0 = { x: cx + Math.cos(a0) * rx, y: cy + Math.sin(a0) * ry };
+    const v1 = { x: cx + Math.cos(a1) * rx, y: cy + Math.sin(a1) * ry };
+    const i0 = { x: cx + Math.cos(a0) * rx * inner, y: cy + Math.sin(a0) * ry * inner };
+    const i1 = { x: cx + Math.cos(a1) * rx * inner, y: cy + Math.sin(a1) * ry * inner };
+    const mid = (a0 + a1) / 2;
+    const nx = Math.cos(mid), ny = Math.sin(mid);
+    const facing = nx * lit.x + ny * lit.y; // 1 mira a la luz
+    ctx.beginPath();
+    ctx.moveTo(v0.x, v0.y); ctx.lineTo(v1.x, v1.y); ctx.lineTo(i1.x, i1.y); ctx.lineTo(i0.x, i0.y); ctx.closePath();
+    if (facing > 0) {
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = `rgba(255,255,255,${facing * (0.18 + 0.4 * inten)})`;
+    } else {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.fillStyle = `rgba(0,0,0,${-facing * (0.25 + 0.35 * inten) * (1 - 0.5 * (light.fill ?? 0))})`;
+    }
+    ctx.fill();
+    // arista dura
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = facing > 0 ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(i0.x, i0.y); ctx.lineTo(i1.x, i1.y); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** Chaflán escalonado: N anillos concéntricos, cada uno con su gradiente de
+ *  luz y borde duro (alternando subida/bajada). */
+export function drawChamfer(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
+  const light = effLight(e, gl);
+  const inten = light.intensity;
+  const steps = Math.max(1, Math.round(num(e, 'steps', 3)));
+  const width = num(e, 'width', 3);
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
+  const lx = cx - light.dx * r, ly = cy - light.dy * r, sx = cx + light.dx * r, sy = cy + light.dy * r;
+  ctx.save();
+  pathFn(ctx);
+  ctx.clip();
+  for (let k = 0; k < steps; k++) {
+    const s = 1 - (k * width) / r;
+    if (s <= 0.05) break;
+    const up = k % 2 === 0;
+    const g = ctx.createLinearGradient(lx, ly, sx, sy);
+    const hi = `rgba(255,255,255,${0.25 + 0.5 * inten})`, lo = `rgba(0,0,0,${0.3 + 0.45 * inten})`;
+    g.addColorStop(0, up ? hi : lo);
+    g.addColorStop(0.5, up ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.08)');
+    g.addColorStop(1, up ? lo : hi);
+    ctx.save();
+    ctx.translate(cx, cy); ctx.scale(s, s); ctx.translate(-cx, -cy);
+    pathFn(ctx);
+    ctx.restore();
+    ctx.lineWidth = width / s;
+    ctx.strokeStyle = g;
+    ctx.stroke();
+    // arista dura interior
+    ctx.save();
+    ctx.translate(cx, cy); ctx.scale(s - (width * 0.5) / r, s - (width * 0.5) / r); ctx.translate(-cx, -cy);
+    pathFn(ctx);
+    ctx.restore();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = up ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.25)';
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/** Cromo: cielo/suelo con horizonte duro, ligero tinte frío arriba/cálido abajo
+ *  y un reflejo deformado del lado de la luz. */
+export function drawChrome(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
+  const light = effLight(e, gl);
+  const inten = light.intensity;
+  const strength = num(e, 'strength', 1);
+  const horizon = num(e, 'horizon', 0.5);
+  const curve = num(e, 'curve', 1); // 0 = horizonte recto (placas), 1 = curvado (esferas)
+  ctx.save();
+  pathFn(ctx);
+  ctx.clip();
+  const cxx = b.x + b.w / 2, cyy = b.y + b.h / 2, rr = Math.max(b.w, b.h) / 2;
+  let g: CanvasGradient;
+  let th: number; // posición (0..1) del horizonte en el gradiente
+  if (curve > 0.01) {
+    // Centro muy por debajo de la pieza: el horizonte queda como un arco que
+    // sube en el centro y cae en los lados, como el reflejo en una bola.
+    const dist = rr * (1.2 + 4 * (1 - curve));
+    const R = dist + rr;
+    g = ctx.createRadialGradient(cxx, cyy + dist, 0, cxx, cyy + dist, R);
+    th = (dist - rr * (2 * horizon - 1)) / R;
+    // Del centro hacia fuera: suelo -> horizonte -> cielo
+    g.addColorStop(0, rgba([200, 190, 180], 0.35 * strength));
+    g.addColorStop(Math.max(0.01, th - 0.14), rgba([60, 55, 55], 0.5 * strength));
+    g.addColorStop(Math.max(0.02, th - 0.02), rgba([20, 18, 22], 0.8 * strength));
+    g.addColorStop(Math.min(0.97, th + 0.02), rgba([150, 165, 190], 0.35 * strength));
+    g.addColorStop(Math.min(0.98, th + 0.1), rgba([200, 212, 230], 0.5 * strength));
+    g.addColorStop(1, rgba([235, 242, 255], 0.9 * strength));
+  } else {
+    g = ctx.createLinearGradient(b.x, b.y, b.x, b.y + b.h);
+    th = horizon;
+    g.addColorStop(0, rgba([235, 242, 255], 0.9 * strength));
+    g.addColorStop(Math.max(0.01, th - 0.18), rgba([200, 212, 230], 0.5 * strength));
+    g.addColorStop(Math.max(0.02, th - 0.04), rgba([150, 165, 190], 0.35 * strength));
+    g.addColorStop(Math.min(0.97, th + 0.04), rgba([20, 18, 22], 0.8 * strength));
+    g.addColorStop(Math.min(0.98, th + 0.16), rgba([60, 55, 55], 0.5 * strength));
+    g.addColorStop(Math.min(0.99, th + 0.3), rgba([120, 110, 100], 0.25 * strength));
+    g.addColorStop(1, rgba([200, 190, 180], 0.35 * strength));
+  }
+  ctx.globalCompositeOperation = 'hard-light';
+  ctx.fillStyle = g;
+  ctx.fillRect(b.x, b.y, b.w, b.h);
+  // reflejo deformado (ventana) hacia la luz
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
+  const hx = cx - light.dx * r * 0.5, hy = cy - light.dy * r * 0.5;
+  ctx.globalCompositeOperation = 'screen';
+  ctx.translate(hx, hy);
+  ctx.rotate(Math.atan2(light.dy, light.dx) + Math.PI / 2);
+  ctx.scale(1, 0.45);
+  const rg = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.55);
+  rg.addColorStop(0, `rgba(255,255,255,${(0.6 + 0.3 * inten) * strength})`);
+  rg.addColorStop(0.5, `rgba(255,255,255,${0.25 * strength})`);
+  rg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = rg;
+  ctx.beginPath(); ctx.arc(0, 0, r * 0.55, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+/** LED/emisivo — parte de DEBAJO: bloom en dos radios que tiñe lo que hay bajo. */
+export function drawEmissiveBloom(ctx: Ctx, b: Box, e: Effect, value?: number) {
+  const on = bool(e, 'followValue', false) ? (value ?? 1) : 1;
+  const strength = num(e, 'strength', 1) * on;
+  if (strength <= 0.01) return;
+  const col = parseColor(str(e, 'color', '#ff3020'));
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
+  const radius = num(e, 'radius', 2.2);
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  const g1 = ctx.createRadialGradient(cx, cy, r * 0.5, cx, cy, r * radius);
+  g1.addColorStop(0, rgba(col, 0.55 * strength));
+  g1.addColorStop(0.35, rgba(col, 0.22 * strength));
+  g1.addColorStop(1, rgba(col, 0));
+  ctx.fillStyle = g1;
+  ctx.fillRect(cx - r * radius, cy - r * radius, r * radius * 2, r * radius * 2);
+  // reflejo del LED sobre el panel (mancha secundaria hacia abajo)
+  const g2 = ctx.createRadialGradient(cx, cy + r * 0.9, 0, cx, cy + r * 0.9, r * 1.6);
+  g2.addColorStop(0, rgba(col, 0.25 * strength));
+  g2.addColorStop(1, rgba(col, 0));
+  ctx.fillStyle = g2;
+  ctx.fillRect(cx - r * 2, cy - r * 2, r * 4, r * 4);
+  ctx.restore();
+}
+
+/** LED/emisivo — parte de ENCIMA: núcleo caliente + color saturado + cúpula. */
+export function drawEmissiveCore(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors, value?: number) {
+  const light = effLight(e, gl);
+  const on = bool(e, 'followValue', false) ? (value ?? 1) : 1;
+  const strength = num(e, 'strength', 1) * on;
+  const col = parseColor(str(e, 'color', '#ff3020'));
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
+  ctx.save();
+  pathFn(ctx);
+  ctx.clip();
+  if (strength > 0.01) {
+    ctx.globalCompositeOperation = 'screen';
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0, rgba([255, 255, 255], 0.95 * strength));
+    g.addColorStop(0.22, rgba(shadeRGB(col, 1.35), 0.95 * strength));
+    g.addColorStop(0.6, rgba(col, 0.8 * strength));
+    g.addColorStop(1, rgba(col, 0.35 * strength));
+    ctx.fillStyle = g;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+  }
+  // cúpula de cristal: reflejo pequeño hacia la luz + borde oscuro
+  const hx = cx - light.dx * r * 0.45, hy = cy - light.dy * r * 0.45;
+  const gs = ctx.createRadialGradient(hx, hy, 0, hx, hy, r * 0.35);
+  gs.addColorStop(0, `rgba(255,255,255,${0.7 + 0.2 * light.intensity})`);
+  gs.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = gs;
+  ctx.fillRect(b.x, b.y, b.w, b.h);
+  const ge = ctx.createRadialGradient(cx, cy, r * 0.7, cx, cy, r);
+  ge.addColorStop(0, 'rgba(0,0,0,0)');
+  ge.addColorStop(1, `rgba(0,0,0,${0.45 - 0.2 * strength})`);
+  ctx.globalCompositeOperation = 'multiply';
+  ctx.fillStyle = ge;
+  ctx.fillRect(b.x, b.y, b.w, b.h);
+  ctx.restore();
+}
+
+function shadeRGB(c: [number, number, number], k: number): [number, number, number] {
+  const f = (v: number) => Math.max(0, Math.min(255, Math.round(k <= 1 ? v * k : v + (255 - v) * (k - 1))));
+  return [f(c[0]), f(c[1]), f(c[2])];
+}
+
+/** Banda ancha y suave de luz que cruza la capa (paneles, marcos). */
+export function drawSheen(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
+  const light = effLight(e, gl);
+  const strength = num(e, 'strength', 0.35) * (0.5 + 0.5 * light.intensity);
+  const width = num(e, 'width', 0.35);
+  const pos = num(e, 'pos', 0.3);
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) * 0.75;
+  const lx = cx - light.dx * r, ly = cy - light.dy * r, sx = cx + light.dx * r, sy = cy + light.dy * r;
+  ctx.save();
+  pathFn(ctx);
+  ctx.clip();
+  const g = ctx.createLinearGradient(lx, ly, sx, sy);
+  g.addColorStop(Math.max(0, pos - width), 'rgba(255,255,255,0)');
+  g.addColorStop(pos, `rgba(255,255,255,${strength})`);
+  g.addColorStop(Math.min(1, pos + width * 0.8), 'rgba(255,255,255,0)');
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = g;
+  ctx.fillRect(b.x, b.y, b.w, b.h);
+  ctx.restore();
+}
+
 /** Aplica los efectos de una capa que van DEBAJO del relleno (sombras/glow). */
 export function applyEffectsBelow(
   ctx: Ctx,
   pathFn: PathFn,
   effects: Effect[],
   light: LightVectors,
+  bounds?: Box,
+  hints: EffectHints = {},
 ) {
-  for (const e of effects) {
-    if (!e.enabled) continue;
-    if (e.type === 'dropShadow') drawDropShadow(ctx, pathFn, e, light);
-    else if (e.type === 'glow') drawGlow(ctx, pathFn, e);
-  }
+  const b = bounds ?? { x: 0, y: 0, w: 0, h: 0 };
+  const run = (type: EffectType, fn: (e: Effect) => void) => {
+    for (const e of effects) if (e.enabled && e.type === type) fn(e);
+  };
+  // Orden: bloom/glow (más lejos) -> sombra larga -> contacto -> pared (encima de las sombras).
+  run('emissive', (e) => drawEmissiveBloom(ctx, b, e, hints.value));
+  run('glow', (e) => drawGlow(ctx, pathFn, e));
+  run('dropShadow', (e) => drawDropShadow(ctx, pathFn, e, light));
+  run('contactShadow', (e) => drawContactShadow(ctx, pathFn, e, light));
+  run('extrude', (e) => drawExtrude(ctx, pathFn, b, e, light, hints.fill));
 }
 
 /** Aplica los efectos que van ENCIMA del relleno (bisel, overlays, inner shadow, ruido). */
@@ -466,7 +829,7 @@ export function applyEffectsAbove(
   bounds: { x: number; y: number; w: number; h: number },
   effects: Effect[],
   light: LightVectors,
-  lobesHint = 24,
+  hints: EffectHints = {},
 ) {
   // Orden importa: material -> reflejo/torneado -> luz direccional -> bisel -> hueco -> ruido.
   const run = (type: EffectType, fn: (e: Effect) => void) => {
@@ -474,13 +837,19 @@ export function applyEffectsAbove(
   };
   run('gradientOverlay', (e) => drawGradientOverlay(ctx, pathFn, bounds, e));
   run('env', (e) => drawEnv(ctx, pathFn, bounds, e));
+  run('chrome', (e) => drawChrome(ctx, pathFn, bounds, e, light));
   run('grooves', (e) => drawGrooves(ctx, pathFn, bounds, e));
   run('brushed', () => drawBrushed(ctx, pathFn, bounds));
-  run('knurl', (e) => drawKnurl(ctx, pathFn, bounds, e, light, lobesHint));
+  run('knurl', (e) => drawKnurl(ctx, pathFn, bounds, e, light, hints.lobes ?? 24));
+  run('facet', (e) => drawFacet(ctx, pathFn, bounds, e, light, hints.sides ?? 6));
   run('spun', (e) => drawSpun(ctx, pathFn, bounds, e, light));
   run('dish', (e) => drawDish(ctx, pathFn, bounds, e, light));
+  run('cylinder', (e) => drawCylinder(ctx, pathFn, bounds, e, light, hints));
+  run('sheen', (e) => drawSheen(ctx, pathFn, bounds, e, light));
   run('specular', (e) => drawSpecular(ctx, pathFn, bounds, e, light));
+  run('emissive', (e) => drawEmissiveCore(ctx, pathFn, bounds, e, light, hints.value));
   run('bevel', (e) => drawBevel(ctx, pathFn, bounds, e, light));
+  run('chamfer', (e) => drawChamfer(ctx, pathFn, bounds, e, light));
   run('recess', (e) => drawRecess(ctx, pathFn, bounds, e, light));
   run('rim', (e) => drawRim(ctx, pathFn, bounds, e, light));
   run('innerShadow', (e) => drawInnerShadow(ctx, pathFn, bounds, e, light));

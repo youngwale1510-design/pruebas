@@ -3,7 +3,7 @@
 // por el rasterizador de filmstrips -> el editor se ve idéntico al plugin.
 
 import { Control, Layer, SceneDocument } from '../model/scene';
-import { applyEffectsAbove, applyEffectsBelow } from './effects';
+import { EffectHints, applyEffectsAbove, applyEffectsBelow } from './effects';
 import { LightVectors, resolveLight, rotateLight, rotationForValue } from './light';
 import { ImageCache, drawImageCover } from './textures';
 
@@ -160,12 +160,18 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
 
   let box = layerBox(w, h, layer);
   let pathFn = (c: Ctx) => tracePath(c, box, layer);
+  const hints: EffectHints = { lobes: layer.lobes ?? 24, sides: layer.sides ?? 6, fill: layer.fill, value };
   if (mode === 'lever') {
     // Palanca de frente: cápsula pivote→punta. En el centro del recorrido la
     // punta coincide con el pivote y solo se ve el remate (apunta a la cámara).
     const g = leverGeometry(w, h, layer, value);
     box = g.bounds;
     pathFn = (c: Ctx) => traceCapsule(c, g.pivot, g.tip, g.r);
+    hints.tip = g.tip;
+    hints.pivot = g.pivot;
+    hints.r = g.r;
+    const len = Math.hypot(g.tip.x - g.pivot.x, g.tip.y - g.pivot.y);
+    hints.axisRad = len > 0.5 ? Math.atan2(g.tip.y - g.pivot.y, g.tip.x - g.pivot.x) : Math.PI / 2;
   } else if (mode === 'translate') {
     const off = travelOffset(w, h, layer, value);
     box = { ...box, x: box.x + off.dx, y: box.y + off.dy };
@@ -174,7 +180,7 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
   // Sombra proyectada / glow en espacio FIJO (no giran con la pieza).
   ctx.save();
   ctx.globalAlpha = layer.opacity;
-  applyEffectsBelow(ctx, pathFn, layer.effects, light);
+  applyEffectsBelow(ctx, pathFn, layer.effects, light, box, hints);
   ctx.restore();
 
   ctx.save();
@@ -208,7 +214,7 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
     ctx.fillStyle = layer.fill ?? '#333333';
     ctx.fill();
   }
-  applyEffectsAbove(ctx, pathFn, box, layer.effects, L, layer.lobes ?? 24);
+  applyEffectsAbove(ctx, pathFn, box, layer.effects, L, hints);
   ctx.restore();
 }
 

@@ -30,7 +30,16 @@ export type EffectType =
   | 'brushed'    // metal cepillado
   | 'specular'   // brillo especular nítido
   | 'rim'        // luz de borde / fresnel (el filo atrapa luz alrededor)
-  | 'knurl';     // moleteado: cada estría con su brillo/sombra
+  | 'knurl'      // moleteado: cada estría con su brillo/sombra
+  // realismo "producto" (grosor, contacto, cilindros, facetas, cromo, LEDs)
+  | 'extrude'       // pared lateral: la pieza tiene altura (vista un poco desde arriba)
+  | 'contactShadow' // oclusión corta y oscura donde la pieza apoya
+  | 'cylinder'      // sombreado transversal de vástago/cápsula + tapa plana
+  | 'facet'         // polígono con caras planas, cada una con su tono (tuerca)
+  | 'chamfer'       // bisel escalonado en N anillos con borde duro
+  | 'chrome'        // cromo: horizonte duro cielo/suelo + reflejo deformado
+  | 'emissive'      // LED: núcleo caliente + bloom que tiñe lo de debajo
+  | 'sheen';        // banda ancha y suave de luz (paneles, marcos)
 
 export interface Effect {
   id: string;

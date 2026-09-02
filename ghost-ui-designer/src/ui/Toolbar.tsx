@@ -44,6 +44,7 @@ export function Toolbar() {
       <button onClick={addKnob}>+ Knob</button>
       <button onClick={() => addSwitch('slide')}>+ Switch</button>
       <button onClick={() => addSwitch('toggle')}>+ Palanca</button>
+      <button onClick={() => addSwitch('led')}>+ LED</button>
       <button onClick={preview}>Vista previa C++</button>
       <button onClick={exportFilmstrip}>Exportar filmstrip</button>
       <button onClick={doExport}>Exportar bundle</button>
