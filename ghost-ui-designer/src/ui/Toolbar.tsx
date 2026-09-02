@@ -1,8 +1,9 @@
 import { useStore } from '../app/store';
-import { exportBundle } from '../app/exportBundle';
+import { exportBundle, exportControlFilmstripPng } from '../app/exportBundle';
 
 export function Toolbar() {
   const scene = useStore((s) => s.scene);
+  const selectedId = useStore((s) => s.selectedId);
   const addKnob = useStore((s) => s.addKnob);
   const setScene = useStore((s) => s.setScene);
   const setPreview = useStore((s) => s.setPreview);
@@ -29,11 +30,19 @@ export function Toolbar() {
     }
   };
 
+  const exportFilmstrip = async () => {
+    const id = selectedId ?? scene.controls[0]?.id;
+    if (!id) { alert('Selecciona un control primero.'); return; }
+    const p = await exportControlFilmstripPng(scene, id);
+    if (p) alert('Filmstrip guardado:\n' + p);
+  };
+
   return (
     <div className="toolbar">
       <strong>Ghost UI Designer</strong>
       <button onClick={addKnob}>+ Knob</button>
       <button onClick={preview}>Vista previa C++</button>
+      <button onClick={exportFilmstrip}>Exportar filmstrip</button>
       <button onClick={doExport}>Exportar bundle</button>
       <span className="spacer" />
       <button onClick={openProject}>Abrir</button>

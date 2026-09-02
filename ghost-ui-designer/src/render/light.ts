@@ -12,6 +12,8 @@ export interface LightVectors {
   elev: number;
   /** Multiplicador de longitud de sombra según la elevación. */
   lenK: number;
+  /** Luz de relleno 0..1 (levanta el lado en sombra). */
+  fill: number;
 }
 
 export function resolveLight(light: LightSource): LightVectors {
@@ -23,6 +25,7 @@ export function resolveLight(light: LightSource): LightVectors {
     intensity: Math.max(0, Math.min(1, light.intensity)),
     elev,
     lenK: 0.5 + (1 - elev) * 1.6, // rasante = sombras largas
+    fill: Math.max(0, Math.min(1, light.fill ?? 0)),
   };
 }
 

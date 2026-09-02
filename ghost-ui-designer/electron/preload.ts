@@ -12,6 +12,7 @@ const api: GhostApi = {
   exportBundle: (scene, assets) =>
     ipcRenderer.invoke(IPC.exportBundle, scene, assets),
   importImage: () => ipcRenderer.invoke(IPC.importImage),
+  saveImage: (dataUri, suggestedName) => ipcRenderer.invoke(IPC.saveImage, dataUri, suggestedName),
 };
 
 contextBridge.exposeInMainWorld('ghost', api);

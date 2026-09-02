@@ -89,6 +89,12 @@ export function LayersPanel() {
               </label>
             )}
 
+            <label className="chk" style={{ marginTop: 6 }}>
+              <input type="checkbox" checked={l.anim?.mode === 'rotate'}
+                onChange={(ev) => updateLayer(control.id, l.id, { anim: ev.target.checked ? { mode: 'rotate', minDeg: -150, maxDeg: 150 } : { mode: 'none' } })} />
+              <span>Gira con el valor</span>
+            </label>
+
             <div className="chips" style={{ marginTop: 6 }}>
               {EFFECTS.map(([type, label]) => {
                 const on = l.effects.some((e) => e.type === type);

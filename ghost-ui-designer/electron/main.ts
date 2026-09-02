@@ -107,23 +107,38 @@ ipcMain.handle(
 ipcMain.handle(IPC.importImage, async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({
     properties: ['openFile'],
-    filters: [{ name: 'Imagen (PNG)', extensions: ['png'] }],
-    title: 'Importar filmstrip / imagen (PNG)',
+    filters: [{ name: 'Imagen', extensions: ['png', 'jpg', 'jpeg', 'webp'] }],
+    title: 'Importar imagen (textura o filmstrip)',
   });
   if (canceled || filePaths.length === 0) return null;
-  const buf = await readFile(filePaths[0]);
-  // Dimensiones desde la cabecera PNG (IHDR): ancho en 16..20, alto en 20..24 (big-endian).
+  const p = filePaths[0];
+  const buf = await readFile(p);
+  const ext = path.extname(p).toLowerCase();
+  const mime = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'image/png';
+  // Dimensiones desde la cabecera PNG (IHDR) si es PNG; para otros formatos las
+  // resuelve el renderer al cargar la imagen.
   let width = 0, height = 0;
-  if (buf.length > 24 && buf.toString('ascii', 12, 16) === 'IHDR') {
+  if (mime === 'image/png' && buf.length > 24 && buf.toString('ascii', 12, 16) === 'IHDR') {
     width = buf.readUInt32BE(16);
     height = buf.readUInt32BE(20);
   }
   return {
-    name: path.basename(filePaths[0]),
-    dataUri: `data:image/png;base64,${buf.toString('base64')}`,
+    name: path.basename(p),
+    dataUri: `data:${mime};base64,${buf.toString('base64')}`,
     width,
     height,
   };
+});
+
+ipcMain.handle(IPC.saveImage, async (_e, dataUri: string, suggestedName: string) => {
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    defaultPath: suggestedName || 'filmstrip.png',
+    filters: [{ name: 'PNG', extensions: ['png'] }],
+  });
+  if (canceled || !filePath) return null;
+  const b64 = dataUri.replace(/^data:image\/\w+;base64,/, '');
+  await writeFile(filePath, Buffer.from(b64, 'base64'));
+  return filePath;
 });
 
 app.whenReady().then(createWindow);

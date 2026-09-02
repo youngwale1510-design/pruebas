@@ -153,6 +153,7 @@ export interface LightSource {
   angleDeg: number; // dirección de la luz global (0 = derecha, 90 = abajo)
   intensity: number; // 0..1
   elev?: number; // altura 0..1 (rasante..cenital); por defecto 0.5
+  fill?: number; // luz de relleno 0..1: levanta el lado en sombra (evita negro puro)
 }
 
 export interface SceneDocument {

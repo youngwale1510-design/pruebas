@@ -55,6 +55,7 @@ export function defaultKnobLayers(): Layer[] {
       shape: 'scalloped',
       lobes: 22,
       fill: '#1c1c20',
+      anim: { mode: 'rotate', minDeg: -150, maxDeg: 150 },
       effects: [
         fx('dropShadow', { distance: 6, blur: 14, color: 'rgba(0,0,0,0.6)', useLight: true }),
         fx('bevel', { size: 6 }),
@@ -67,6 +68,7 @@ export function defaultKnobLayers(): Layer[] {
     layer('Cap', {
       inset: 0.22,
       fill: '#b6b9be',
+      anim: { mode: 'rotate', minDeg: -150, maxDeg: 150 },
       effects: [
         fx('env', { sky: 'rgba(255,255,255,0.75)', ground: 'rgba(0,0,0,0.6)' }),
         fx('grooves', { step: 2.2 }),
@@ -81,6 +83,7 @@ export function defaultKnobLayers(): Layer[] {
     layer('Hub', {
       inset: 0.46,
       fill: '#9a9da2',
+      anim: { mode: 'rotate', minDeg: -150, maxDeg: 150 },
       effects: [
         fx('grooves', { step: 1.6 }),
         fx('dish', { offset: 0.4 }),

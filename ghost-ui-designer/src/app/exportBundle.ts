@@ -5,7 +5,7 @@
 
 import { SceneDocument } from '../model/scene';
 import { exportControlFilmstrip, FilmstripPng } from '../render/dom';
-import { bitmapFile, collectBitmapResources } from '../codegen/iplug2/resources';
+import { bitmapFile, collectBitmapResources, controlFrames } from '../codegen/iplug2/resources';
 import { Orientation } from '../render/filmstrip';
 import { bakeKnobFilmstrip } from '../render3d/bake';
 import { preloadTextures } from '../render/textures';
@@ -36,4 +36,24 @@ export async function buildFilmstripAssets(scene: SceneDocument): Promise<Filmst
 export async function exportBundle(scene: SceneDocument) {
   const assets = await buildFilmstripAssets(scene);
   return window.ghost.exportBundle(scene, assets);
+}
+
+/** Genera el filmstrip de UN control y lo guarda como PNG (diálogo). */
+export async function exportControlFilmstripPng(scene: SceneDocument, controlId: string) {
+  const c = scene.controls.find((x) => x.id === controlId);
+  if (!c) return null;
+  const frames = controlFrames(c);
+  let dataUri: string;
+  const imported = c.props.filmstripDataUri as string | undefined;
+  if (imported) {
+    dataUri = imported;
+  } else if (c.knob3d) {
+    const frameSize = Math.max(64, Math.round(Math.max(c.rect.w, c.rect.h)));
+    dataUri = bakeKnobFilmstrip(c.knob3d, frameSize, 2).dataUri;
+  } else {
+    const images = await preloadTextures([c]);
+    const orientation = (c.props.orientation as Orientation) ?? 'vertical';
+    dataUri = exportControlFilmstrip(c, scene, frames, orientation, bitmapFile(c.id), images).dataUri;
+  }
+  return window.ghost.saveImage(dataUri, bitmapFile(c.id));
 }

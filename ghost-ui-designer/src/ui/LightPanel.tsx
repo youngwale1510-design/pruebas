@@ -7,6 +7,7 @@ export function LightPanel() {
   const previewValue = useStore((s) => s.previewValue);
   const setPreviewValue = useStore((s) => s.setPreviewValue);
   const elev = light.elev ?? 0.5;
+  const fill = light.fill ?? 0;
 
   return (
     <div className="panel">
@@ -30,6 +31,13 @@ export function LightPanel() {
         <input
           type="range" min={0} max={100} value={Math.round(elev * 100)}
           onChange={(e) => setLight({ elev: Number(e.target.value) / 100 })}
+        />
+      </label>
+      <label>
+        Relleno (luz opuesta) <b>{fill.toFixed(2)}</b>
+        <input
+          type="range" min={0} max={100} value={Math.round(fill * 100)}
+          onChange={(e) => setLight({ fill: Number(e.target.value) / 100 })}
         />
       </label>
       <label>

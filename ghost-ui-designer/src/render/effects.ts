@@ -112,11 +112,12 @@ export function drawBevel(
   ctx.clip();
   ctx.globalCompositeOperation = 'source-atop';
 
-  // 1) Reiluminado de la cara.
+  // 1) Reiluminado de la cara (la luz de relleno levanta el lado en sombra).
+  const fill = light.fill ?? 0;
   const g = ctx.createLinearGradient(lx, ly, sx, sy);
   g.addColorStop(0, str(e, 'highlight', `rgba(255,255,255,${0.15 + 0.55 * inten})`));
   g.addColorStop(0.5, 'rgba(0,0,0,0)');
-  g.addColorStop(1, str(e, 'shadow', `rgba(0,0,0,${0.15 + 0.6 * inten})`));
+  g.addColorStop(1, str(e, 'shadow', `rgba(0,0,0,${(0.15 + 0.6 * inten) * (1 - 0.6 * fill)})`));
   ctx.fillStyle = g;
   ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
 
@@ -286,15 +287,26 @@ export function drawDish(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightV
   pathFn(ctx);
   ctx.clip();
   const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2, inten = light.intensity;
+  const fill = light.fill ?? 0;
   const off = r * num(e, 'offset', 0.4);
   const hx = cx - light.dx * off, hy = cy - light.dy * off;
   const g = ctx.createRadialGradient(hx, hy, 0, hx, hy, r * 1.2);
   g.addColorStop(0, `rgba(255,255,255,${0.16 + 0.34 * inten})`);
   g.addColorStop(0.45, 'rgba(0,0,0,0)');
-  g.addColorStop(1, `rgba(0,0,0,${0.22 + 0.3 * inten})`);
+  g.addColorStop(1, `rgba(0,0,0,${(0.22 + 0.3 * inten) * (1 - 0.7 * fill)})`); // relleno levanta la sombra
   ctx.globalCompositeOperation = 'overlay';
   ctx.fillStyle = g;
   ctx.fillRect(b.x, b.y, b.w, b.h);
+  // Luz de relleno: brillo tenue desde el lado opuesto a la luz.
+  if (fill > 0) {
+    const fx = cx + light.dx * off, fy = cy + light.dy * off;
+    const gf = ctx.createRadialGradient(fx, fy, 0, fx, fy, r * 1.1);
+    gf.addColorStop(0, `rgba(255,255,255,${0.06 + 0.22 * fill})`);
+    gf.addColorStop(0.6, 'rgba(255,255,255,0)');
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = gf;
+    ctx.fillRect(b.x, b.y, b.w, b.h);
+  }
   ctx.restore();
 }
 
