@@ -4,6 +4,9 @@ import { useStore } from '../app/store';
 export function LightPanel() {
   const light = useStore((s) => s.scene.light);
   const setLight = useStore((s) => s.setLight);
+  const previewValue = useStore((s) => s.previewValue);
+  const setPreviewValue = useStore((s) => s.setPreviewValue);
+  const elev = light.elev ?? 0.5;
 
   return (
     <div className="panel">
@@ -20,6 +23,20 @@ export function LightPanel() {
         <input
           type="range" min={0} max={100} value={Math.round(light.intensity * 100)}
           onChange={(e) => setLight({ intensity: Number(e.target.value) / 100 })}
+        />
+      </label>
+      <label>
+        Altura <b>{elev.toFixed(2)}</b>
+        <input
+          type="range" min={0} max={100} value={Math.round(elev * 100)}
+          onChange={(e) => setLight({ elev: Number(e.target.value) / 100 })}
+        />
+      </label>
+      <label>
+        Giro (previsualización) <b>{Math.round(previewValue * 100)}%</b>
+        <input
+          type="range" min={0} max={100} value={Math.round(previewValue * 100)}
+          onChange={(e) => setPreviewValue(Number(e.target.value) / 100)}
         />
       </label>
     </div>

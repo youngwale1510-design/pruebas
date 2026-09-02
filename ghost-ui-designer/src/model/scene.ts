@@ -150,6 +150,7 @@ export interface FilmstripAsset {
 export interface LightSource {
   angleDeg: number; // dirección de la luz global (0 = derecha, 90 = abajo)
   intensity: number; // 0..1
+  elev?: number; // altura 0..1 (rasante..cenital); por defecto 0.5
 }
 
 export interface SceneDocument {

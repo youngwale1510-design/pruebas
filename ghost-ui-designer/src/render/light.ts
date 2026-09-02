@@ -8,14 +8,21 @@ export interface LightVectors {
   dx: number;
   dy: number;
   intensity: number;
+  /** Elevación 0..1 (rasante..cenital). */
+  elev: number;
+  /** Multiplicador de longitud de sombra según la elevación. */
+  lenK: number;
 }
 
 export function resolveLight(light: LightSource): LightVectors {
   const rad = (light.angleDeg * Math.PI) / 180;
+  const elev = Math.max(0, Math.min(1, light.elev ?? 0.5));
   return {
     dx: Math.cos(rad),
     dy: Math.sin(rad),
     intensity: Math.max(0, Math.min(1, light.intensity)),
+    elev,
+    lenK: 0.5 + (1 - elev) * 1.6, // rasante = sombras largas
   };
 }
 

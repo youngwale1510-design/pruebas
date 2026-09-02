@@ -29,7 +29,7 @@ function effLight(e: Effect, light: LightVectors): LightVectors {
   if (typeof a === 'number') {
     const rad = (a * Math.PI) / 180;
     const inten = typeof e.params['lightIntensity'] === 'number' ? (e.params['lightIntensity'] as number) : light.intensity;
-    return { dx: Math.cos(rad), dy: Math.sin(rad), intensity: inten };
+    return { ...light, dx: Math.cos(rad), dy: Math.sin(rad), intensity: inten };
   }
   return light;
 }
@@ -41,13 +41,13 @@ export function drawDropShadow(
   e: Effect,
   light: LightVectors,
 ) {
-  const dist = num(e, 'distance', 4);
+  const dist = num(e, 'distance', 4) * (light.lenK ?? 1);
   const useLight = bool(e, 'useLight', true);
   const dx = useLight ? light.dx * dist : num(e, 'offsetX', dist);
   const dy = useLight ? light.dy * dist : num(e, 'offsetY', dist);
   ctx.save();
   ctx.shadowColor = str(e, 'color', 'rgba(0,0,0,0.5)');
-  ctx.shadowBlur = num(e, 'blur', 8);
+  ctx.shadowBlur = num(e, 'blur', 8) + (1 - (light.elev ?? 0.5)) * 6;
   ctx.shadowOffsetX = dx;
   ctx.shadowOffsetY = dy;
   ctx.fillStyle = 'rgba(0,0,0,1)';
@@ -298,22 +298,43 @@ export function drawDish(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightV
   ctx.restore();
 }
 
-/** Brillo especular nítido hacia la luz. */
+/**
+ * Reflejo/brillo hacia la luz, con tamaño y forma configurables:
+ *  - size:   fracción del radio (qué tan grande es el reflejo)
+ *  - aspect: 1 = redondo; >1 = alargado (streak) a lo largo del eje de la luz
+ *  - dist:   0..1, distancia del reflejo desde el centro hacia la luz
+ *  - strength: 0..1, intensidad del brillo
+ */
 export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
   const light = effLight(e, gl);
+  const inten = light.intensity;
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
+  const size = num(e, 'size', 0.5);
+  const aspect = Math.max(1, num(e, 'aspect', 1));
+  const dist = num(e, 'dist', 0.55);
+  const strength = num(e, 'strength', 1);
+  const hx = cx - light.dx * r * dist, hy = cy - light.dy * r * dist;
+  const angle = Math.atan2(light.dy, light.dx);
+  const a0 = strength * (0.75 + 0.25 * inten);
+  const a1 = strength * (0.35 + 0.2 * inten);
+
   ctx.save();
   pathFn(ctx);
   ctx.clip();
-  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2, inten = light.intensity;
-  const hx = cx - light.dx * r * 0.55, hy = cy - light.dy * r * 0.55;
-  const g = ctx.createRadialGradient(hx, hy, 0, hx, hy, r * num(e, 'size', 0.5));
-  g.addColorStop(0, `rgba(255,255,255,${0.75 + 0.25 * inten})`);
-  g.addColorStop(0.18, `rgba(255,255,255,${0.35 + 0.2 * inten})`);
+  ctx.globalCompositeOperation = 'screen';
+  // Se dibuja en un espacio local escalado para lograr el reflejo alargado.
+  ctx.translate(hx, hy);
+  ctx.rotate(angle);
+  ctx.scale(aspect, 1);
+  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * size);
+  g.addColorStop(0, `rgba(255,255,255,${a0})`);
+  g.addColorStop(0.18, `rgba(255,255,255,${a1})`);
   g.addColorStop(0.55, 'rgba(255,255,255,0.04)');
   g.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.globalCompositeOperation = 'screen';
   ctx.fillStyle = g;
-  ctx.fillRect(b.x, b.y, b.w, b.h);
+  ctx.beginPath();
+  ctx.arc(0, 0, r * size, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 }
 

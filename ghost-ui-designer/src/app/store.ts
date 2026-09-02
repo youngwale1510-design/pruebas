@@ -7,6 +7,7 @@ interface AppState {
   scene: SceneDocument;
   selectedId: string | null;
   previewCpp: string;
+  previewValue: number; // 0..1, para previsualizar el giro de los controles
 
   select: (id: string | null) => void;
   addKnob: () => void;
@@ -19,6 +20,7 @@ interface AppState {
   addEffect: (controlId: string, layerId: string, type: EffectType, params?: Effect['params']) => void;
   removeEffect: (controlId: string, layerId: string, effectId: string) => void;
   updateEffect: (controlId: string, layerId: string, effectId: string, params: Effect['params']) => void;
+  setPreviewValue: (v: number) => void;
   setScene: (scene: SceneDocument) => void;
   setPreview: (cpp: string) => void;
 }
@@ -44,6 +46,7 @@ export const useStore = create<AppState>((set) => ({
   scene: emptyScene('GhostBand'),
   selectedId: null,
   previewCpp: '',
+  previewValue: 0.5,
 
   select: (id) => set({ selectedId: id }),
 
@@ -131,6 +134,7 @@ export const useStore = create<AppState>((set) => ({
       })),
     })),
 
+  setPreviewValue: (v) => set({ previewValue: Math.max(0, Math.min(1, v)) }),
   setScene: (scene) => set({ scene, selectedId: null }),
   setPreview: (cpp) => set({ previewCpp: cpp }),
 }));

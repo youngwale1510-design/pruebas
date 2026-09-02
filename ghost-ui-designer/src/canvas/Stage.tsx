@@ -7,6 +7,7 @@ export function Stage() {
   const selectedId = useStore((s) => s.selectedId);
   const select = useStore((s) => s.select);
   const moveControl = useStore((s) => s.moveControl);
+  const previewValue = useStore((s) => s.previewValue);
 
   const { width, height, bg } = scene.canvas;
 
@@ -26,7 +27,7 @@ export function Stage() {
               key={c.id}
               control={c}
               scene={scene}
-              value={0.5}
+              value={previewValue}
               selected={c.id === selectedId}
               onSelect={() => select(c.id)}
               onMove={(x, y) => moveControl(c.id, x, y)}

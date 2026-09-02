@@ -65,6 +65,21 @@ export function LayersPanel() {
               </select>
             </label>
 
+            {l.shape === 'scalloped' && (
+              <label className="k3-field">
+                <span>Nº de estrías <b>{l.lobes ?? 12}</b></span>
+                <input type="range" min={6} max={48} step={1} value={l.lobes ?? 12}
+                  onChange={(e) => updateLayer(control.id, l.id, { lobes: Number(e.target.value) })} />
+              </label>
+            )}
+            {l.shape === 'polygon' && (
+              <label className="k3-field">
+                <span>Nº de lados <b>{l.sides ?? 6}</b></span>
+                <input type="range" min={3} max={12} step={1} value={l.sides ?? 6}
+                  onChange={(e) => updateLayer(control.id, l.id, { sides: Number(e.target.value) })} />
+              </label>
+            )}
+
             {l.rectNorm == null && (
               <label className="k3-field">
                 <span>Tamaño <b>{Math.round((1 - 2 * (l.inset ?? 0)) * 100)}%</b></span>
@@ -86,17 +101,30 @@ export function LayersPanel() {
             {/* Luces / reflejos extra (cada reflejo con su ángulo) */}
             <div style={{ marginTop: 8 }}>
               <div className="k3-field"><span>Reflejos / luces</span></div>
-              {speculars.map((e, i) => (
-                <div key={e.id} className="row" style={{ alignItems: 'center', gap: 6 }}>
-                  <input type="range" min={0} max={359}
-                    value={typeof e.params.angleDeg === 'number' ? e.params.angleDeg : scene.light.angleDeg}
-                    onChange={(ev) => updateEffect(control.id, l.id, e.id, { angleDeg: Number(ev.target.value) })}
-                    title={`Ángulo reflejo ${i + 1}`} style={{ flex: 1 }} />
-                  <button className="btn" onClick={() => removeEffect(control.id, l.id, e.id)} title="Quitar">✕</button>
-                </div>
-              ))}
+              {speculars.map((e, i) => {
+                const angle = typeof e.params.angleDeg === 'number' ? e.params.angleDeg : scene.light.angleDeg;
+                const size = typeof e.params.size === 'number' ? e.params.size : 0.45;
+                const aspect = typeof e.params.aspect === 'number' ? e.params.aspect : 1;
+                return (
+                  <div key={e.id} style={{ borderTop: '1px solid var(--line-soft)', paddingTop: 6, marginTop: 6 }}>
+                    <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>Reflejo {i + 1}</span>
+                      <button className="btn" onClick={() => removeEffect(control.id, l.id, e.id)} title="Quitar">✕</button>
+                    </div>
+                    <label className="k3-field"><span>Ángulo <b>{Math.round(angle)}°</b></span>
+                      <input type="range" min={0} max={359} value={angle}
+                        onChange={(ev) => updateEffect(control.id, l.id, e.id, { angleDeg: Number(ev.target.value) })} /></label>
+                    <label className="k3-field"><span>Tamaño <b>{size.toFixed(2)}</b></span>
+                      <input type="range" min={0.1} max={1.2} step={0.02} value={size}
+                        onChange={(ev) => updateEffect(control.id, l.id, e.id, { size: Number(ev.target.value) })} /></label>
+                    <label className="k3-field"><span>Forma (alargado) <b>{aspect.toFixed(1)}×</b></span>
+                      <input type="range" min={1} max={5} step={0.1} value={aspect}
+                        onChange={(ev) => updateEffect(control.id, l.id, e.id, { aspect: Number(ev.target.value) })} /></label>
+                  </div>
+                );
+              })}
               <button className="btn" style={{ marginTop: 4 }}
-                onClick={() => addEffect(control.id, l.id, 'specular', { size: 0.45, angleDeg: (scene.light.angleDeg + 40) % 360 })}>
+                onClick={() => addEffect(control.id, l.id, 'specular', { size: 0.45, aspect: 1, angleDeg: (scene.light.angleDeg + 40) % 360 })}>
                 + Añadir reflejo
               </button>
             </div>
