@@ -5,6 +5,7 @@
 import { Control, SceneDocument } from '../model/scene';
 import { renderControlFrame } from './renderControl';
 import { renderFilmstrip, Orientation } from './filmstrip';
+import { ImageCache } from './textures';
 
 export function makeCanvas(w: number, h: number): HTMLCanvasElement {
   const c = document.createElement('canvas');
@@ -18,10 +19,11 @@ export function renderControlToCanvas(
   control: Control,
   scene: SceneDocument,
   value: number,
+  images?: ImageCache,
 ): HTMLCanvasElement {
   const canvas = makeCanvas(control.rect.w, control.rect.h);
   const ctx = canvas.getContext('2d')!;
-  renderControlFrame(ctx, control, scene, value);
+  renderControlFrame(ctx, control, scene, value, images);
   return canvas;
 }
 
@@ -39,7 +41,8 @@ export function exportControlFilmstrip(
   frames: number,
   orientation: Orientation,
   file: string,
+  images?: ImageCache,
 ): FilmstripPng {
-  const { canvas } = renderFilmstrip(control, scene, frames, orientation, makeCanvas);
+  const { canvas } = renderFilmstrip(control, scene, frames, orientation, makeCanvas, images);
   return { controlId: control.id, file, frames, dataUri: canvas.toDataURL('image/png') };
 }

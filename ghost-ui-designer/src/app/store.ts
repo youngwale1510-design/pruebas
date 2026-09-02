@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Control, SceneDocument } from '../model/scene';
+import { Control, Effect, EffectType, Layer, SceneDocument } from '../model/scene';
 import { emptyScene, makeId, defaultKnob, defaultParam } from '../model/defaults';
 import { KnobConfig, defaultKnobConfig } from '../model/knobConfig';
 
@@ -14,8 +14,30 @@ interface AppState {
   moveControl: (id: string, x: number, y: number) => void;
   setKnob3d: (id: string, cfg: KnobConfig | undefined) => void;
   setLight: (patch: Partial<SceneDocument['light']>) => void;
+  updateLayer: (controlId: string, layerId: string, patch: Partial<Layer>) => void;
+  toggleEffect: (controlId: string, layerId: string, type: EffectType) => void;
+  addEffect: (controlId: string, layerId: string, type: EffectType, params?: Effect['params']) => void;
+  removeEffect: (controlId: string, layerId: string, effectId: string) => void;
+  updateEffect: (controlId: string, layerId: string, effectId: string, params: Effect['params']) => void;
   setScene: (scene: SceneDocument) => void;
   setPreview: (cpp: string) => void;
+}
+
+/** Aplica una transformación a una capa concreta de un control. */
+function editLayer(
+  scene: SceneDocument,
+  controlId: string,
+  layerId: string,
+  fn: (l: Layer) => Layer,
+): SceneDocument {
+  return {
+    ...scene,
+    controls: scene.controls.map((c) =>
+      c.id === controlId
+        ? { ...c, layers: c.layers.map((l) => (l.id === layerId ? fn(l) : l)) }
+        : c,
+    ),
+  };
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -74,6 +96,40 @@ export const useStore = create<AppState>((set) => ({
 
   setLight: (patch) =>
     set((s) => ({ scene: { ...s.scene, light: { ...s.scene.light, ...patch } } })),
+
+  updateLayer: (controlId, layerId, patch) =>
+    set((s) => ({ scene: editLayer(s.scene, controlId, layerId, (l) => ({ ...l, ...patch })) })),
+
+  toggleEffect: (controlId, layerId, type) =>
+    set((s) => ({
+      scene: editLayer(s.scene, controlId, layerId, (l) =>
+        l.effects.some((e) => e.type === type)
+          ? { ...l, effects: l.effects.filter((e) => e.type !== type) }
+          : { ...l, effects: [...l.effects, { id: makeId('fx'), type, enabled: true, params: {} }] },
+      ),
+    })),
+
+  addEffect: (controlId, layerId, type, params = {}) =>
+    set((s) => ({
+      scene: editLayer(s.scene, controlId, layerId, (l) => ({
+        ...l, effects: [...l.effects, { id: makeId('fx'), type, enabled: true, params }],
+      })),
+    })),
+
+  removeEffect: (controlId, layerId, effectId) =>
+    set((s) => ({
+      scene: editLayer(s.scene, controlId, layerId, (l) => ({
+        ...l, effects: l.effects.filter((e) => e.id !== effectId),
+      })),
+    })),
+
+  updateEffect: (controlId, layerId, effectId, params) =>
+    set((s) => ({
+      scene: editLayer(s.scene, controlId, layerId, (l) => ({
+        ...l,
+        effects: l.effects.map((e) => (e.id === effectId ? { ...e, params: { ...e.params, ...params } } : e)),
+      })),
+    })),
 
   setScene: (scene) => set({ scene, selectedId: null }),
   setPreview: (cpp) => set({ previewCpp: cpp }),

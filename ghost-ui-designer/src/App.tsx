@@ -1,5 +1,6 @@
 import { Stage } from './canvas/Stage';
 import { PropertiesPanel } from './ui/PropertiesPanel';
+import { LayersPanel } from './ui/LayersPanel';
 import { Knob3DPanel } from './ui/Knob3DPanel';
 import { LightPanel } from './ui/LightPanel';
 import { Toolbar } from './ui/Toolbar';
@@ -23,6 +24,7 @@ export function App() {
         <aside className="sidebar">
           <LightPanel />
           <PropertiesPanel />
+          <LayersPanel />
           <Knob3DPanel />
         </aside>
       </div>

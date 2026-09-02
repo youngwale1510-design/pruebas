@@ -128,6 +128,19 @@ body {
   background: #2f2f37; color: var(--text); border: 1px solid var(--border);
 }
 .k3-quick button:hover { border-color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .02em;
+  padding: 3px 7px; border-radius: 999px; cursor: pointer; user-select: none;
+  background: var(--raised); border: 1px solid var(--line-soft); color: var(--muted);
+  transition: all .12s ease;
+}
+.chip[aria-pressed="true"] {
+  background: rgba(242,165,74,.14); border-color: var(--accent-dim); color: var(--accent);
+}
+.k3 input[type=color] { width: 30px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 5px; background: none; cursor: pointer; }
+.k3 select, .k3 input[type=range] { width: 100%; }
+.k3 .row { display: flex; gap: 6px; }
 .hint { color: #6b7079; font-size: 12px; }
 
 .cpp-preview {

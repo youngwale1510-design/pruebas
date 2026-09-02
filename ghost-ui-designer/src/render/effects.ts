@@ -22,6 +22,18 @@ function bool(e: Effect, k: string, d: boolean): boolean {
   return typeof v === 'boolean' ? v : d;
 }
 
+/** Luz efectiva del efecto: usa su propio `angleDeg`/`lightIntensity` si los tiene
+ *  (para tener varias luces/reflejos por capa), o la luz global por defecto. */
+function effLight(e: Effect, light: LightVectors): LightVectors {
+  const a = e.params['angleDeg'];
+  if (typeof a === 'number') {
+    const rad = (a * Math.PI) / 180;
+    const inten = typeof e.params['lightIntensity'] === 'number' ? (e.params['lightIntensity'] as number) : light.intensity;
+    return { dx: Math.cos(rad), dy: Math.sin(rad), intensity: inten };
+  }
+  return light;
+}
+
 /** Sombra proyectada por debajo del relleno de la capa. */
 export function drawDropShadow(
   ctx: Ctx,
@@ -81,8 +93,9 @@ export function drawBevel(
   pathFn: PathFn,
   bounds: { x: number; y: number; w: number; h: number },
   e: Effect,
-  light: LightVectors,
+  gl: LightVectors,
 ) {
+  const light = effLight(e, gl);
   const size = num(e, 'size', 3);
   const inten = light.intensity;
   const cx = bounds.x + bounds.w / 2;
@@ -248,8 +261,9 @@ export function drawBrushed(ctx: Ctx, pathFn: PathFn, b: Box) {
 }
 
 /** Brillo anisótropo de metal torneado (dos lóbulos alineados a la luz). */
-export function drawSpun(ctx: Ctx, pathFn: PathFn, b: Box, light: LightVectors) {
+export function drawSpun(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
   if (!ctx.createConicGradient) return;
+  const light = effLight(e, gl);
   ctx.save();
   pathFn(ctx);
   ctx.clip();
@@ -266,7 +280,8 @@ export function drawSpun(ctx: Ctx, pathFn: PathFn, b: Box, light: LightVectors) 
 }
 
 /** Domo: iluminación direccional de la cara (brilla hacia la luz). */
-export function drawDish(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, light: LightVectors) {
+export function drawDish(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
+  const light = effLight(e, gl);
   ctx.save();
   pathFn(ctx);
   ctx.clip();
@@ -284,7 +299,8 @@ export function drawDish(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, light: Lig
 }
 
 /** Brillo especular nítido hacia la luz. */
-export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, light: LightVectors) {
+export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
+  const light = effLight(e, gl);
   ctx.save();
   pathFn(ctx);
   ctx.clip();
@@ -302,7 +318,8 @@ export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, light:
 }
 
 /** Pieza hundida: oclusión de borde + sombra de contacto direccional + labio de luz. */
-export function drawRecess(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, light: LightVectors) {
+export function drawRecess(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
+  const light = effLight(e, gl);
   const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2, inten = light.intensity;
   const fx = cx + light.dx * r, fy = cy + light.dy * r, nx = cx - light.dx * r, ny = cy - light.dy * r;
   ctx.save();
@@ -361,7 +378,7 @@ export function applyEffectsAbove(
   run('env', (e) => drawEnv(ctx, pathFn, bounds, e));
   run('grooves', (e) => drawGrooves(ctx, pathFn, bounds, e));
   run('brushed', () => drawBrushed(ctx, pathFn, bounds));
-  run('spun', () => drawSpun(ctx, pathFn, bounds, light));
+  run('spun', (e) => drawSpun(ctx, pathFn, bounds, e, light));
   run('dish', (e) => drawDish(ctx, pathFn, bounds, e, light));
   run('specular', (e) => drawSpecular(ctx, pathFn, bounds, e, light));
   run('bevel', (e) => drawBevel(ctx, pathFn, bounds, e, light));

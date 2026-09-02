@@ -3,6 +3,7 @@ import { Image as KonvaImage, Group, Rect } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { Control, SceneDocument } from '../model/scene';
 import { renderControlToCanvas } from '../render/dom';
+import { ImageCache, preloadTextures } from '../render/textures';
 
 interface Props {
   control: Control;
@@ -33,6 +34,16 @@ export function ControlImage({ control, scene, value, selected, onSelect, onMove
     img.src = stripUri;
   }, [stripUri]);
 
+  // Precarga de texturas de las capas.
+  const [textures, setTextures] = useState<ImageCache>({});
+  const texKey = control.layers.map((l) => l.fillImage ?? '').join('|');
+  useEffect(() => {
+    let alive = true;
+    preloadTextures([control]).then((c) => { if (alive) setTextures(c); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [texKey]);
+
   // Canvas del frame actual (filmstrip importado) o del compositor 2D.
   const canvas = useMemo(() => {
     if (stripUri && stripImg) {
@@ -48,9 +59,9 @@ export function ControlImage({ control, scene, value, selected, onSelect, onMove
       ctx.drawImage(stripImg, sx, sy, fw, fh, 0, 0, c.width, c.height);
       return c;
     }
-    return renderControlToCanvas(control, scene, value);
+    return renderControlToCanvas(control, scene, value, textures);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stripUri, stripImg, frames, orientation, JSON.stringify(control.layers), w, h, value, JSON.stringify(scene.light)]);
+  }, [stripUri, stripImg, frames, orientation, JSON.stringify(control.layers), w, h, value, JSON.stringify(scene.light), textures]);
 
   const onDragEnd = (e: KonvaEventObject<DragEvent>) =>
     onMove(Math.round(e.target.x()), Math.round(e.target.y()));

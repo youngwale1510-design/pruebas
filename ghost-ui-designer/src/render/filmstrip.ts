@@ -3,6 +3,7 @@
 
 import { Control, SceneDocument } from '../model/scene';
 import { renderControlFrame } from './renderControl';
+import { ImageCache } from './textures';
 
 export type Orientation = 'horizontal' | 'vertical';
 
@@ -55,6 +56,7 @@ export function renderFilmstrip(
   frames: number,
   orientation: Orientation,
   makeCanvas: (w: number, h: number) => HTMLCanvasElement,
+  images?: ImageCache,
 ): { canvas: HTMLCanvasElement; layout: FilmstripLayout } {
   const layout = filmstripLayout(frames, control.rect.w, control.rect.h, orientation);
   const canvas = makeCanvas(layout.sheetW, layout.sheetH);
@@ -64,7 +66,7 @@ export function renderFilmstrip(
     const o = frameOrigin(layout, i);
     ctx.save();
     ctx.translate(o.x, o.y);
-    renderControlFrame(ctx, control, scene, valueForFrame(i, frames));
+    renderControlFrame(ctx, control, scene, valueForFrame(i, frames), images);
     ctx.restore();
   }
   return { canvas, layout };

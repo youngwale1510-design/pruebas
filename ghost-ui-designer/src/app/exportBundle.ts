@@ -8,10 +8,12 @@ import { exportControlFilmstrip, FilmstripPng } from '../render/dom';
 import { bitmapFile, collectBitmapResources } from '../codegen/iplug2/resources';
 import { Orientation } from '../render/filmstrip';
 import { bakeKnobFilmstrip } from '../render3d/bake';
+import { preloadTextures } from '../render/textures';
 
-export function buildFilmstripAssets(scene: SceneDocument): FilmstripPng[] {
+export async function buildFilmstripAssets(scene: SceneDocument): Promise<FilmstripPng[]> {
   const res = collectBitmapResources(scene);
   const byId = new Map(scene.controls.map((c) => [c.id, c]));
+  const images = await preloadTextures(scene); // texturas de capas (2D)
   return res.map((r) => {
     const c = byId.get(r.controlId)!;
     // 1) Filmstrip importado por el usuario (Photoshop, Blender, etc.) — máxima prioridad.
@@ -19,19 +21,19 @@ export function buildFilmstripAssets(scene: SceneDocument): FilmstripPng[] {
     if (imported) {
       return { controlId: c.id, file: bitmapFile(c.id), frames: r.frames, dataUri: imported };
     }
-    // 2) Horneado 3D.
+    // 2) Horneado 3D (opcional).
     if (c.knob3d) {
-      // Horneado 3D de alta calidad (frameSize por el lado mayor del rect).
       const frameSize = Math.max(64, Math.round(Math.max(c.rect.w, c.rect.h)));
       const baked = bakeKnobFilmstrip(c.knob3d, frameSize, 2);
       return { controlId: c.id, file: bitmapFile(c.id), frames: baked.frames, dataUri: baked.dataUri };
     }
+    // 3) Compositor 2D (con texturas de capa).
     const orientation = (c.props.orientation as Orientation) ?? 'vertical';
-    return exportControlFilmstrip(c, scene, r.frames, orientation, bitmapFile(c.id));
+    return exportControlFilmstrip(c, scene, r.frames, orientation, bitmapFile(c.id), images);
   });
 }
 
 export async function exportBundle(scene: SceneDocument) {
-  const assets = buildFilmstripAssets(scene);
+  const assets = await buildFilmstripAssets(scene);
   return window.ghost.exportBundle(scene, assets);
 }

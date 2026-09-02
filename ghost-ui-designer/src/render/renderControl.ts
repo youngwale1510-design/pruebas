@@ -5,6 +5,7 @@
 import { Control, Layer, SceneDocument } from '../model/scene';
 import { applyEffectsAbove, applyEffectsBelow } from './effects';
 import { LightVectors, resolveLight, rotateLight, rotationForValue } from './light';
+import { ImageCache, drawImageCover } from './textures';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -83,7 +84,7 @@ function tracePath(ctx: Ctx, box: Box, layer: Layer) {
   }
 }
 
-function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number, light: LightVectors) {
+function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number, light: LightVectors, images?: ImageCache) {
   if (!layer.visible) return;
   const box = layerBox(w, h, layer);
   const pathFn = (c: Ctx) => tracePath(c, box, layer);
@@ -106,9 +107,24 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
     ctx.rotate((deg * Math.PI) / 180);
     ctx.translate(-w / 2, -h / 2);
   }
-  pathFn(ctx);
-  ctx.fillStyle = layer.fill ?? '#333333';
-  ctx.fill();
+  const tex = layer.fillImage && images ? images[layer.fillImage] : undefined;
+  if (tex) {
+    // Relleno por textura (cover) recortado a la forma.
+    ctx.save();
+    pathFn(ctx);
+    ctx.clip();
+    if ((layer.fillImageMode ?? 'cover') === 'tile') {
+      const pat = ctx.createPattern(tex, 'repeat');
+      if (pat) { ctx.fillStyle = pat; ctx.fillRect(box.x, box.y, box.w, box.h); }
+    } else {
+      drawImageCover(ctx, tex, box);
+    }
+    ctx.restore();
+  } else {
+    pathFn(ctx);
+    ctx.fillStyle = layer.fill ?? '#333333';
+    ctx.fill();
+  }
   applyEffectsAbove(ctx, pathFn, box, layer.effects, L);
   ctx.restore();
 }
@@ -122,8 +138,9 @@ export function renderControlFrame(
   control: Control,
   scene: SceneDocument,
   value: number,
+  images?: ImageCache,
 ) {
   const { w, h } = control.rect;
   const light = resolveLight(scene.light);
-  for (const layer of control.layers) renderLayer(ctx, w, h, layer, value, light);
+  for (const layer of control.layers) renderLayer(ctx, w, h, layer, value, light, images);
 }

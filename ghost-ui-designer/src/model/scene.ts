@@ -65,6 +65,10 @@ export interface Layer {
   opacity: number; // 0..1
   /** Relleno: color hex, id de textura embebida (asset:<id>) o gradiente. */
   fill?: string;
+  /** Textura de relleno (data URI PNG importado). Tiene prioridad sobre `fill`. */
+  fillImage?: string;
+  /** Cómo encajar la textura: cubrir el rect o teselar. */
+  fillImageMode?: 'cover' | 'tile';
   /** id de máscara (otra capa o asset) — opcional. */
   maskAssetId?: string;
   color?: Partial<ColorAdjust>;
