@@ -369,6 +369,70 @@ export function drawRecess(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: Ligh
   ctx.restore();
 }
 
+/** Luz de borde / fresnel: el filo atrapa luz alrededor, más fuerte del lado de
+ *  la luz. Es la clave del look "producto" en plásticos oscuros. */
+export function drawRim(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
+  const light = effLight(e, gl);
+  const inten = light.intensity;
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
+  const width = num(e, 'size', 3);
+  const color = str(e, 'color', '255,255,255');
+  ctx.save();
+  pathFn(ctx);
+  ctx.clip();
+  ctx.globalCompositeOperation = 'screen';
+  // 1) Fresnel tenue en todo el perímetro.
+  ctx.lineWidth = width * 2;
+  ctx.strokeStyle = `rgba(${color},${0.05 + 0.06 * inten})`;
+  pathFn(ctx);
+  ctx.stroke();
+  // 2) Arco brillante del lado de la luz.
+  const nx = cx - light.dx * r, ny = cy - light.dy * r, fx = cx + light.dx * r, fy = cy + light.dy * r;
+  const g = ctx.createLinearGradient(nx, ny, fx, fy);
+  g.addColorStop(0, `rgba(${color},${0.35 + 0.4 * inten})`);
+  g.addColorStop(0.45, `rgba(${color},0)`);
+  g.addColorStop(1, `rgba(${color},0)`);
+  ctx.lineWidth = width * 2.2;
+  ctx.strokeStyle = g;
+  pathFn(ctx);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Moleteado: sombrea cada estría según la luz (surco a surco), no el contorno. */
+export function drawKnurl(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors, lobesHint = 24) {
+  const light = effLight(e, gl);
+  const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
+  const lobes = Math.max(6, Math.round(num(e, 'lobes', lobesHint)));
+  const bandInner = r * (1 - num(e, 'depth', 0.16));
+  const litAngle = Math.atan2(-light.dy, -light.dx); // dirección hacia la luz
+  const strength = num(e, 'strength', 0.5);
+  ctx.save();
+  pathFn(ctx);
+  ctx.clip();
+  ctx.lineCap = 'round';
+  for (let i = 0; i < lobes; i++) {
+    const a = (i / lobes) * Math.PI * 2;
+    // 1 cuando la estría mira a la luz, -1 cuando está en sombra.
+    const facing = Math.cos(a - litAngle);
+    const x0 = cx + Math.cos(a) * bandInner, y0 = cy + Math.sin(a) * bandInner;
+    const x1 = cx + Math.cos(a) * r, y1 = cy + Math.sin(a) * r;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.lineWidth = (Math.PI * 2 * r) / lobes * 0.35;
+    if (facing > 0) {
+      ctx.globalCompositeOperation = 'screen';
+      ctx.strokeStyle = `rgba(255,255,255,${facing * strength * (0.4 + 0.4 * light.intensity)})`;
+    } else {
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.strokeStyle = `rgba(0,0,0,${-facing * strength * 0.7})`;
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 /** Aplica los efectos de una capa que van DEBAJO del relleno (sombras/glow). */
 export function applyEffectsBelow(
   ctx: Ctx,
@@ -390,6 +454,7 @@ export function applyEffectsAbove(
   bounds: { x: number; y: number; w: number; h: number },
   effects: Effect[],
   light: LightVectors,
+  lobesHint = 24,
 ) {
   // Orden importa: material -> reflejo/torneado -> luz direccional -> bisel -> hueco -> ruido.
   const run = (type: EffectType, fn: (e: Effect) => void) => {
@@ -399,11 +464,13 @@ export function applyEffectsAbove(
   run('env', (e) => drawEnv(ctx, pathFn, bounds, e));
   run('grooves', (e) => drawGrooves(ctx, pathFn, bounds, e));
   run('brushed', () => drawBrushed(ctx, pathFn, bounds));
+  run('knurl', (e) => drawKnurl(ctx, pathFn, bounds, e, light, lobesHint));
   run('spun', (e) => drawSpun(ctx, pathFn, bounds, e, light));
   run('dish', (e) => drawDish(ctx, pathFn, bounds, e, light));
   run('specular', (e) => drawSpecular(ctx, pathFn, bounds, e, light));
   run('bevel', (e) => drawBevel(ctx, pathFn, bounds, e, light));
   run('recess', (e) => drawRecess(ctx, pathFn, bounds, e, light));
+  run('rim', (e) => drawRim(ctx, pathFn, bounds, e, light));
   run('innerShadow', (e) => drawInnerShadow(ctx, pathFn, bounds, e, light));
   run('noise', (e) => drawNoise(ctx, pathFn, bounds, e));
 }

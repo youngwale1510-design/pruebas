@@ -53,13 +53,15 @@ export function defaultKnobLayers(): Layer[] {
   return [
     layer('Base', {
       shape: 'scalloped',
-      lobes: 12,
-      fill: '#26262b',
+      lobes: 22,
+      fill: '#1c1c20',
       effects: [
-        fx('dropShadow', { distance: 6, blur: 12, color: 'rgba(0,0,0,0.6)', useLight: true }),
+        fx('dropShadow', { distance: 6, blur: 14, color: 'rgba(0,0,0,0.6)', useLight: true }),
         fx('bevel', { size: 6 }),
         fx('dish', { offset: 0.5 }),
-        fx('gradientOverlay', { type: 'radial', from: 'rgba(255,255,255,0.08)', to: 'rgba(0,0,0,0.4)' }),
+        fx('knurl', { depth: 0.16, strength: 0.55 }),
+        fx('gradientOverlay', { type: 'radial', from: 'rgba(255,255,255,0.06)', to: 'rgba(0,0,0,0.45)' }),
+        fx('rim', { size: 3 }),
       ],
     }),
     layer('Cap', {
@@ -70,9 +72,10 @@ export function defaultKnobLayers(): Layer[] {
         fx('grooves', { step: 2.2 }),
         fx('spun', {}),
         fx('dish', { offset: 0.42 }),
-        fx('specular', { size: 0.42 }),
+        fx('specular', { size: 0.5, aspect: 2.2 }),
         fx('bevel', { size: 3 }),
         fx('recess', { depth: 0.62, lip: 2.4 }),
+        fx('rim', { size: 2 }),
       ],
     }),
     layer('Hub', {

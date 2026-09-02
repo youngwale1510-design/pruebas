@@ -125,7 +125,7 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
     ctx.fillStyle = layer.fill ?? '#333333';
     ctx.fill();
   }
-  applyEffectsAbove(ctx, pathFn, box, layer.effects, L);
+  applyEffectsAbove(ctx, pathFn, box, layer.effects, L, layer.lobes ?? 24);
   ctx.restore();
 }
 

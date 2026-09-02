@@ -28,7 +28,9 @@ export type EffectType =
   | 'spun'       // brillo anisótropo de metal torneado
   | 'grooves'    // surcos concéntricos (torneado)
   | 'brushed'    // metal cepillado
-  | 'specular';  // brillo especular nítido
+  | 'specular'   // brillo especular nítido
+  | 'rim'        // luz de borde / fresnel (el filo atrapa luz alrededor)
+  | 'knurl';     // moleteado: cada estría con su brillo/sombra
 
 export interface Effect {
   id: string;

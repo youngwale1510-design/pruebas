@@ -8,6 +8,7 @@ const SHAPES: [LayerShape, string][] = [
 const EFFECTS: [EffectType, string][] = [
   ['dropShadow', 'sombra'], ['bevel', 'bisel'], ['dish', 'domo'], ['recess', 'hueco'],
   ['env', 'entorno'], ['grooves', 'torneado'], ['brushed', 'cepillado'], ['spun', 'metal'],
+  ['knurl', 'moleteado'], ['rim', 'luz borde'],
   ['specular', 'reflejo'], ['gradientOverlay', 'degradado'], ['noise', 'ruido'],
   ['innerShadow', 'sombra int'], ['glow', 'glow'],
 ];
