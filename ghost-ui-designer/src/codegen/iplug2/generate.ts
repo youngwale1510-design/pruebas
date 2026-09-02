@@ -32,6 +32,8 @@ function attachLine(c: Control): string {
       return `  pGraphics->AttachControl(new IVSliderControl(${rect}, ${tag}, ${label}), ${ctrlTag(c.id)});`;
     case 'IVButtonControl':
       return `  pGraphics->AttachControl(new IVButtonControl(${rect}, SplashClickActionFunc, ${label}), ${ctrlTag(c.id)});`;
+    case 'IVToggleControl':
+      return `  pGraphics->AttachControl(new IVToggleControl(${rect}, ${tag}, ${label}), ${ctrlTag(c.id)});`;
     case 'IBKnobControl': {
       // Opción B: filmstrip rasterizado desde el editor (look Canvas Audio).
       const res = bitmapResId(c.id);

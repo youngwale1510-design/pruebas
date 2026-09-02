@@ -78,6 +78,7 @@ export type ControlType =
   | 'IVKnobControl'
   | 'IVSliderControl'
   | 'IVButtonControl'
+  | 'IVToggleControl'
   | 'IBKnobControl'
   | 'IBitmapControl';
 
