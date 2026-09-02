@@ -13,6 +13,7 @@ interface AppState {
   updateControl: (id: string, patch: Partial<Control>) => void;
   moveControl: (id: string, x: number, y: number) => void;
   setKnob3d: (id: string, cfg: KnobConfig | undefined) => void;
+  setLight: (patch: Partial<SceneDocument['light']>) => void;
   setScene: (scene: SceneDocument) => void;
   setPreview: (cpp: string) => void;
 }
@@ -70,6 +71,9 @@ export const useStore = create<AppState>((set) => ({
         ),
       },
     })),
+
+  setLight: (patch) =>
+    set((s) => ({ scene: { ...s.scene, light: { ...s.scene.light, ...patch } } })),
 
   setScene: (scene) => set({ scene, selectedId: null }),
   setPreview: (cpp) => set({ previewCpp: cpp }),

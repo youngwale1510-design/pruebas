@@ -28,6 +28,9 @@ export interface GhostApi {
     scene: SceneDocument,
     assets: FilmstripPng[],
   ): Promise<{ dir: string; merged: boolean } | null>;
+  /** Abre un PNG del disco (p.ej. filmstrip hecho en Photoshop) y lo devuelve
+   *  embebido como data URI + sus dimensiones. */
+  importImage(): Promise<{ name: string; dataUri: string; width: number; height: number } | null>;
 }
 
 export const IPC = {
@@ -37,4 +40,5 @@ export const IPC = {
   importCpp: 'ghost:importCpp',
   previewCpp: 'ghost:previewCpp',
   exportBundle: 'ghost:exportBundle',
+  importImage: 'ghost:importImage',
 } as const;

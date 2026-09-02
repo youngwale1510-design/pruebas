@@ -71,6 +71,74 @@ export function PropertiesPanel() {
           </label>
         ))}
       </div>
+
+      <h3 style={{ marginTop: 16 }}>Filmstrip propio</h3>
+      <p className="hint">
+        ¿Ya tienes tu imagen (Photoshop/Blender)? Impórtala como sprite sheet y el
+        plugin la usará tal cual.
+      </p>
+      {control.props.filmstripDataUri ? (
+        <>
+          <img
+            src={control.props.filmstripDataUri as string}
+            alt="filmstrip"
+            style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 6, border: '1px solid var(--border)', background: '#0e0e11' }}
+          />
+          <div className="row">
+            <label className="small">
+              Frames
+              <input
+                type="number"
+                min={1}
+                value={Number(control.props.frames ?? 1)}
+                onChange={(e) =>
+                  update(control.id, { props: { ...control.props, frames: Math.max(1, Number(e.target.value)) } })
+                }
+              />
+            </label>
+            <label className="small">
+              Orientación
+              <select
+                value={(control.props.orientation as string) ?? 'vertical'}
+                onChange={(e) =>
+                  update(control.id, { props: { ...control.props, orientation: e.target.value } })
+                }
+              >
+                <option value="vertical">Vertical</option>
+                <option value="horizontal">Horizontal</option>
+              </select>
+            </label>
+          </div>
+          <button
+            className="btn"
+            onClick={() => {
+              const { filmstripDataUri: _drop, ...rest } = control.props;
+              update(control.id, { props: rest });
+            }}
+          >
+            Quitar filmstrip
+          </button>
+        </>
+      ) : (
+        <button className="btn primary" onClick={importFilmstrip}>
+          Importar PNG…
+        </button>
+      )}
     </div>
   );
+
+  async function importFilmstrip() {
+    const res = await window.ghost.importImage();
+    if (!res) return;
+    // Adivina nº de frames si es una tira vertical alta (alto múltiplo del ancho).
+    let frames = 1;
+    if (res.width > 0 && res.height > res.width) {
+      const guess = Math.round(res.height / res.width);
+      if (guess > 1 && Math.abs(res.height / guess - res.width) < 2) frames = guess;
+    }
+    update(control!.id, {
+      type: 'IBKnobControl',
+      props: { ...control!.props, filmstripDataUri: res.dataUri, frames, orientation: 'vertical' },
+    });
+  }
 }

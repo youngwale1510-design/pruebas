@@ -104,6 +104,28 @@ ipcMain.handle(
   },
 );
 
+ipcMain.handle(IPC.importImage, async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'Imagen (PNG)', extensions: ['png'] }],
+    title: 'Importar filmstrip / imagen (PNG)',
+  });
+  if (canceled || filePaths.length === 0) return null;
+  const buf = await readFile(filePaths[0]);
+  // Dimensiones desde la cabecera PNG (IHDR): ancho en 16..20, alto en 20..24 (big-endian).
+  let width = 0, height = 0;
+  if (buf.length > 24 && buf.toString('ascii', 12, 16) === 'IHDR') {
+    width = buf.readUInt32BE(16);
+    height = buf.readUInt32BE(20);
+  }
+  return {
+    name: path.basename(filePaths[0]),
+    dataUri: `data:image/png;base64,${buf.toString('base64')}`,
+    width,
+    height,
+  };
+});
+
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

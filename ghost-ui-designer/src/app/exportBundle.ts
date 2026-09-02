@@ -14,6 +14,12 @@ export function buildFilmstripAssets(scene: SceneDocument): FilmstripPng[] {
   const byId = new Map(scene.controls.map((c) => [c.id, c]));
   return res.map((r) => {
     const c = byId.get(r.controlId)!;
+    // 1) Filmstrip importado por el usuario (Photoshop, Blender, etc.) — máxima prioridad.
+    const imported = c.props.filmstripDataUri as string | undefined;
+    if (imported) {
+      return { controlId: c.id, file: bitmapFile(c.id), frames: r.frames, dataUri: imported };
+    }
+    // 2) Horneado 3D.
     if (c.knob3d) {
       // Horneado 3D de alta calidad (frameSize por el lado mayor del rect).
       const frameSize = Math.max(64, Math.round(Math.max(c.rect.w, c.rect.h)));

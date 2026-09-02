@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { KnobConfig } from '../model/knobConfig';
 import { Knob3DStage } from '../render3d/stage';
 
@@ -12,6 +12,7 @@ interface Props {
 export function Knob3DView({ config, value = 0.5, size = 220 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<Knob3DStage | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -20,8 +21,9 @@ export function Knob3DView({ config, value = 0.5, size = 220 }: Props) {
       stage = new Knob3DStage(canvasRef.current);
       stage.setSize(size);
       stageRef.current = stage;
-    } catch {
-      /* WebGL no disponible */
+      setError(null);
+    } catch (e) {
+      setError('No se pudo iniciar el 3D (WebGL no disponible): ' + (e instanceof Error ? e.message : String(e)));
     }
     return () => { stage?.dispose(); stageRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -30,10 +32,28 @@ export function Knob3DView({ config, value = 0.5, size = 220 }: Props) {
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
-    stage.setConfig(config);
-    stage.setLight(config.light);
-    stage.render(value, config.sweepDeg);
+    try {
+      stage.setConfig(config);
+      stage.setLight(config.light);
+      stage.render(value, config.sweepDeg);
+    } catch (e) {
+      setError('Error al renderizar el 3D: ' + (e instanceof Error ? e.message : String(e)));
+    }
   }, [config, value]);
 
-  return <canvas ref={canvasRef} width={size} height={size} style={{ borderRadius: 8, background: '#0b0c0e' }} />;
+  return (
+    <div>
+      <canvas
+        ref={canvasRef}
+        width={size}
+        height={size}
+        style={{ borderRadius: 8, background: '#0b0c0e', display: error ? 'none' : 'block' }}
+      />
+      {error && (
+        <p className="hint" style={{ color: '#e08a8a' }}>
+          {error} — usa el filmstrip importado o el modo 2D.
+        </p>
+      )}
+    </div>
+  );
 }
