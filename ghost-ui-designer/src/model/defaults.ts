@@ -48,41 +48,49 @@ function layer(name: string, patch: Partial<Layer>): Layer {
   };
 }
 
-/** Pila de capas pseudo-3D de un knob (look Canvas Audio), rasterizable a filmstrip. */
+/** Pila de capas de un knob torneado (aluminio con reflejos), rasterizable a filmstrip. */
 export function defaultKnobLayers(): Layer[] {
   return [
     layer('Base', {
-      fill: '#2a2a30',
+      shape: 'scalloped',
+      lobes: 12,
+      fill: '#26262b',
       effects: [
-        fx('dropShadow', { distance: 5, blur: 10, color: 'rgba(0,0,0,0.55)', useLight: true }),
-        fx('bevel', { size: 3, highlight: 'rgba(255,255,255,0.35)', shadow: 'rgba(0,0,0,0.5)' }),
-      ],
-    }),
-    layer('Ring', {
-      inset: 0.06,
-      fill: '#3a3a42',
-      effects: [
-        fx('gradientOverlay', { type: 'linear', from: 'rgba(255,255,255,0.18)', to: 'rgba(0,0,0,0.28)' }),
-        fx('bevel', { size: 4 }),
+        fx('dropShadow', { distance: 6, blur: 12, color: 'rgba(0,0,0,0.6)', useLight: true }),
+        fx('bevel', { size: 6 }),
+        fx('dish', { offset: 0.5 }),
+        fx('gradientOverlay', { type: 'radial', from: 'rgba(255,255,255,0.08)', to: 'rgba(0,0,0,0.4)' }),
       ],
     }),
     layer('Cap', {
-      inset: 0.2,
-      fill: '#4a4a54',
+      inset: 0.22,
+      fill: '#b6b9be',
       effects: [
-        fx('gradientOverlay', { type: 'radial', from: 'rgba(255,255,255,0.22)', to: 'rgba(0,0,0,0.15)' }),
-        fx('bevel', { size: 6 }),
-        fx('innerShadow', { distance: 2, blur: 5, color: 'rgba(0,0,0,0.5)' }),
-        fx('noise', { amount: 0.05 }),
+        fx('env', { sky: 'rgba(255,255,255,0.75)', ground: 'rgba(0,0,0,0.6)' }),
+        fx('grooves', { step: 2.2 }),
+        fx('spun', {}),
+        fx('dish', { offset: 0.42 }),
+        fx('specular', { size: 0.42 }),
+        fx('bevel', { size: 3 }),
+        fx('recess', { depth: 0.62, lip: 2.4 }),
+      ],
+    }),
+    layer('Hub', {
+      inset: 0.46,
+      fill: '#9a9da2',
+      effects: [
+        fx('grooves', { step: 1.6 }),
+        fx('dish', { offset: 0.4 }),
+        fx('recess', { depth: 0.5, lip: 1.6 }),
       ],
     }),
     layer('Indicator', {
       shape: 'roundRect',
       cornerRadius: 3,
-      rectNorm: { x: 0.47, y: 0.12, w: 0.06, h: 0.28 },
-      fill: '#e8e8ee',
-      anim: { mode: 'rotate', minDeg: -135, maxDeg: 135 },
-      effects: [fx('glow', { blur: 4, color: 'rgba(180,210,255,0.5)' })],
+      rectNorm: { x: 0.485, y: 0.72, w: 0.03, h: 0.22 },
+      fill: '#1b1b1e',
+      anim: { mode: 'rotate', minDeg: -150, maxDeg: 150 },
+      effects: [],
     }),
   ];
 }

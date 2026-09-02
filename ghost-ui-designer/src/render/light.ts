@@ -25,6 +25,13 @@ export function shadowOffset(light: LightSource, distance: number) {
   return { x: v.dx * distance * v.intensity, y: v.dy * distance * v.intensity };
 }
 
+/** Gira el vector de luz un delta (grados). Para contrarrotar la luz cuando una
+ *  pieza gira: la forma rota, pero la iluminación queda fija en el mundo. */
+export function rotateLight(light: LightVectors, degDelta: number): LightVectors {
+  const a = Math.atan2(light.dy, light.dx) + (degDelta * Math.PI) / 180;
+  return { ...light, dx: Math.cos(a), dy: Math.sin(a) };
+}
+
 /** Mapea value(0..1) al ángulo (grados) de una capa animada por rotación. */
 export function rotationForValue(
   value: number,

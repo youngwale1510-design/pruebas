@@ -20,7 +20,15 @@ export type EffectType =
   | 'bevel'
   | 'gradientOverlay'
   | 'noise'
-  | 'glow';
+  | 'glow'
+  // materiales avanzados (paridad con el look del demo)
+  | 'env'        // reflejo de entorno cielo/suelo
+  | 'dish'       // iluminación direccional de la cara (abombado)
+  | 'recess'     // pieza hundida: oclusión + sombra de contacto + labio
+  | 'spun'       // brillo anisótropo de metal torneado
+  | 'grooves'    // surcos concéntricos (torneado)
+  | 'brushed'    // metal cepillado
+  | 'specular';  // brillo especular nítido
 
 export interface Effect {
   id: string;
@@ -39,7 +47,7 @@ export interface ColorAdjust {
   contrast: number; // -100..100
 }
 
-export type LayerShape = 'ellipse' | 'rect' | 'roundRect';
+export type LayerShape = 'ellipse' | 'rect' | 'roundRect' | 'scalloped' | 'polygon' | 'wedge';
 
 /** Animación de la capa en función del valor del control (0..1). */
 export interface LayerAnim {
@@ -70,6 +78,10 @@ export interface Layer {
    *  prioridad sobre `inset`. Útil para indicadores/pointers. */
   rectNorm?: { x: number; y: number; w: number; h: number };
   cornerRadius?: number;
+  /** nº de lóbulos para 'scalloped'. */
+  lobes?: number;
+  /** nº de lados para 'polygon'. */
+  sides?: number;
   anim?: LayerAnim;
 }
 
