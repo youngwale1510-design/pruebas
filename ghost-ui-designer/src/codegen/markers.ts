@@ -28,9 +28,26 @@ function fromB64(s: string): string {
   return Buffer.from(s, 'base64').toString('utf8');
 }
 
+/**
+ * Quita las imágenes embebidas (data URIs) del payload: viven en el .ghostui y en
+ * resources/*.png. Sin esto, un filmstrip importado metería megabytes en una
+ * línea del .cpp.
+ */
+export function stripEmbeddedImages(control: Control): Control {
+  const c = JSON.parse(JSON.stringify(control)) as Control;
+  if (typeof c.props.filmstripDataUri === 'string') {
+    delete c.props.filmstripDataUri;
+    c.props.filmstripEmbedded = true;
+  }
+  c.layers = c.layers.map((l) =>
+    l.fillImage ? { ...l, fillImage: undefined, fillImageEmbedded: true } : l,
+  );
+  return c;
+}
+
 /** Serializa un control a la línea de comentario `// [GHOST:DATA]<base64>`. */
 export function encodeControlData(control: Control): string {
-  return `${MARK.dataPrefix}${toB64(JSON.stringify(control))}`;
+  return `${MARK.dataPrefix}${toB64(JSON.stringify(stripEmbeddedImages(control)))}`;
 }
 
 /** Reconstruye el Control desde el texto de un bloque CONTROL completo. */

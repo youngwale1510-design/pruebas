@@ -72,6 +72,14 @@ export function PropertiesPanel() {
         ))}
       </div>
 
+      <label>
+        Margen para marcas (encoge el knob) <b>{Math.round(Number(control.props.bodyInset ?? 0) * 100)}%</b>
+        <input
+          type="range" min={0} max={40} value={Math.round(Number(control.props.bodyInset ?? 0) * 100)}
+          onChange={(e) => update(control.id, { props: { ...control.props, bodyInset: Number(e.target.value) / 100 } })}
+        />
+      </label>
+
       <h3 style={{ marginTop: 16 }}>Filmstrip propio</h3>
       <p className="hint">
         ¿Ya tienes tu imagen (Photoshop/Blender)? Impórtala como sprite sheet y el

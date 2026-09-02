@@ -94,3 +94,22 @@ describe('round-trip iPlug2', () => {
     expect(c).toBe(b);
   });
 });
+
+describe('payload sin imágenes embebidas', () => {
+  it('no mete data URIs (filmstrip/texturas) en el .cpp y marca que existían', () => {
+    const scene = emptyScene();
+    const knob = defaultKnob('knob_img', 'Img', 'x');
+    const big = 'data:image/png;base64,' + 'A'.repeat(200_000);
+    knob.props.filmstripDataUri = big;
+    knob.layers[0].fillImage = big;
+    scene.controls.push(knob);
+    const { source } = writeSceneToSource(scene, null);
+    expect(source.length).toBeLessThan(20_000);
+    expect(source).not.toContain('AAAAAAAAAA');
+    const [c] = parseControlsFromBody(source);
+    expect(c.props.filmstripDataUri).toBeUndefined();
+    expect(c.props.filmstripEmbedded).toBe(true);
+    expect(c.layers[0].fillImage).toBeUndefined();
+    expect(c.layers[0].fillImageEmbedded).toBe(true);
+  });
+});

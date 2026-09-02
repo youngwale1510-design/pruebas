@@ -1,14 +1,11 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import type { SceneDocument } from '../src/model/scene';
 import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
 import { generateResourcesHeader } from '../src/codegen/iplug2/resources';
 import { IPC, type FilmstripPng } from './ipc-contract';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** Ventana padre para los diálogos (si no, en Windows pueden abrirse detrás). */
 function dlgWin(): BrowserWindow {
@@ -101,7 +98,7 @@ ipcMain.handle(
       const resDir = path.join(dir, 'resources');
       await mkdir(resDir, { recursive: true });
       for (const a of assets) {
-        const b64 = a.dataUri.replace(/^data:image\/png;base64,/, '');
+        const b64 = a.dataUri.replace(/^data:image\/\w+;base64,/, '');
         await writeFile(path.join(resDir, a.file), Buffer.from(b64, 'base64'));
       }
     }

@@ -26,6 +26,8 @@ body {
 }
 
 .app { display: flex; flex-direction: column; height: 100vh; }
+.bridge-warn { background: #5a2626; color: #ffd9d9; padding: 8px 14px; font-size: 12px; border-bottom: 1px solid #7a3a3a; }
+.bridge-warn code { font-family: var(--mono); }
 
 .toolbar {
   display: flex;

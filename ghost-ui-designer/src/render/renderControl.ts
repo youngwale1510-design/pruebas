@@ -179,5 +179,17 @@ export function renderControlFrame(
 ) {
   const { w, h } = control.rect;
   const light = resolveLight(scene.light);
-  for (const layer of control.layers) renderLayer(ctx, w, h, layer, value, light, images);
+  // Margen del cuerpo: encoge todas las capas (menos las marcas) hacia el centro
+  // para dejar sitio a las marcas exteriores. Fracción 0..0.4.
+  const bodyInset = Math.max(0, Math.min(0.4, Number(control.props.bodyInset ?? 0) || 0));
+  const s = 1 - 2 * bodyInset;
+  for (const layer of control.layers) {
+    if (layer.shape === 'ticks' || s >= 1) { renderLayer(ctx, w, h, layer, value, light, images); continue; }
+    ctx.save();
+    ctx.translate(w / 2, h / 2);
+    ctx.scale(s, s);
+    ctx.translate(-w / 2, -h / 2);
+    renderLayer(ctx, w, h, layer, value, light, images);
+    ctx.restore();
+  }
 }

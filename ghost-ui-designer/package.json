@@ -4,7 +4,6 @@
   "description": "Editor visual WYSIWYG que genera y hace round-trip de GUIs de plugins iPlug2 (C++).",
   "author": "",
   "license": "MIT",
-  "type": "module",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",

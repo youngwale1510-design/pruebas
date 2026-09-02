@@ -80,6 +80,8 @@ export interface Layer {
   fillImage?: string;
   /** Cómo encajar la textura: cubrir el rect o teselar. */
   fillImageMode?: 'cover' | 'tile';
+  /** true si la textura se omitió del payload del .cpp (vive en el .ghostui). */
+  fillImageEmbedded?: boolean;
   /** id de máscara (otra capa o asset) — opcional. */
   maskAssetId?: string;
   color?: Partial<ColorAdjust>;

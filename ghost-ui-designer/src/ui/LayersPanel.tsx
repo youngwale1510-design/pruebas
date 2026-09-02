@@ -20,6 +20,7 @@ export function LayersPanel() {
   const updateLayer = useStore((s) => s.updateLayer);
   const addLayer = useStore((s) => s.addLayer);
   const removeLayer = useStore((s) => s.removeLayer);
+  const updateControl = useStore((s) => s.updateControl);
   const toggleEffect = useStore((s) => s.toggleEffect);
   const addEffect = useStore((s) => s.addEffect);
   const removeEffect = useStore((s) => s.removeEffect);
@@ -69,12 +70,14 @@ export function LayersPanel() {
               <img src={l.fillImage} alt="" style={{ maxWidth: '100%', maxHeight: 70, borderRadius: 5, marginTop: 6, border: '1px solid var(--border)' }} />
             )}
 
+            {l.shape !== 'ticks' && (
             <label className="k3-field" style={{ marginTop: 8 }}>
               <span>Forma</span>
               <select value={l.shape ?? 'ellipse'} onChange={(e) => updateLayer(control.id, l.id, { shape: e.target.value as LayerShape })}>
                 {SHAPES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
               </select>
             </label>
+            )}
 
             {l.shape === 'scalloped' && (
               <label className="k3-field">
@@ -177,11 +180,11 @@ export function LayersPanel() {
           id: makeId('lyr'), name: 'Capa', kind: 'shape', visible: true, blendMode: 'normal',
           opacity: 1, shape: 'ellipse', inset: 0.1, fill: '#3a3a42', effects: [],
         })}>+ Capa</button>
-        <button className="btn" onClick={() => addLayer(control.id, {
+        <button className="btn" onClick={() => { if (!Number(control.props.bodyInset ?? 0)) updateControl(control.id, { props: { ...control.props, bodyInset: 0.14 } }); addLayer(control.id, {
           id: makeId('lyr'), name: 'Marcas', kind: 'shape', visible: true, blendMode: 'normal',
           opacity: 1, shape: 'ticks', fill: '#c9c9d0', effects: [],
           ticks: { count: 11, style: 'dot', radius: 0.94, spanDeg: 270, size: 3 },
-        })}>+ Marcas</button>
+        }); }}>+ Marcas</button>
       </div>
     </div>
   );

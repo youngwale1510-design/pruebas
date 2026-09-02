@@ -8,9 +8,15 @@ import { useStore } from './app/store';
 
 export function App() {
   const previewCpp = useStore((s) => s.previewCpp);
+  const bridgeOk = typeof window !== 'undefined' && !!(window as unknown as { ghost?: unknown }).ghost;
 
   return (
     <div className="app">
+      {!bridgeOk && (
+        <div className="bridge-warn">
+          El puente con Electron (preload) no cargó: importar/exportar/guardar no funcionarán. Reinicia con <code>npm run electron:dev</code>.
+        </div>
+      )}
       <Toolbar />
       <div className="body">
         <main className="stage-area">
