@@ -95,3 +95,21 @@ describe('recursos bitmap (opción B)', () => {
     expect(layers.find((l) => l.name === 'Indicator')?.anim?.mode).toBe('rotate');
   });
 });
+
+describe('sentido de giro del indicador', () => {
+  // Misma convención que renderLayer: canvas con Y hacia abajo, ctx.rotate(+θ) = horario.
+  function indicatorPos(value: number) {
+    const ind = defaultKnobLayers().find((l) => l.name === 'Indicator')!;
+    const r = ind.rectNorm!;
+    const cx = r.x + r.w / 2 - 0.5;
+    const cy = r.y + r.h / 2 - 0.5;
+    const th = (rotationForValue(value, ind.anim!.minDeg, ind.anim!.maxDeg) * Math.PI) / 180;
+    return { x: cx * Math.cos(th) - cy * Math.sin(th), y: cx * Math.sin(th) + cy * Math.cos(th) };
+  }
+  it('value 0 → abajo-izquierda, 0.5 → arriba, 1 → abajo-derecha (horario por las 12)', () => {
+    const a = indicatorPos(0), m = indicatorPos(0.5), b = indicatorPos(1);
+    expect(a.x).toBeLessThan(0); expect(a.y).toBeGreaterThan(0);
+    expect(Math.abs(m.x)).toBeLessThan(0.01); expect(m.y).toBeLessThan(0);
+    expect(b.x).toBeGreaterThan(0); expect(b.y).toBeGreaterThan(0);
+  });
+});

@@ -93,7 +93,7 @@ export function defaultKnobLayers(): Layer[] {
     layer('Indicator', {
       shape: 'roundRect',
       cornerRadius: 3,
-      rectNorm: { x: 0.485, y: 0.72, w: 0.03, h: 0.22 },
+      rectNorm: { x: 0.485, y: 0.08, w: 0.03, h: 0.22 }, // arriba: el giro pasa por las 12
       fill: '#1b1b1e',
       anim: { mode: 'rotate', minDeg: -150, maxDeg: 150 },
       effects: [],

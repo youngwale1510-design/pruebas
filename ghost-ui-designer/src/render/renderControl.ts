@@ -137,11 +137,13 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
   ctx.globalAlpha = layer.opacity;
   ctx.globalCompositeOperation = COMPOSITE[layer.blendMode] ?? 'source-over';
   // La forma gira; la luz se contrarrota para quedar FIJA en el mundo.
-  // Sentido: valor creciente = horario (como un knob real).
-  const L = rotate ? rotateLight(light, deg) : light;
+  // Sentido: valor creciente = horario pasando por ARRIBA (como un knob real):
+  // value 0 → indicador a las 7, value 1 → a las 5. En canvas (Y hacia abajo)
+  // ctx.rotate(+θ) es horario, así que se aplica deg tal cual y la luz gira -deg.
+  const L = rotate ? rotateLight(light, -deg) : light;
   if (rotate) {
     ctx.translate(w / 2, h / 2);
-    ctx.rotate((-deg * Math.PI) / 180);
+    ctx.rotate((deg * Math.PI) / 180);
     ctx.translate(-w / 2, -h / 2);
   }
   const tex = layer.fillImage && images ? images[layer.fillImage] : undefined;
