@@ -36,6 +36,38 @@ export function layerBox(w: number, h: number, layer: Layer): Box {
   return { x: inset, y: inset, w: w - inset * 2, h: h - inset * 2 };
 }
 
+/** Desplazamiento (px) de una capa animada por translate/lever para `value`. Puro. */
+export function travelOffset(w: number, h: number, layer: Layer, value: number): { dx: number; dy: number } {
+  const a = layer.anim;
+  if (!a || (a.mode !== 'translate' && a.mode !== 'lever') || !a.travel) return { dx: 0, dy: 0 };
+  return { dx: a.travel.x * w * value, dy: a.travel.y * h * value };
+}
+
+/** Geometría de una palanca: cápsula desde el pivote hasta la punta. Puro. */
+export function leverGeometry(w: number, h: number, layer: Layer, value: number) {
+  const box = layerBox(w, h, layer);
+  const off = travelOffset(w, h, layer, value);
+  const p = layer.anim?.pivotNorm ?? { x: 0.5, y: 0.5 };
+  const pivot = { x: p.x * w, y: p.y * h };
+  const tip = { x: box.x + box.w / 2 + off.dx, y: box.y + box.h / 2 + off.dy };
+  const r = Math.min(box.w, box.h) / 2;
+  const bounds: Box = {
+    x: Math.min(pivot.x, tip.x) - r,
+    y: Math.min(pivot.y, tip.y) - r,
+    w: Math.abs(tip.x - pivot.x) + r * 2,
+    h: Math.abs(tip.y - pivot.y) + r * 2,
+  };
+  return { pivot, tip, r, bounds };
+}
+
+function traceCapsule(ctx: Ctx, a: { x: number; y: number }, b: { x: number; y: number }, r: number) {
+  const ang = Math.atan2(b.y - a.y, b.x - a.x);
+  ctx.beginPath();
+  ctx.arc(a.x, a.y, r, ang + Math.PI / 2, ang - Math.PI / 2);
+  ctx.arc(b.x, b.y, r, ang - Math.PI / 2, ang + Math.PI / 2);
+  ctx.closePath();
+}
+
 function tracePath(ctx: Ctx, box: Box, layer: Layer) {
   const shape = layer.shape ?? 'ellipse';
   ctx.beginPath();
@@ -122,10 +154,22 @@ function drawTicks(ctx: Ctx, w: number, h: number, layer: Layer) {
 function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number, light: LightVectors, images?: ImageCache) {
   if (!layer.visible) return;
   if (layer.shape === 'ticks') { drawTicks(ctx, w, h, layer); return; }
-  const box = layerBox(w, h, layer);
-  const pathFn = (c: Ctx) => tracePath(c, box, layer);
-  const rotate = layer.anim && layer.anim.mode === 'rotate';
+  const mode = layer.anim?.mode ?? 'none';
+  const rotate = mode === 'rotate';
   const deg = rotate ? rotationForValue(value, layer.anim!.minDeg ?? -135, layer.anim!.maxDeg ?? 135) : 0;
+
+  let box = layerBox(w, h, layer);
+  let pathFn = (c: Ctx) => tracePath(c, box, layer);
+  if (mode === 'lever') {
+    // Palanca de frente: cápsula pivote→punta. En el centro del recorrido la
+    // punta coincide con el pivote y solo se ve el remate (apunta a la cámara).
+    const g = leverGeometry(w, h, layer, value);
+    box = g.bounds;
+    pathFn = (c: Ctx) => traceCapsule(c, g.pivot, g.tip, g.r);
+  } else if (mode === 'translate') {
+    const off = travelOffset(w, h, layer, value);
+    box = { ...box, x: box.x + off.dx, y: box.y + off.dy };
+  }
 
   // Sombra proyectada / glow en espacio FIJO (no giran con la pieza).
   ctx.save();
@@ -168,6 +212,13 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
   ctx.restore();
 }
 
+/** Controles por pasos (switches): el valor se cuantiza a N estados. Puro. */
+export function snapValue(control: Control, value: number): number {
+  if (control.type !== 'IBSwitchControl') return value;
+  const n = Math.max(2, Math.round(Number(control.props.frames ?? 2) || 2));
+  return Math.round(value * (n - 1)) / (n - 1);
+}
+
 /**
  * Dibuja un frame del control en el sistema de coordenadas del control
  * (origen 0,0; tamaño rect.w x rect.h). `value` en 0..1.
@@ -181,6 +232,7 @@ export function renderControlFrame(
 ) {
   const { w, h } = control.rect;
   const light = resolveLight(scene.light);
+  value = snapValue(control, value);
   // Margen del cuerpo: encoge todas las capas (menos las marcas) hacia el centro
   // para dejar sitio a las marcas exteriores. Fracción 0..0.4.
   const bodyInset = Math.max(0, Math.min(0.4, Number(control.props.bodyInset ?? 0) || 0));

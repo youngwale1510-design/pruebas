@@ -3,7 +3,7 @@
 
 import { Control, SceneDocument } from '../../model/scene';
 
-const BITMAP_TYPES = new Set(['IBKnobControl', 'IBitmapControl']);
+const BITMAP_TYPES = new Set(['IBKnobControl', 'IBSwitchControl', 'IBitmapControl']);
 
 export function isBitmapControl(c: Control): boolean {
   return BITMAP_TYPES.has(c.type);

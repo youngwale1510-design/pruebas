@@ -5,7 +5,9 @@ const CONTROL_TYPES: ControlType[] = [
   'IVKnobControl',
   'IVSliderControl',
   'IVButtonControl',
+  'IVToggleControl',
   'IBKnobControl',
+  'IBSwitchControl',
   'IBitmapControl',
 ];
 
@@ -13,6 +15,7 @@ export function PropertiesPanel() {
   const scene = useStore((s) => s.scene);
   const selectedId = useStore((s) => s.selectedId);
   const update = useStore((s) => s.updateControl);
+  const setSteps = useStore((s) => s.setSteps);
 
   const control = scene.controls.find((c) => c.id === selectedId);
   if (!control) return <div className="panel">Selecciona un control</div>;
@@ -71,6 +74,17 @@ export function PropertiesPanel() {
           </label>
         ))}
       </div>
+
+      {control.type === 'IBSwitchControl' && (
+        <label>
+          Pasos (posiciones del switch) <b>{Number(control.props.frames ?? 2)}</b>
+          <input
+            type="range" min={2} max={8} value={Number(control.props.frames ?? 2)}
+            onChange={(e) => setSteps(control.id, Number(e.target.value))}
+          />
+          <span className="hint">Cada paso es un frame del filmstrip; el parámetro pasa a enum 0..{Number(control.props.frames ?? 2) - 1}.</span>
+        </label>
+      )}
 
       <label>
         Margen para marcas (encoge el knob) <b>{Math.round(Number(control.props.bodyInset ?? 0) * 100)}%</b>

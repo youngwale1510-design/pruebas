@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveLight, rotationForValue, shadowOffset } from '../src/render/light';
-import { layerBox } from '../src/render/renderControl';
+import { layerBox, leverGeometry, snapValue, travelOffset } from '../src/render/renderControl';
 import {
   filmstripLayout,
   frameOrigin,
@@ -13,7 +13,7 @@ import {
   controlFrames,
   generateResourcesHeader,
 } from '../src/codegen/iplug2/resources';
-import { emptyScene, defaultKnob, defaultKnobLayers } from '../src/model/defaults';
+import { emptyScene, defaultKnob, defaultKnobLayers, defaultSlideSwitch, defaultToggleSwitch } from '../src/model/defaults';
 
 describe('luz global', () => {
   it('vector de luz y offset de sombra', () => {
@@ -111,5 +111,34 @@ describe('sentido de giro del indicador', () => {
     expect(a.x).toBeLessThan(0); expect(a.y).toBeGreaterThan(0);
     expect(Math.abs(m.x)).toBeLessThan(0.01); expect(m.y).toBeLessThan(0);
     expect(b.x).toBeGreaterThan(0); expect(b.y).toBeGreaterThan(0);
+  });
+});
+
+describe('switches por pasos', () => {
+  it('slide: la bola recorre la pista y el valor se cuantiza a N pasos', () => {
+    const sw = defaultSlideSwitch('sw', 'Sw', 'p', 3);
+    expect(sw.type).toBe('IBSwitchControl');
+    expect(sw.props.frames).toBe(3);
+    expect(snapValue(sw, 0.4)).toBeCloseTo(0.5);
+    expect(snapValue(sw, 0.1)).toBe(0);
+    const ball = sw.layers.find((l) => l.name === 'Bola')!;
+    const a = travelOffset(sw.rect.w, sw.rect.h, ball, 0);
+    const b = travelOffset(sw.rect.w, sw.rect.h, ball, 1);
+    expect(a.dx).toBe(0);
+    expect(b.dx).toBeGreaterThan(sw.rect.w * 0.4);
+    // la bola termina dentro de la pista
+    const box = layerBox(sw.rect.w, sw.rect.h, ball);
+    expect(box.x + box.w + b.dx).toBeLessThanOrEqual(sw.rect.w);
+  });
+  it('palanca: punta abajo en 0, en el pivote a mitad, arriba en 1', () => {
+    const tg = defaultToggleSwitch('tg', 'Tg', 'p', 3);
+    const lever = tg.layers.find((l) => l.name === 'Palanca')!;
+    const g0 = leverGeometry(tg.rect.w, tg.rect.h, lever, 0);
+    const gm = leverGeometry(tg.rect.w, tg.rect.h, lever, 0.5);
+    const g1 = leverGeometry(tg.rect.w, tg.rect.h, lever, 1);
+    expect(g0.tip.y).toBeGreaterThan(g0.pivot.y);
+    expect(Math.abs(gm.tip.y - gm.pivot.y)).toBeLessThan(1);
+    expect(g1.tip.y).toBeLessThan(g1.pivot.y);
+    expect(Math.abs(g0.tip.y - g0.pivot.y)).toBeCloseTo(Math.abs(g1.tip.y - g1.pivot.y), 5);
   });
 });

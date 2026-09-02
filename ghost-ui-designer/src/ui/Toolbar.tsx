@@ -5,6 +5,7 @@ export function Toolbar() {
   const scene = useStore((s) => s.scene);
   const selectedId = useStore((s) => s.selectedId);
   const addKnob = useStore((s) => s.addKnob);
+  const addSwitch = useStore((s) => s.addSwitch);
   const setScene = useStore((s) => s.setScene);
   const setPreview = useStore((s) => s.setPreview);
 
@@ -41,6 +42,8 @@ export function Toolbar() {
     <div className="toolbar">
       <strong>Ghost UI Designer</strong>
       <button onClick={addKnob}>+ Knob</button>
+      <button onClick={() => addSwitch('slide')}>+ Switch</button>
+      <button onClick={() => addSwitch('toggle')}>+ Palanca</button>
       <button onClick={preview}>Vista previa C++</button>
       <button onClick={exportFilmstrip}>Exportar filmstrip</button>
       <button onClick={doExport}>Exportar bundle</button>

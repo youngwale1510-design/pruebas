@@ -62,9 +62,17 @@ export interface TicksConfig {
 
 /** Animación de la capa en función del valor del control (0..1). */
 export interface LayerAnim {
-  mode: 'none' | 'rotate';
+  /** none: fija · rotate: gira (knob) · translate: se desplaza (switch deslizante,
+   *  slider) · lever: palanca vista de frente, cápsula desde `pivotNorm` hasta
+   *  la punta (la punta viaja `travel`; en el punto medio queda de canto). */
+  mode: 'none' | 'rotate' | 'translate' | 'lever';
   minDeg?: number; // ángulo en value=0 (por defecto -135)
   maxDeg?: number; // ángulo en value=1 (por defecto  135)
+  /** translate/lever: desplazamiento total (fracción del rect del control) entre
+   *  value=0 y value=1. La posición en value=0 es la del rectNorm de la capa. */
+  travel?: { x: number; y: number };
+  /** lever: punto de giro (0..1 del control); por defecto el centro. */
+  pivotNorm?: { x: number; y: number };
 }
 
 export interface Layer {
@@ -111,6 +119,7 @@ export type ControlType =
   | 'IVButtonControl'
   | 'IVToggleControl'
   | 'IBKnobControl'
+  | 'IBSwitchControl' // filmstrip de N estados (switch deslizante, palanca, botón)
   | 'IBitmapControl';
 
 export interface Rect {

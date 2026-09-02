@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { Control, Effect, EffectType, Layer, SceneDocument } from '../model/scene';
-import { emptyScene, makeId, defaultKnob, defaultParam } from '../model/defaults';
+import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch } from '../model/defaults';
+import { ParamDef } from '../model/scene';
 import { KnobConfig, defaultKnobConfig } from '../model/knobConfig';
 
 interface AppState {
@@ -11,6 +12,11 @@ interface AppState {
 
   select: (id: string | null) => void;
   addKnob: () => void;
+  /** Añade un switch (deslizante o de palanca) con N pasos y su parámetro enum. */
+  addSwitch: (kind: 'slide' | 'toggle', steps?: number) => void;
+  updateParam: (id: string, patch: Partial<ParamDef>) => void;
+  /** Cambia el nº de pasos de un switch (frames del filmstrip + rango del parámetro). */
+  setSteps: (controlId: string, steps: number) => void;
   updateControl: (id: string, patch: Partial<Control>) => void;
   moveControl: (id: string, x: number, y: number) => void;
   setKnob3d: (id: string, cfg: KnobConfig | undefined) => void;
@@ -66,6 +72,40 @@ export const useStore = create<AppState>((set) => ({
           controls: [...s.scene.controls, knob],
         },
         selectedId: knob.id,
+      };
+    }),
+
+  addSwitch: (kind, steps = 2) =>
+    set((s) => {
+      const n = s.scene.controls.length + 1;
+      const pid = `param${n}`;
+      const make = kind === 'slide' ? defaultSlideSwitch : defaultToggleSwitch;
+      const sw = make(makeId(kind), `${kind === 'slide' ? 'Switch' : 'Palanca'} ${n}`, pid, steps);
+      sw.rect.x = 20 + ((n - 1) % 4) * 100;
+      sw.rect.y = 20 + Math.floor((n - 1) / 4) * 130;
+      const param: ParamDef = { id: pid, name: `Param ${n}`, type: 'enum', min: 0, max: steps - 1, default: 0 };
+      return {
+        scene: { ...s.scene, params: [...s.scene.params, param], controls: [...s.scene.controls, sw] },
+        selectedId: sw.id,
+      };
+    }),
+
+  updateParam: (id, patch) =>
+    set((s) => ({
+      scene: { ...s.scene, params: s.scene.params.map((p) => (p.id === id ? { ...p, ...patch } : p)) },
+    })),
+
+  setSteps: (controlId, steps) =>
+    set((s) => {
+      const n = Math.max(2, Math.min(16, Math.round(steps) || 2));
+      const c = s.scene.controls.find((x) => x.id === controlId);
+      if (!c) return {};
+      return {
+        scene: {
+          ...s.scene,
+          controls: s.scene.controls.map((x) => (x.id === controlId ? { ...x, props: { ...x.props, frames: n } } : x)),
+          params: s.scene.params.map((p) => (p.id === c.paramId ? { ...p, type: 'enum', min: 0, max: n - 1 } : p)),
+        },
       };
     }),
 

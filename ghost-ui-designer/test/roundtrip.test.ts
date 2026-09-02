@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { emptyScene, defaultKnob, defaultParam } from '../src/model/defaults';
+import { emptyScene, defaultKnob, defaultParam, defaultToggleSwitch } from '../src/model/defaults';
 import { writeSceneToSource, readSceneFromSource } from '../src/codegen/roundtrip';
 import { parseControlsFromBody } from '../src/codegen/iplug2/parse';
 
@@ -111,5 +111,19 @@ describe('payload sin imágenes embebidas', () => {
     expect(c.props.filmstripEmbedded).toBe(true);
     expect(c.layers[0].fillImage).toBeUndefined();
     expect(c.layers[0].fillImageEmbedded).toBe(true);
+  });
+});
+
+describe('switches en el codegen', () => {
+  it('IBSwitchControl con N frames y recurso bitmap, y sobrevive al round-trip', () => {
+    const scene = emptyScene();
+    scene.params.push({ id: 'mode', name: 'Mode', type: 'enum', min: 0, max: 2, default: 0 });
+    scene.controls.push(defaultToggleSwitch('sw_mode', 'Mode', 'mode', 3));
+    const { source } = writeSceneToSource(scene, null);
+    expect(source).toContain('new IBSwitchControl(20, 20, pGraphics->LoadBitmap(SWMODE_FN, 3), kMode)');
+    const parsed = readSceneFromSource(source);
+    expect(parsed.controls[0].type).toBe('IBSwitchControl');
+    expect(parsed.controls[0].props.frames).toBe(3);
+    expect(parsed.controls[0].layers.some((l) => l.anim?.mode === 'lever')).toBe(true);
   });
 });

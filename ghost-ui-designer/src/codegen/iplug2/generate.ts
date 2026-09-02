@@ -40,6 +40,12 @@ function attachLine(c: Control): string {
       const frames = controlFrames(c);
       return `  pGraphics->AttachControl(new IBKnobControl(${c.rect.x}, ${c.rect.y}, pGraphics->LoadBitmap(${res}, ${frames}), ${tag}), ${ctrlTag(c.id)});`;
     }
+    case 'IBSwitchControl': {
+      // Filmstrip de N estados: switch deslizante, palanca, botón…
+      const res = bitmapResId(c.id);
+      const frames = controlFrames(c);
+      return `  pGraphics->AttachControl(new IBSwitchControl(${c.rect.x}, ${c.rect.y}, pGraphics->LoadBitmap(${res}, ${frames}), ${tag}), ${ctrlTag(c.id)});`;
+    }
     case 'IBitmapControl': {
       const res = bitmapResId(c.id);
       const frames = controlFrames(c);

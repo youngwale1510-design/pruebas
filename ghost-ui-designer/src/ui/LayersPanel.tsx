@@ -124,11 +124,56 @@ export function LayersPanel() {
             )}
 
             {l.shape !== 'ticks' && (<>
-            <label className="chk" style={{ marginTop: 6 }}>
-              <input type="checkbox" checked={l.anim?.mode === 'rotate'}
-                onChange={(ev) => updateLayer(control.id, l.id, { anim: ev.target.checked ? { mode: 'rotate', minDeg: -150, maxDeg: 150 } : { mode: 'none' } })} />
-              <span>Gira con el valor</span>
+            {l.rectNorm && (
+              <div className="row">
+                {(['x', 'y', 'w', 'h'] as const).map((k) => (
+                  <label key={k} className="k3-field" style={{ flex: 1 }}>
+                    <span>{k.toUpperCase()} %</span>
+                    <input type="number" step={1} value={Math.round(l.rectNorm![k] * 100)}
+                      onChange={(e) => updateLayer(control.id, l.id, { rectNorm: { ...l.rectNorm!, [k]: Number(e.target.value) / 100 } })} />
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <label className="k3-field" style={{ marginTop: 6 }}>
+              <span>Animación con el valor</span>
+              <select value={l.anim?.mode ?? 'none'}
+                onChange={(ev) => {
+                  const m = ev.target.value as NonNullable<typeof l.anim>['mode'];
+                  const anim =
+                    m === 'rotate' ? { mode: m, minDeg: -150, maxDeg: 150 } :
+                    m === 'translate' ? { mode: m, travel: { x: 0.5, y: 0 } } :
+                    m === 'lever' ? { mode: m, travel: { x: 0, y: -0.5 }, pivotNorm: { x: 0.5, y: 0.5 } } :
+                    { mode: 'none' as const };
+                  updateLayer(control.id, l.id, { anim });
+                }}>
+                <option value="none">Fija</option>
+                <option value="rotate">Gira (knob)</option>
+                <option value="translate">Se desplaza (switch / slider)</option>
+                <option value="lever">Palanca (pivote → punta)</option>
+              </select>
             </label>
+            {(l.anim?.mode === 'translate' || l.anim?.mode === 'lever') && (
+              <div className="row">
+                <label className="k3-field" style={{ flex: 1 }}><span>Recorrido X <b>{Math.round((l.anim.travel?.x ?? 0) * 100)}%</b></span>
+                  <input type="range" min={-100} max={100} value={Math.round((l.anim.travel?.x ?? 0) * 100)}
+                    onChange={(e) => updateLayer(control.id, l.id, { anim: { ...l.anim!, travel: { x: Number(e.target.value) / 100, y: l.anim!.travel?.y ?? 0 } } })} /></label>
+                <label className="k3-field" style={{ flex: 1 }}><span>Recorrido Y <b>{Math.round((l.anim.travel?.y ?? 0) * 100)}%</b></span>
+                  <input type="range" min={-100} max={100} value={Math.round((l.anim.travel?.y ?? 0) * 100)}
+                    onChange={(e) => updateLayer(control.id, l.id, { anim: { ...l.anim!, travel: { x: l.anim!.travel?.x ?? 0, y: Number(e.target.value) / 100 } } })} /></label>
+              </div>
+            )}
+            {l.anim?.mode === 'lever' && (
+              <div className="row">
+                <label className="k3-field" style={{ flex: 1 }}><span>Pivote X %</span>
+                  <input type="number" value={Math.round((l.anim.pivotNorm?.x ?? 0.5) * 100)}
+                    onChange={(e) => updateLayer(control.id, l.id, { anim: { ...l.anim!, pivotNorm: { x: Number(e.target.value) / 100, y: l.anim!.pivotNorm?.y ?? 0.5 } } })} /></label>
+                <label className="k3-field" style={{ flex: 1 }}><span>Pivote Y %</span>
+                  <input type="number" value={Math.round((l.anim.pivotNorm?.y ?? 0.5) * 100)}
+                    onChange={(e) => updateLayer(control.id, l.id, { anim: { ...l.anim!, pivotNorm: { x: l.anim!.pivotNorm?.x ?? 0.5, y: Number(e.target.value) / 100 } } })} /></label>
+              </div>
+            )}
 
             <div className="chips" style={{ marginTop: 6 }}>
               {EFFECTS.map(([type, label]) => {

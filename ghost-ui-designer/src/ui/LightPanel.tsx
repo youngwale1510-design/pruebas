@@ -41,7 +41,7 @@ export function LightPanel() {
         />
       </label>
       <label>
-        Giro (previsualización) <b>{Math.round(previewValue * 100)}%</b>
+        Valor (previsualización) <b>{Math.round(previewValue * 100)}%</b>
         <input
           type="range" min={0} max={100} value={Math.round(previewValue * 100)}
           onChange={(e) => setPreviewValue(Number(e.target.value) / 100)}
