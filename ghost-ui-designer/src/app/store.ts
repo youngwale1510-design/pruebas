@@ -16,6 +16,8 @@ interface AppState {
   setKnob3d: (id: string, cfg: KnobConfig | undefined) => void;
   setLight: (patch: Partial<SceneDocument['light']>) => void;
   updateLayer: (controlId: string, layerId: string, patch: Partial<Layer>) => void;
+  addLayer: (controlId: string, layer: Layer) => void;
+  removeLayer: (controlId: string, layerId: string) => void;
   toggleEffect: (controlId: string, layerId: string, type: EffectType) => void;
   addEffect: (controlId: string, layerId: string, type: EffectType, params?: Effect['params']) => void;
   removeEffect: (controlId: string, layerId: string, effectId: string) => void;
@@ -102,6 +104,26 @@ export const useStore = create<AppState>((set) => ({
 
   updateLayer: (controlId, layerId, patch) =>
     set((s) => ({ scene: editLayer(s.scene, controlId, layerId, (l) => ({ ...l, ...patch })) })),
+
+  addLayer: (controlId, layer) =>
+    set((s) => ({
+      scene: {
+        ...s.scene,
+        controls: s.scene.controls.map((c) =>
+          c.id === controlId ? { ...c, layers: [...c.layers, layer] } : c,
+        ),
+      },
+    })),
+
+  removeLayer: (controlId, layerId) =>
+    set((s) => ({
+      scene: {
+        ...s.scene,
+        controls: s.scene.controls.map((c) =>
+          c.id === controlId ? { ...c, layers: c.layers.filter((l) => l.id !== layerId) } : c,
+        ),
+      },
+    })),
 
   toggleEffect: (controlId, layerId, type) =>
     set((s) => ({

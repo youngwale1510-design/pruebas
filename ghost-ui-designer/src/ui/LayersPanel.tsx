@@ -1,5 +1,6 @@
 import { useStore } from '../app/store';
 import { EffectType, Layer, LayerShape } from '../model/scene';
+import { makeId } from '../model/defaults';
 
 const SHAPES: [LayerShape, string][] = [
   ['ellipse', 'Círculo'], ['scalloped', 'Estriado'], ['polygon', 'Polígono'],
@@ -17,6 +18,8 @@ export function LayersPanel() {
   const scene = useStore((s) => s.scene);
   const selectedId = useStore((s) => s.selectedId);
   const updateLayer = useStore((s) => s.updateLayer);
+  const addLayer = useStore((s) => s.addLayer);
+  const removeLayer = useStore((s) => s.removeLayer);
   const toggleEffect = useStore((s) => s.toggleEffect);
   const addEffect = useStore((s) => s.addEffect);
   const removeEffect = useStore((s) => s.removeEffect);
@@ -35,9 +38,16 @@ export function LayersPanel() {
       <h3>Capas y efectos</h3>
       {control.layers.map((l: Layer) => {
         const speculars = l.effects.filter((e) => e.type === 'specular');
+        const t = l.ticks ?? { count: 11, style: 'dot' as const, radius: 0.92, spanDeg: 270, size: 3 };
+        const setTicks = (patch: Partial<typeof t>) =>
+          updateLayer(control.id, l.id, { ticks: { ...t, ...patch } });
         return (
           <fieldset key={l.id}>
-            <legend>{l.name}</legend>
+            <legend style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <span>{l.name}</span>
+              <button className="btn" style={{ padding: '1px 7px' }} title="Quitar capa"
+                onClick={() => removeLayer(control.id, l.id)}>✕</button>
+            </legend>
 
             <div className="row" style={{ alignItems: 'center', gap: 8 }}>
               <input
@@ -80,8 +90,29 @@ export function LayersPanel() {
                   onChange={(e) => updateLayer(control.id, l.id, { sides: Number(e.target.value) })} />
               </label>
             )}
+            {l.shape === 'ticks' && (
+              <>
+                <label className="k3-field"><span>Nº de marcas <b>{t.count}</b></span>
+                  <input type="range" min={2} max={48} step={1} value={t.count}
+                    onChange={(e) => setTicks({ count: Number(e.target.value) })} /></label>
+                <label className="k3-field"><span>Estilo</span>
+                  <select value={t.style} onChange={(e) => setTicks({ style: e.target.value as 'dot' | 'line' })}>
+                    <option value="dot">Puntos</option>
+                    <option value="line">Líneas</option>
+                  </select></label>
+                <label className="k3-field"><span>Radio <b>{Math.round(t.radius * 100)}%</b></span>
+                  <input type="range" min={0.5} max={1} step={0.01} value={t.radius}
+                    onChange={(e) => setTicks({ radius: Number(e.target.value) })} /></label>
+                <label className="k3-field"><span>Arco <b>{t.spanDeg}°</b></span>
+                  <input type="range" min={90} max={360} step={5} value={t.spanDeg}
+                    onChange={(e) => setTicks({ spanDeg: Number(e.target.value) })} /></label>
+                <label className="k3-field"><span>Tamaño <b>{t.size}px</b></span>
+                  <input type="range" min={1} max={10} step={0.5} value={t.size}
+                    onChange={(e) => setTicks({ size: Number(e.target.value) })} /></label>
+              </>
+            )}
 
-            {l.rectNorm == null && (
+            {l.shape !== 'ticks' && l.rectNorm == null && (
               <label className="k3-field">
                 <span>Tamaño <b>{Math.round((1 - 2 * (l.inset ?? 0)) * 100)}%</b></span>
                 <input type="range" min={0} max={0.48} step={0.01} value={l.inset ?? 0}
@@ -89,6 +120,7 @@ export function LayersPanel() {
               </label>
             )}
 
+            {l.shape !== 'ticks' && (<>
             <label className="chk" style={{ marginTop: 6 }}>
               <input type="checkbox" checked={l.anim?.mode === 'rotate'}
                 onChange={(ev) => updateLayer(control.id, l.id, { anim: ev.target.checked ? { mode: 'rotate', minDeg: -150, maxDeg: 150 } : { mode: 'none' } })} />
@@ -135,9 +167,22 @@ export function LayersPanel() {
                 + Añadir reflejo
               </button>
             </div>
+            </>)}
           </fieldset>
         );
       })}
+
+      <div className="row" style={{ gap: 6, marginTop: 8 }}>
+        <button className="btn" onClick={() => addLayer(control.id, {
+          id: makeId('lyr'), name: 'Capa', kind: 'shape', visible: true, blendMode: 'normal',
+          opacity: 1, shape: 'ellipse', inset: 0.1, fill: '#3a3a42', effects: [],
+        })}>+ Capa</button>
+        <button className="btn" onClick={() => addLayer(control.id, {
+          id: makeId('lyr'), name: 'Marcas', kind: 'shape', visible: true, blendMode: 'normal',
+          opacity: 1, shape: 'ticks', fill: '#c9c9d0', effects: [],
+          ticks: { count: 11, style: 'dot', radius: 0.94, spanDeg: 270, size: 3 },
+        })}>+ Marcas</button>
+      </div>
     </div>
   );
 }

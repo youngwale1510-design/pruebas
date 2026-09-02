@@ -10,6 +10,11 @@ import { IPC, type FilmstripPng } from './ipc-contract';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+/** Ventana padre para los diálogos (si no, en Windows pueden abrirse detrás). */
+function dlgWin(): BrowserWindow {
+  return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+}
+
 async function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
@@ -31,7 +36,7 @@ async function createWindow() {
 }
 
 ipcMain.handle(IPC.saveProject, async (_e, scene: SceneDocument, suggested?: string) => {
-  const { canceled, filePath } = await dialog.showSaveDialog({
+  const { canceled, filePath } = await dialog.showSaveDialog(dlgWin(), {
     defaultPath: suggested ?? `${scene.meta.pluginName || 'project'}.ghostui`,
     filters: [{ name: 'Ghost UI', extensions: ['ghostui'] }],
   });
@@ -41,7 +46,7 @@ ipcMain.handle(IPC.saveProject, async (_e, scene: SceneDocument, suggested?: str
 });
 
 ipcMain.handle(IPC.openProject, async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
+  const { canceled, filePaths } = await dialog.showOpenDialog(dlgWin(), {
     properties: ['openFile'],
     filters: [{ name: 'Ghost UI', extensions: ['ghostui'] }],
   });
@@ -70,7 +75,7 @@ ipcMain.handle(IPC.previewCpp, async (_e, scene: SceneDocument, existing: string
 ipcMain.handle(
   IPC.exportBundle,
   async (_e, scene: SceneDocument, assets: FilmstripPng[]) => {
-    const { canceled, filePaths } = await dialog.showOpenDialog({
+    const { canceled, filePaths } = await dialog.showOpenDialog(dlgWin(), {
       properties: ['openDirectory', 'createDirectory'],
       title: 'Carpeta de destino del bundle',
     });
@@ -105,7 +110,7 @@ ipcMain.handle(
 );
 
 ipcMain.handle(IPC.importImage, async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
+  const { canceled, filePaths } = await dialog.showOpenDialog(dlgWin(), {
     properties: ['openFile'],
     filters: [{ name: 'Imagen', extensions: ['png', 'jpg', 'jpeg', 'webp'] }],
     title: 'Importar imagen (textura o filmstrip)',
@@ -131,7 +136,7 @@ ipcMain.handle(IPC.importImage, async () => {
 });
 
 ipcMain.handle(IPC.saveImage, async (_e, dataUri: string, suggestedName: string) => {
-  const { canceled, filePath } = await dialog.showSaveDialog({
+  const { canceled, filePath } = await dialog.showSaveDialog(dlgWin(), {
     defaultPath: suggestedName || 'filmstrip.png',
     filters: [{ name: 'PNG', extensions: ['png'] }],
   });

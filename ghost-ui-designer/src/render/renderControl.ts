@@ -84,8 +84,44 @@ function tracePath(ctx: Ctx, box: Box, layer: Layer) {
   }
 }
 
+/** Anillo de marcas exteriores (escala del knob). Estáticas por defecto. */
+function drawTicks(ctx: Ctx, w: number, h: number, layer: Layer) {
+  const t = layer.ticks;
+  if (!t) return;
+  const cx = w / 2, cy = h / 2;
+  const R = (Math.min(w, h) / 2) * (t.radius ?? 0.92);
+  const count = Math.max(2, Math.round(t.count ?? 11));
+  const spanRad = ((t.spanDeg ?? 270) * Math.PI) / 180;
+  const color = layer.fill ?? '#c9c9d0';
+  const size = t.size ?? 3;
+  ctx.save();
+  ctx.globalAlpha = layer.opacity;
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
+  for (let i = 0; i < count; i++) {
+    const frac = count <= 1 ? 0 : i / (count - 1);
+    // centradas arriba, hueco abajo (como un knob real)
+    const ang = -Math.PI / 2 - spanRad / 2 + spanRad * frac;
+    const cos = Math.cos(ang), sin = Math.sin(ang);
+    if ((t.style ?? 'dot') === 'line') {
+      ctx.lineWidth = Math.max(1, size * 0.5);
+      ctx.beginPath();
+      ctx.moveTo(cx + cos * R, cy + sin * R);
+      ctx.lineTo(cx + cos * (R - size * 1.6), cy + sin * (R - size * 1.6));
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(cx + cos * R, cy + sin * R, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
 function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number, light: LightVectors, images?: ImageCache) {
   if (!layer.visible) return;
+  if (layer.shape === 'ticks') { drawTicks(ctx, w, h, layer); return; }
   const box = layerBox(w, h, layer);
   const pathFn = (c: Ctx) => tracePath(c, box, layer);
   const rotate = layer.anim && layer.anim.mode === 'rotate';
@@ -101,10 +137,11 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
   ctx.globalAlpha = layer.opacity;
   ctx.globalCompositeOperation = COMPOSITE[layer.blendMode] ?? 'source-over';
   // La forma gira; la luz se contrarrota para quedar FIJA en el mundo.
-  const L = rotate ? rotateLight(light, -deg) : light;
+  // Sentido: valor creciente = horario (como un knob real).
+  const L = rotate ? rotateLight(light, deg) : light;
   if (rotate) {
     ctx.translate(w / 2, h / 2);
-    ctx.rotate((deg * Math.PI) / 180);
+    ctx.rotate((-deg * Math.PI) / 180);
     ctx.translate(-w / 2, -h / 2);
   }
   const tex = layer.fillImage && images ? images[layer.fillImage] : undefined;

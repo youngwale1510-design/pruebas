@@ -49,7 +49,16 @@ export interface ColorAdjust {
   contrast: number; // -100..100
 }
 
-export type LayerShape = 'ellipse' | 'rect' | 'roundRect' | 'scalloped' | 'polygon' | 'wedge';
+export type LayerShape = 'ellipse' | 'rect' | 'roundRect' | 'scalloped' | 'polygon' | 'wedge' | 'ticks';
+
+/** Anillo de marcas exteriores (escala del knob): puntos o líneas alrededor. */
+export interface TicksConfig {
+  count: number;      // nº de marcas
+  style: 'dot' | 'line';
+  radius: number;     // fracción del radio (0..1) donde se colocan
+  spanDeg: number;    // arco total que cubren (p.ej. 270)
+  size: number;       // tamaño del punto / largo de la línea (px)
+}
 
 /** Animación de la capa en función del valor del control (0..1). */
 export interface LayerAnim {
@@ -88,6 +97,8 @@ export interface Layer {
   lobes?: number;
   /** nº de lados para 'polygon'. */
   sides?: number;
+  /** configuración de marcas para shape 'ticks'. */
+  ticks?: TicksConfig;
   anim?: LayerAnim;
 }
 
