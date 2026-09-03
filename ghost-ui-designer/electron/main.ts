@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { SceneDocument } from '../src/model/scene';
 import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
-import { generateResourcesHeader } from '../src/codegen/iplug2/resources';
+import { generateResourcesHeader, generateResourcesRc } from '../src/codegen/iplug2/resources';
 import { IPC, type FilmstripPng } from './ipc-contract';
 
 /** Ventana padre para los diálogos (si no, en Windows pueden abrirse detrás). */
@@ -93,9 +93,11 @@ ipcMain.handle(
       'utf8',
     );
 
-    // 3) PNGs de filmstrip (rasterizados en el renderer).
+    await writeFile(path.join(dir, `${name}_resources.rc.txt`), generateResourcesRc(scene), 'utf8');
+
+    // 3) PNGs de filmstrip (rasterizados en el renderer) -> resources/img (layout iPlug2).
     if (assets.length > 0) {
-      const resDir = path.join(dir, 'resources');
+      const resDir = path.join(dir, 'resources', 'img');
       await mkdir(resDir, { recursive: true });
       for (const a of assets) {
         const b64 = a.dataUri.replace(/^data:image\/\w+;base64,/, '');

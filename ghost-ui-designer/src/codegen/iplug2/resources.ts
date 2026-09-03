@@ -49,8 +49,23 @@ export function generateResourcesHeader(scene: SceneDocument): string {
   const lines = res.map((r) => `#define ${r.resId} "${r.file}"`);
   return [
     '// [GHOST:RESOURCES BEGIN] — generado por Ghost UI Designer',
+    '// Inclúyelo desde config.h:  #include "<Plugin>_resources.h"',
+    '// Los PNG van en resources/img/ y hay que declararlos en resources/main.rc',
+    '// (ver <Plugin>_resources.rc.txt).',
     '#pragma once',
     ...lines,
     '// [GHOST:RESOURCES END]',
+  ].join('\n');
+}
+
+/** Líneas para pegar en resources/main.rc (Windows embebe los PNG como recursos).
+ *  Convención iPlug2: `NOMBRE_FN PNG NOMBRE_FN` (el nombre viene del #define). */
+export function generateResourcesRc(scene: SceneDocument): string {
+  const res = collectBitmapResources(scene);
+  return [
+    '// Pega estas líneas en resources/main.rc, junto a "ROBOTO_FN TTF ROBOTO_FN"',
+    '// (aparece dos veces: en el bloque TEXTINCLUDE y al final del archivo).',
+    ...res.map((r) => `${r.resId} PNG ${r.resId}`),
+    '',
   ].join('\n');
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { emptyScene, defaultKnob, defaultParam, defaultToggleSwitch } from '../src/model/defaults';
 import { writeSceneToSource, readSceneFromSource } from '../src/codegen/roundtrip';
 import { parseControlsFromBody } from '../src/codegen/iplug2/parse';
+import { generateResourcesRc } from '../src/codegen/iplug2/resources';
 
 function sceneWithKnob() {
   const scene = emptyScene('GhostBand');
@@ -125,5 +126,16 @@ describe('switches en el codegen', () => {
     expect(parsed.controls[0].type).toBe('IBSwitchControl');
     expect(parsed.controls[0].props.frames).toBe(3);
     expect(parsed.controls[0].layers.some((l) => l.anim?.mode === 'lever')).toBe(true);
+  });
+});
+
+describe('recursos para main.rc', () => {
+  it('genera una línea PNG por control bitmap', () => {
+    const scene = emptyScene();
+    scene.controls.push(defaultKnob('knob_gain', 'Gain', 'gain'));
+    scene.controls.push(defaultToggleSwitch('sw_mode', 'Mode', 'mode', 2));
+    const rc = generateResourcesRc(scene);
+    expect(rc).toContain('KNOBGAIN_FN PNG KNOBGAIN_FN');
+    expect(rc).toContain('SWMODE_FN PNG SWMODE_FN');
   });
 });

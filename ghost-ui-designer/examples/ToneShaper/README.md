@@ -35,31 +35,57 @@ En `ToneShaper.cpp`, todo lo que está **fuera** de `// [GHOST:LAYOUT BEGIN] …
 > El `.cpp` de este ejemplo lo **genera el propio codegen del diseñador**
 > (ver `test/exampleToneShaper.test.ts`), así que el round-trip está garantizado.
 
-## Compilar (colocándolo en iPlug2)
+## Compilar en Windows (paso a paso)
 
-iPlug2 es gratuito y de licencia permisiva (por eso migramos desde JUCE).
+Necesitas: **Git for Windows**, **Visual Studio 2022 Community** (carga de trabajo
+"Desarrollo de escritorio con C++") y **Python 3** (marca "Add to PATH" al instalar).
 
-```bash
-# 1) Clona iPlug2
-git clone https://github.com/iPlug2/iPlug2.git
-cd iPlug2 && ./download-iplug-sdks.sh   # (o .bat en Windows)
+1. **Descarga iPlug2** (si no lo tienes ya):
+   ```
+   git clone https://github.com/iPlug2/iPlug2.git
+   ```
+2. **SDKs y librerías precompiladas.** Abre *Git Bash* (clic derecho en la carpeta
+   `iPlug2` → "Git Bash Here") y ejecuta:
+   ```bash
+   cd Dependencies/IPlug
+   ./download-iplug-sdks.sh
+   cd ..
+   ./download-prebuilt-libs.sh
+   ```
+3. **Crea el proyecto desde la plantilla** (en PowerShell o CMD, dentro de `iPlug2\Examples`):
+   ```
+   python duplicate.py IPlugEffect ToneShaper GhostAudio
+   ```
+   Esto genera `iPlug2\Examples\ToneShaper\` con el `.sln`, los `resources/` y los wrappers.
+4. **Copia estos tres archivos** encima de los generados:
+   ```
+   copy ToneShaper.h    iPlug2\Examples\ToneShaper\
+   copy ToneShaper.cpp  iPlug2\Examples\ToneShaper\
+   copy config.h        iPlug2\Examples\ToneShaper\
+   ```
+5. **Compila y ejecuta.** Abre `iPlug2\Examples\ToneShaper\ToneShaper.sln` en Visual Studio.
+   Clic derecho en `ToneShaper-app` → *Establecer como proyecto de inicio*, plataforma **x64**,
+   y **F5**. Se abre el plugin standalone con la GUI "fea" de partida.
+   Para el VST3: proyecto de inicio `ToneShaper-vst3` (compila a `C:\Program Files\Common Files\VST3`,
+   abre Visual Studio como administrador o da permisos a esa carpeta).
 
-# 2) Crea un proyecto a partir del ejemplo IPlugEffect
-cd Examples
-python duplicate.py IPlugEffect ToneShaper GhostAudio
+## Reestilizar y recompilar (round-trip)
 
-# 3) Sustituye los archivos generados por los de esta carpeta
-cp /ruta/a/ghost-ui-designer/examples/ToneShaper/ToneShaper.h  ToneShaper/
-cp /ruta/a/ghost-ui-designer/examples/ToneShaper/ToneShaper.cpp ToneShaper/
-cp /ruta/a/ghost-ui-designer/examples/ToneShaper/config.h       ToneShaper/
+1. En Ghost UI Designer: **Abrir** → `iPlug2\Examples\ToneShaper\ToneShaper.cpp`.
+2. Cambia lo que quieras (materiales, luces, switches, LEDs…).
+3. **Exportar bundle** → elige la carpeta `iPlug2\Examples\ToneShaper`. Se escriben:
+   - `ToneShaper.cpp` (solo se regenera la región entre marcadores; el DSP queda igual)
+   - `ToneShaper_resources.h` (los `#define XXX_FN "xxx.png"`)
+   - `ToneShaper_resources.rc.txt` (líneas para `main.rc`)
+   - `resources/img/*.png` (los filmstrips)
+4. En `config.h` añade al final: `#include "ToneShaper_resources.h"`.
+5. En `resources/main.rc` pega las líneas de `ToneShaper_resources.rc.txt` junto a
+   `ROBOTO_FN TTF ROBOTO_FN` (aparece dos veces en el archivo; pégalas en ambas).
+   Windows embebe así los PNG dentro del ejecutable.
+6. Vuelve a Visual Studio y F5. Solo los pasos 4 y 5 son necesarios la primera vez;
+   después basta con exportar y recompilar.
 
-# 4) Copia los recursos que exporte el diseñador (filmstrips, fuentes)
-#    a ToneShaper/resources/ y declara sus #define en config.h
-```
+## Compilar en macOS / Linux (resumen)
 
-Luego abre el proyecto (Xcode / Visual Studio) o usa el CMake de iPlug2 y compila
-el target `APP` para probarlo standalone, o `VST3`/`AU`.
-
-> Nota: `duplicate.py` genera los proyectos de IDE, los `resources/` y los wrappers
-> por plataforma. Estos tres archivos son la **fuente de verdad** de tu plugin
-> (DSP + parámetros + GUI marcada); el resto lo aporta la plantilla de iPlug2.
+Mismos scripts en un terminal normal y `python3 duplicate.py …`; luego abre el
+`.xcodeproj` (macOS) o usa el CMake de iPlug2 (Linux).
