@@ -7,6 +7,7 @@ export function Toolbar() {
   const addKnob = useStore((s) => s.addKnob);
   const addSwitch = useStore((s) => s.addSwitch);
   const setScene = useStore((s) => s.setScene);
+  const importControls = useStore((s) => s.importControls);
   const setPreview = useStore((s) => s.setPreview);
 
   const preview = async () => {
@@ -19,6 +20,18 @@ export function Toolbar() {
   const openProject = async () => {
     const res = await window.ghost.openProject();
     if (res) setScene(res.scene);
+  };
+
+  const openCpp = async () => {
+    const res = await window.ghost.importCpp();
+    if (!res) return;
+    if (!res.found) {
+      alert('Ese .cpp no tiene marcadores // [GHOST:LAYOUT ...]. Pide el plugin con la GUI marcada o añade los marcadores.');
+      return;
+    }
+    const name = res.path.replace(/\\/g, '/').split('/').pop()!.replace(/\.(cpp|cc|cxx|h|hpp)$/i, '');
+    importControls(res.controls, name);
+    alert(`${res.controls.length} controles cargados desde ${name}. Al exportar el bundle, elige la carpeta del proyecto iPlug2 y se actualizará solo la región marcada.`);
   };
 
   const doExport = async () => {
@@ -49,7 +62,8 @@ export function Toolbar() {
       <button onClick={exportFilmstrip}>Exportar filmstrip</button>
       <button onClick={doExport}>Exportar bundle</button>
       <span className="spacer" />
-      <button onClick={openProject}>Abrir</button>
+      <button onClick={openCpp}>Abrir .cpp</button>
+      <button onClick={openProject}>Abrir proyecto</button>
       <button onClick={saveProject}>Guardar</button>
     </div>
   );

@@ -32,6 +32,8 @@ interface AppState {
   updateEffect: (controlId: string, layerId: string, effectId: string, params: Effect['params']) => void;
   setPreviewValue: (v: number) => void;
   setScene: (scene: SceneDocument) => void;
+  /** Carga controles leídos de un .cpp: completa capas por tipo y crea los parámetros que falten. */
+  importControls: (controls: Control[], pluginName: string) => void;
   setPreview: (cpp: string) => void;
 }
 
@@ -209,6 +211,29 @@ export const useStore = create<AppState>((set) => ({
 
   setPreviewValue: (v) => set({ previewValue: Math.max(0, Math.min(1, v)) }),
   setScene: (scene) => set({ scene, selectedId: null }),
+  importControls: (controls, pluginName) =>
+    set((s) => {
+      const params = [...s.scene.params];
+      const prepared = controls.map((c) => {
+        if (c.paramId && !params.some((p) => p.id === c.paramId)) params.push(defaultParam(c.paramId, c.paramId));
+        if (c.layers.length > 0) return c;
+        // Control recién marcado (sin payload de diseño): plantilla según el tipo,
+        // convertido a bitmap para poder reestilizarlo al 100 %.
+        if (c.type === 'IVKnobControl' || c.type === 'IBKnobControl') {
+          const k = defaultKnob(c.id, c.name, c.paramId);
+          return { ...k, rect: c.rect, props: { ...k.props, ...c.props } };
+        }
+        if (c.type === 'IVToggleControl' || c.type === 'IVButtonControl' || c.type === 'IBSwitchControl') {
+          const sw = defaultSlideSwitch(c.id, c.name, c.paramId, 2);
+          return { ...sw, rect: c.rect, props: { ...sw.props, ...c.props } };
+        }
+        return c;
+      });
+      return {
+        scene: { ...s.scene, meta: { ...s.scene.meta, pluginName }, params, controls: prepared },
+        selectedId: prepared[0]?.id ?? null,
+      };
+    }),
   setPreview: (cpp) => set({ previewCpp: cpp }),
 }));
 

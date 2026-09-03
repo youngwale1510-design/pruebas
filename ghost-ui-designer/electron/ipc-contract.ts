@@ -16,8 +16,9 @@ export interface GhostApi {
   openProject(): Promise<{ path: string; scene: SceneDocument } | null>;
   /** Genera/actualiza el .cpp en `path` preservando el código escrito a mano. */
   exportCpp(scene: SceneDocument, path: string): Promise<{ merged: boolean }>;
-  /** Lee un .cpp y reconstruye los controles desde los marcadores. */
-  importCpp(path: string): Promise<{ found: boolean; controls: Control[] }>;
+  /** Abre un diálogo (o usa `path`) y reconstruye los controles desde los
+   *  marcadores del .cpp. `null` si el usuario cancela. */
+  importCpp(path?: string): Promise<{ path: string; found: boolean; controls: Control[] } | null>;
   /** Vista previa del C++ generado (sin escribir a disco). */
   previewCpp(scene: SceneDocument, existingSource: string | null): Promise<string>;
   /**

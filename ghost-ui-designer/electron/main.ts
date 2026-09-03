@@ -59,10 +59,19 @@ ipcMain.handle(IPC.exportCpp, async (_e, scene: SceneDocument, target: string) =
   return { merged };
 });
 
-ipcMain.handle(IPC.importCpp, async (_e, target: string) => {
-  const source = await readFile(target, 'utf8');
+ipcMain.handle(IPC.importCpp, async (_e, target?: string) => {
+  let file = target;
+  if (!file) {
+    const { canceled, filePaths } = await dialog.showOpenDialog(dlgWin(), {
+      properties: ['openFile'],
+      filters: [{ name: 'C++ iPlug2', extensions: ['cpp', 'cc', 'cxx', 'h', 'hpp'] }],
+    });
+    if (canceled || filePaths.length === 0) return null;
+    file = filePaths[0];
+  }
+  const source = await readFile(file, 'utf8');
   const { found, controls } = readSceneFromSource(source);
-  return { found, controls };
+  return { path: file, found, controls };
 });
 
 ipcMain.handle(IPC.previewCpp, async (_e, scene: SceneDocument, existing: string | null) => {
