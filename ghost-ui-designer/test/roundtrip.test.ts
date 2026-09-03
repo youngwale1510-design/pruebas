@@ -148,6 +148,7 @@ describe('selector de tamaño (100%/75%/50%) en todo plugin exportado', () => {
     expect(source).toContain('pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, 1.f)');
     expect(source).toContain('ghostSizeMenuStyle');
     expect(source).toContain('WithShowValue(false)');
+    expect(source).toContain('IText(11.f, "Roboto-Regular")');
     expect(source).toContain('pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, .75f)');
     expect(source).toContain('pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, .5f)');
     expect(source).toContain('"100%"');

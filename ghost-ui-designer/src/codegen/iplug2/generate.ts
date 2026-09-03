@@ -96,10 +96,14 @@ function generateSizeMenu(): string {
     '    const int x100 = pGraphics->Width() - pad - sw;',
     '    const int x75 = (x100 - pad - sw) > 0 ? (x100 - pad - sw) : 0;',
     '    const int x50 = (x75 - pad - sw) > 0 ? (x75 - pad - sw) : 0;',
-    // Sin texto de "valor" (el botón no representa un parámetro, no aplica);
-    // la fuente del label se deja en su default (DEFAULT_FONT) para no
-    // depender de con qué nombre registró el .ttf el LoadFont() de tu DSP.
-    '    const IVStyle ghostSizeMenuStyle = DEFAULT_STYLE.WithShowValue(false);',
+    // Sin texto de "valor" (el botón no representa un parámetro, no aplica).
+    // Fuente fijada al literal "Roboto-Regular": es el nombre con el que TODA
+    // plantilla de iPlug2 (duplicate.py) registra su fuente por defecto vía
+    // LoadFont("Roboto-Regular", ROBOTO_FN) en el constructor. Se fija a mano
+    // en vez de dejar el DEFAULT_FONT de la librería porque una discrepancia
+    // ahí (una copia de iPlug2 donde ese default cambió) dispara justo el
+    // assert de NanoVG "no font found" que nos reportó un usuario.
+    '    const IVStyle ghostSizeMenuStyle = DEFAULT_STYLE.WithShowValue(false).WithLabelText(IText(11.f, "Roboto-Regular"));',
     btn('100%', '1.', 'x100'),
     btn('75%', '.75', 'x75'),
     btn('50%', '.5', 'x50'),
