@@ -55,3 +55,4 @@
 // Recursos (fuentes/bitmaps). Los filmstrips horneados por el diseñador se
 // declararán aquí (p.ej. #define KNOBGAIN_FN "knob_gain.png").
 #define ROBOTO_FN "Roboto-Regular.ttf"
+#include "ToneShaper_resources.h"

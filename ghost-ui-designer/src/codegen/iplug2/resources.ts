@@ -52,9 +52,13 @@ export function generateResourcesHeader(scene: SceneDocument): string {
     '// Inclúyelo desde config.h:  #include "<Plugin>_resources.h"',
     '// Los PNG van en resources/img/ y hay que declararlos en resources/main.rc',
     '// (ver <Plugin>_resources.rc.txt).',
-    '#pragma once',
+    '// Sin #pragma once: este archivo también lo lee rc.exe (compilador de recursos).',
+    '#ifndef GHOST_RESOURCES_H',
+    '#define GHOST_RESOURCES_H',
     ...lines,
+    '#endif',
     '// [GHOST:RESOURCES END]',
+    '', // rc.exe exige salto de línea final (RC1004 si falta)
   ].join('\n');
 }
 
