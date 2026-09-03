@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { SceneDocument } from '../src/model/scene';
 import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
 import { generateResourcesHeader, generateResourcesRc } from '../src/codegen/iplug2/resources';
+import { syncHeaderEnums } from '../src/codegen/iplug2/header';
 import { IPC, type FilmstripPng } from './ipc-contract';
 
 /** Ventana padre para los diálogos (si no, en Windows pueden abrirse detrás). */
@@ -52,11 +53,25 @@ ipcMain.handle(IPC.openProject, async () => {
   return { path: filePaths[0], scene };
 });
 
+/** Busca el .h que va con el .cpp (mismo nombre, misma carpeta) y le añade a
+ *  EParams/ECtrlTags lo que falte. Nunca quita nada: si no lo encuentra, o el
+ *  archivo no tiene esos enums, no toca nada y lo dice en el resultado. */
+async function syncHeaderNextTo(cppPath: string, scene: SceneDocument) {
+  const hPath = cppPath.replace(/\.[^./\\]+$/, '.h');
+  if (hPath === cppPath || !existsSync(hPath)) return { headerFound: false, headerChanged: false };
+  const existing = await readFile(hPath, 'utf8');
+  const r = syncHeaderEnums(existing, scene);
+  const changed = r.paramsChanged || r.tagsChanged;
+  if (changed) await writeFile(hPath, r.source, 'utf8');
+  return { headerFound: r.paramsFound || r.tagsFound, headerChanged: changed };
+}
+
 ipcMain.handle(IPC.exportCpp, async (_e, scene: SceneDocument, target: string) => {
   const existing = existsSync(target) ? await readFile(target, 'utf8') : null;
   const { source, merged } = writeSceneToSource(scene, existing);
   await writeFile(target, source, 'utf8');
-  return { merged };
+  const h = await syncHeaderNextTo(target, scene);
+  return { merged, ...h };
 });
 
 ipcMain.handle(IPC.importCpp, async (_e, target?: string) => {
@@ -95,6 +110,9 @@ ipcMain.handle(
     const { source, merged } = writeSceneToSource(scene, existing);
     await writeFile(cppPath, source, 'utf8');
 
+    // 1b) Enums EParams/ECtrlTags del .h (si existe): se les añade lo que falte.
+    const h = await syncHeaderNextTo(cppPath, scene);
+
     // 2) Cabecera de recursos.
     await writeFile(
       path.join(dir, `${name}_resources.h`),
@@ -113,7 +131,7 @@ ipcMain.handle(
         await writeFile(path.join(resDir, a.file), Buffer.from(b64, 'base64'));
       }
     }
-    return { dir, merged };
+    return { dir, merged, ...h };
   },
 );
 

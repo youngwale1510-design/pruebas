@@ -43,12 +43,23 @@ export function Toolbar() {
 
   const doExport = async () => {
     const res = await exportBundle(scene);
-    if (res) {
-      alert(
-        `Bundle ${res.merged ? 'actualizado (round-trip)' : 'generado'} en:\n${res.dir}\n` +
-          `(.cpp + _resources.h + resources/*.png)`,
+    if (!res) return;
+    const lines = [
+      `Bundle ${res.merged ? 'actualizado (round-trip)' : 'generado'} en:`,
+      res.dir,
+      '(.cpp + _resources.h + resources/*.png)',
+    ];
+    if (res.headerChanged) {
+      lines.push('', 'Se añadieron tags/parámetros nuevos al .h (kCtrl_… / EParams). Recompila.');
+    } else if (!res.headerFound) {
+      lines.push(
+        '',
+        'Aviso: no se encontró (o no se pudo leer) el .h junto al .cpp exportado.',
+        'Si el plugin tiene controles o parámetros nuevos, añade a mano en el .h',
+        'su kCtrl_<id> en ECtrlTags y/o su parámetro en EParams — si no, no compila.',
       );
     }
+    alert(lines.join('\n'));
   };
 
   const exportFilmstrip = async () => {

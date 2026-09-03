@@ -13,21 +13,27 @@ const int kNumPresets = 1;
 // Parámetros del plugin. El diseñador vincula cada control a uno de estos por su symbol.
 enum EParams
 {
-  kGain = 0,   // -> kGain
-  kTone,       // -> kTone
-  kMode,       // -> kMode  (Warm / Bright)
-  kBypass,     // -> kBypass
+// [GHOST:PARAMS BEGIN]
+  kGain,
+  kTone,
+  kMode,
+  kBypass,
   kNumParams
+// [GHOST:PARAMS END]
 };
 
-// Tags de control (el diseñador genera kCtrl_<id>).
+// Tags de control (el diseñador genera kCtrl_<id>). Al exportar el bundle, el
+// diseñador AÑADE aquí el de cualquier control nuevo (nunca borra los que ya
+// había, aunque quites ese control del diseño, para no romper el DSP).
 enum ECtrlTags
 {
-  kCtrl_knob_gain = 0,
+// [GHOST:CTRLTAGS BEGIN]
+  kCtrl_knob_gain,
   kCtrl_knob_tone,
   kCtrl_sw_mode,
   kCtrl_sw_bypass,
   kNumCtrlTags
+// [GHOST:CTRLTAGS END]
 };
 
 using namespace iplug;

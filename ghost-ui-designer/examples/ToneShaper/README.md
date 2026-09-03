@@ -16,7 +16,7 @@ Plugin mínimo para validar TODO el flujo de trabajo:
 
 | Archivo | Qué es | ¿Lo toca el diseñador? |
 |---|---|---|
-| `ToneShaper.h` | Clase, parámetros (`EParams`), tags de control | No |
+| `ToneShaper.h` | Clase, DSP a mano, `EParams`/`ECtrlTags` | Solo añade tags/parámetros nuevos dentro de sus marcadores |
 | `ToneShaper.cpp` | Constructor + **GUI entre marcadores `// [GHOST:…]`** + DSP | Solo la región marcada |
 | `config.h` | Metadatos del plugin (iPlug2) | No |
 
@@ -79,7 +79,19 @@ Necesitas: **Git for Windows**, **Visual Studio 2022 Community** (carga de traba
    - `ToneShaper_resources.rc.txt` (líneas para `main.rc`)
    - `resources/img/*.png` (los filmstrips)
 4. En `config.h` añade al final: `#include "ToneShaper_resources.h"`.
-5. En `resources/main.rc` pega las líneas de `ToneShaper_resources.rc.txt`
+5. **Añadir un control nuevo (switch, LED, fondo…) también añade su tag a
+   `ToneShaper.h`.** El diseñador solo reescribe la región marcada del `.cpp`;
+   el `enum ECtrlTags` (y el `enum EParams` si el control trae parámetro nuevo)
+   viven en el `.h`, que es donde escribes tu DSP a mano. Este `ToneShaper.h`
+   ya trae marcadores `// [GHOST:PARAMS...]` / `// [GHOST:CTRLTAGS...]`
+   alrededor de esos dos enums: al exportar el bundle, el diseñador les AÑADE
+   lo que falte (nunca borra nada, así que quitar un control no rompe el DSP
+   que aún lo use). Si el aviso al exportar dice que no encontró el `.h`, o
+   partes de un `.h` tuyo escrito antes de este archivo sin esos marcadores,
+   añade el `kCtrl_<id>` a mano en `ECtrlTags` (y el parámetro en `EParams`
+   si aplica) — es la única vez que hace falta, ya que a partir de ahí el
+   diseñador reconoce el enum aunque no tenga marcadores y se los pone solo.
+6. En `resources/main.rc` pega las líneas de `ToneShaper_resources.rc.txt`
    **al final del archivo**, junto a la declaración suelta `ROBOTO_FN TTF ROBOTO_FN`
    (la que está fuera de cualquier `BEGIN`/`END`), sin comillas. Windows embebe así
    los PNG en el ejecutable.
@@ -90,8 +102,9 @@ Necesitas: **Git for Windows**, **Visual Studio 2022 Community** (carga de traba
    > `\r\n` (la última en `\0`). Pegar ahí las líneas sin comillas da error de
    > sintaxis. Lo más simple es no tocar ese bloque; el `.rc.txt` trae las dos
    > versiones por si lo necesitas.
-6. Vuelve a Visual Studio y F5. Solo los pasos 4 y 5 son necesarios la primera vez;
-   después basta con exportar y recompilar.
+7. Vuelve a Visual Studio y F5. Los pasos 4 y 6 son solo la primera vez (o la
+   primera vez que aparece un recurso PNG nuevo); el paso 5 (tags del `.h`)
+   ya lo hace solo el diseñador en cada exportación.
 
 ## Compilar en macOS / Linux (resumen)
 

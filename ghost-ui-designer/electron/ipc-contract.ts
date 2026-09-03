@@ -15,7 +15,7 @@ export interface GhostApi {
   /** Abre un .ghostui y devuelve la escena. */
   openProject(): Promise<{ path: string; scene: SceneDocument } | null>;
   /** Genera/actualiza el .cpp en `path` preservando el código escrito a mano. */
-  exportCpp(scene: SceneDocument, path: string): Promise<{ merged: boolean }>;
+  exportCpp(scene: SceneDocument, path: string): Promise<{ merged: boolean; headerFound: boolean; headerChanged: boolean }>;
   /** Abre un diálogo (o usa `path`) y reconstruye los controles desde los
    *  marcadores del .cpp. `null` si el usuario cancela. */
   importCpp(path?: string): Promise<{ path: string; found: boolean; controls: Control[] } | null>;
@@ -28,7 +28,7 @@ export interface GhostApi {
   exportBundle(
     scene: SceneDocument,
     assets: FilmstripPng[],
-  ): Promise<{ dir: string; merged: boolean } | null>;
+  ): Promise<{ dir: string; merged: boolean; headerFound: boolean; headerChanged: boolean } | null>;
   /** Abre una imagen del disco (textura o filmstrip) y la devuelve embebida como
    *  data URI + sus dimensiones. */
   importImage(): Promise<{ name: string; dataUri: string; width: number; height: number } | null>;
