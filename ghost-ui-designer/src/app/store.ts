@@ -36,6 +36,8 @@ interface AppState {
   moveControl: (id: string, x: number, y: number) => void;
   setKnob3d: (id: string, cfg: KnobConfig | undefined) => void;
   setLight: (patch: Partial<SceneDocument['light']>) => void;
+  /** Cambia tamaño/color de fondo del lienzo del plugin (PLUG_WIDTH/HEIGHT). */
+  setCanvas: (patch: Partial<SceneDocument['canvas']>) => void;
   updateLayer: (controlId: string, layerId: string, patch: Partial<Layer>) => void;
   addLayer: (controlId: string, layer: Layer) => void;
   removeLayer: (controlId: string, layerId: string) => void;
@@ -232,6 +234,9 @@ export const useStore = create<AppState>((set) => ({
 
   setLight: (patch) =>
     set((s) => ({ scene: { ...s.scene, light: { ...s.scene.light, ...patch } } })),
+
+  setCanvas: (patch) =>
+    set((s) => ({ scene: { ...s.scene, canvas: { ...s.scene.canvas, ...patch } } })),
 
   updateLayer: (controlId, layerId, patch) =>
     set((s) => ({ scene: editLayer(s.scene, controlId, layerId, (l) => ({ ...l, ...patch })) })),

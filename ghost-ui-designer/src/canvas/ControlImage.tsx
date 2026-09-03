@@ -78,7 +78,10 @@ export function ControlImage({ control, scene, value, selected, onSelect, onMove
     <Group x={x - pad} y={y - pad} draggable onClick={onSelect} onTap={onSelect} onDragEnd={onDragEnd}>
       <KonvaImage image={canvas} width={cw} height={ch} />
       {selected && (
-        <Rect x={pad} y={pad} width={w} height={h} stroke="#4c9aff" dash={[4, 3]} strokeWidth={1} />
+        // Selección alrededor de TODO lo visible (incluida la sombra en el
+        // margen), no solo del rect nominal: si el marco fuera más chico que
+        // la sombra, se vería como si la recortara.
+        <Rect x={0} y={0} width={cw} height={ch} stroke="#4c9aff" dash={[4, 3]} strokeWidth={1} />
       )}
     </Group>
   );
