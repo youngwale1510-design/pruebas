@@ -59,6 +59,16 @@ export function Toolbar() {
         'su kCtrl_<id> en ECtrlTags y/o su parámetro en EParams — si no, no compila.',
       );
     }
+    if (res.configChanged) {
+      lines.push('', `Se ajustó PLUG_WIDTH/PLUG_HEIGHT en config.h a ${scene.canvas.width}×${scene.canvas.height} (tamaño del lienzo). Recompila.`);
+    } else if (!res.configFound) {
+      lines.push(
+        '',
+        'Aviso: no se encontró config.h junto al .cpp exportado.',
+        `Pon a mano PLUG_WIDTH ${scene.canvas.width} / PLUG_HEIGHT ${scene.canvas.height} — si no, la ventana`,
+        'del plugin se queda con el tamaño viejo y solo se ve una esquina del diseño.',
+      );
+    }
     alert(lines.join('\n'));
   };
 

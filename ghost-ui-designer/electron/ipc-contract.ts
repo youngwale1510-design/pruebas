@@ -28,7 +28,14 @@ export interface GhostApi {
   exportBundle(
     scene: SceneDocument,
     assets: FilmstripPng[],
-  ): Promise<{ dir: string; merged: boolean; headerFound: boolean; headerChanged: boolean } | null>;
+  ): Promise<{
+    dir: string;
+    merged: boolean;
+    headerFound: boolean;
+    headerChanged: boolean;
+    configFound: boolean;
+    configChanged: boolean;
+  } | null>;
   /** Abre una imagen del disco (textura o filmstrip) y la devuelve embebida como
    *  data URI + sus dimensiones. */
   importImage(): Promise<{ name: string; dataUri: string; width: number; height: number } | null>;

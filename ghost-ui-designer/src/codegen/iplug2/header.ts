@@ -129,3 +129,34 @@ export function syncHeaderEnums(existingSource: string, scene: SceneDocument): H
     tagsChanged: tags.changed,
   };
 }
+
+
+export interface ConfigSyncResult {
+  source: string;
+  found: boolean; // true si se encontró al menos un #define PLUG_WIDTH/HEIGHT
+  changed: boolean;
+}
+
+/**
+ * Ajusta `#define PLUG_WIDTH N` / `#define PLUG_HEIGHT N` en config.h al
+ * tamaño real del lienzo. Sin esto, agrandar el lienzo (o insertar una imagen
+ * de fondo con otras dimensiones) deja la VENTANA del plugin con el tamaño
+ * viejo: solo se ve la esquina superior izquierda del diseño, recortado.
+ * config.h es metadato del plugin (no DSP), así que se puede tocar directo,
+ * sin marcadores: son dos líneas con nombre reservado por iPlug2.
+ */
+export function syncConfigSize(existingSource: string, width: number, height: number): ConfigSyncResult {
+  let changed = false;
+  let found = false;
+  const replace = (src: string, name: 'PLUG_WIDTH' | 'PLUG_HEIGHT', value: number) => {
+    const re = new RegExp(`(#define\\s+${name}\\s+)(\\d+)`, 'm');
+    return src.replace(re, (_m, pre: string, num: string) => {
+      found = true;
+      if (Number(num) !== value) changed = true;
+      return `${pre}${value}`;
+    });
+  };
+  let source = replace(existingSource, 'PLUG_WIDTH', Math.round(width));
+  source = replace(source, 'PLUG_HEIGHT', Math.round(height));
+  return { source, found, changed };
+}

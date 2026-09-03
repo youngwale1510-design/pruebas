@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { SceneDocument } from '../src/model/scene';
 import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
 import { generateResourcesHeader, generateResourcesRc } from '../src/codegen/iplug2/resources';
-import { syncHeaderEnums } from '../src/codegen/iplug2/header';
+import { syncConfigSize, syncHeaderEnums } from '../src/codegen/iplug2/header';
 import { IPC, type FilmstripPng } from './ipc-contract';
 
 /** Ventana padre para los diálogos (si no, en Windows pueden abrirse detrás). */
@@ -113,6 +113,21 @@ ipcMain.handle(
     // 1b) Enums EParams/ECtrlTags del .h (si existe): se les añade lo que falte.
     const h = await syncHeaderNextTo(cppPath, scene);
 
+    // 1c) PLUG_WIDTH/PLUG_HEIGHT en config.h: si el lienzo cambió de tamaño
+    // (p.ej. una imagen de fondo grande) y no se actualiza, la VENTANA del
+    // plugin se queda con el tamaño viejo y solo se ve una esquina recortada
+    // del diseño.
+    const configPath = path.join(dir, 'config.h');
+    let configFound = false;
+    let configChanged = false;
+    if (existsSync(configPath)) {
+      const configSrc = await readFile(configPath, 'utf8');
+      const r = syncConfigSize(configSrc, scene.canvas.width, scene.canvas.height);
+      configFound = r.found;
+      configChanged = r.changed;
+      if (r.changed) await writeFile(configPath, r.source, 'utf8');
+    }
+
     // 2) Cabecera de recursos.
     await writeFile(
       path.join(dir, `${name}_resources.h`),
@@ -131,7 +146,7 @@ ipcMain.handle(
         await writeFile(path.join(resDir, a.file), Buffer.from(b64, 'base64'));
       }
     }
-    return { dir, merged, ...h };
+    return { dir, merged, ...h, configFound, configChanged };
   },
 );
 

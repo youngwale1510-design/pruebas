@@ -79,7 +79,15 @@ Necesitas: **Git for Windows**, **Visual Studio 2022 Community** (carga de traba
    - `ToneShaper_resources.rc.txt` (líneas para `main.rc`)
    - `resources/img/*.png` (los filmstrips)
 4. En `config.h` añade al final: `#include "ToneShaper_resources.h"`.
-5. **Añadir un control nuevo (switch, LED, fondo…) también añade su tag a
+5. **Si cambias el tamaño del lienzo (o insertas una imagen de fondo grande),
+   `config.h` se actualiza solo.** `PLUG_WIDTH`/`PLUG_HEIGHT` son el tamaño
+   de la VENTANA del plugin; si no coinciden con el lienzo del diseñador, la
+   ventana se queda con el tamaño viejo y solo se ve una esquina recortada
+   del diseño (los controles fuera de ese recorte ni se ven). Al exportar el
+   bundle, el diseñador ajusta esas dos líneas de `config.h` al tamaño real
+   del lienzo. Si el aviso dice que no encontró `config.h`, pon ahí a mano
+   `PLUG_WIDTH`/`PLUG_HEIGHT` con el ancho/alto del panel "Lienzo".
+6. **Añadir un control nuevo (switch, LED, fondo…) también añade su tag a
    `ToneShaper.h`.** El diseñador solo reescribe la región marcada del `.cpp`;
    el `enum ECtrlTags` (y el `enum EParams` si el control trae parámetro nuevo)
    viven en el `.h`, que es donde escribes tu DSP a mano. Este `ToneShaper.h`
@@ -91,7 +99,7 @@ Necesitas: **Git for Windows**, **Visual Studio 2022 Community** (carga de traba
    añade el `kCtrl_<id>` a mano en `ECtrlTags` (y el parámetro en `EParams`
    si aplica) — es la única vez que hace falta, ya que a partir de ahí el
    diseñador reconoce el enum aunque no tenga marcadores y se los pone solo.
-6. En `resources/main.rc` pega las líneas de `ToneShaper_resources.rc.txt`
+7. En `resources/main.rc` pega las líneas de `ToneShaper_resources.rc.txt`
    **al final del archivo**, junto a la declaración suelta `ROBOTO_FN TTF ROBOTO_FN`
    (la que está fuera de cualquier `BEGIN`/`END`), sin comillas. Windows embebe así
    los PNG en el ejecutable.
@@ -102,9 +110,10 @@ Necesitas: **Git for Windows**, **Visual Studio 2022 Community** (carga de traba
    > `\r\n` (la última en `\0`). Pegar ahí las líneas sin comillas da error de
    > sintaxis. Lo más simple es no tocar ese bloque; el `.rc.txt` trae las dos
    > versiones por si lo necesitas.
-7. Vuelve a Visual Studio y F5. Los pasos 4 y 6 son solo la primera vez (o la
-   primera vez que aparece un recurso PNG nuevo); el paso 5 (tags del `.h`)
-   ya lo hace solo el diseñador en cada exportación.
+8. Vuelve a Visual Studio y F5. Los pasos 4 y 7 son solo la primera vez (o la
+   primera vez que aparece un recurso PNG nuevo); los pasos 5 (tamaño de la
+   ventana) y 6 (tags del `.h`) ya los hace solo el diseñador en cada
+   exportación.
 
 ## Compilar en macOS / Linux (resumen)
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { syncHeaderEnums, HMARK } from '../src/codegen/iplug2/header';
+import { syncHeaderEnums, syncConfigSize, HMARK } from '../src/codegen/iplug2/header';
 import { emptyScene, defaultKnob, defaultBackground } from '../src/model/defaults';
 
 const TONESHAPER_H = readFileSync(new URL('../examples/ToneShaper/ToneShaper.h', import.meta.url), 'utf8');
@@ -144,5 +144,45 @@ describe('syncHeaderEnums — el bug real: falta kCtrl_<id> al añadir un contro
     expect(twice.source).toContain('kCtrl_bg_7akp');
     // Solo un bloque de marcadores, no duplicado.
     expect(twice.source.split(HMARK.ctrlTagsBegin).length - 1).toBe(1);
+  });
+});
+
+describe('syncConfigSize — el bug real: la ventana se queda con PLUG_WIDTH/HEIGHT viejos', () => {
+  const CONFIG_H = `#pragma once
+#define PLUG_NAME "ToneShaper"
+#define PLUG_WIDTH 400
+#define PLUG_HEIGHT 300
+#define PLUG_FPS 60
+`;
+
+  it('cambia PLUG_WIDTH/PLUG_HEIGHT cuando el lienzo creció (p.ej. imagen de fondo grande)', () => {
+    const r = syncConfigSize(CONFIG_H, 1024, 768);
+    expect(r.found).toBe(true);
+    expect(r.changed).toBe(true);
+    expect(r.source).toContain('#define PLUG_WIDTH 1024');
+    expect(r.source).toContain('#define PLUG_HEIGHT 768');
+    // No toca nada más del archivo.
+    expect(r.source).toContain('#define PLUG_NAME "ToneShaper"');
+    expect(r.source).toContain('#define PLUG_FPS 60');
+  });
+
+  it('sin cambios en el tamaño, no marca `changed`', () => {
+    const r = syncConfigSize(CONFIG_H, 400, 300);
+    expect(r.changed).toBe(false);
+    expect(r.source).toBe(CONFIG_H);
+  });
+
+  it('si no encuentra los #define, no toca el archivo y avisa found:false', () => {
+    const r = syncConfigSize('#pragma once\n// nada aquí\n', 800, 600);
+    expect(r.found).toBe(false);
+    expect(r.source).toBe('#pragma once\n// nada aquí\n');
+  });
+
+  it('el config.h real de ToneShaper se actualiza igual', () => {
+    const configH = readFileSync(new URL('../examples/ToneShaper/config.h', import.meta.url), 'utf8');
+    const r = syncConfigSize(configH, 900, 500);
+    expect(r.found).toBe(true);
+    expect(r.source).toContain('#define PLUG_WIDTH 900');
+    expect(r.source).toContain('#define PLUG_HEIGHT 500');
   });
 });
