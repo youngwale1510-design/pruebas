@@ -79,9 +79,17 @@ Necesitas: **Git for Windows**, **Visual Studio 2022 Community** (carga de traba
    - `ToneShaper_resources.rc.txt` (líneas para `main.rc`)
    - `resources/img/*.png` (los filmstrips)
 4. En `config.h` añade al final: `#include "ToneShaper_resources.h"`.
-5. En `resources/main.rc` pega las líneas de `ToneShaper_resources.rc.txt` junto a
-   `ROBOTO_FN TTF ROBOTO_FN` (aparece dos veces en el archivo; pégalas en ambas).
-   Windows embebe así los PNG dentro del ejecutable.
+5. En `resources/main.rc` pega las líneas de `ToneShaper_resources.rc.txt`
+   **al final del archivo**, junto a la declaración suelta `ROBOTO_FN TTF ROBOTO_FN`
+   (la que está fuera de cualquier `BEGIN`/`END`), sin comillas. Windows embebe así
+   los PNG en el ejecutable.
+
+   > `ROBOTO_FN TTF ROBOTO_FN` aparece **dos** veces. La otra está dentro de
+   > `3 TEXTINCLUDE ... BEGIN/END`, un bloque que solo usa el editor de recursos de
+   > Visual Studio y donde **cada línea tiene que ir entre comillas** y terminar en
+   > `\r\n` (la última en `\0`). Pegar ahí las líneas sin comillas da error de
+   > sintaxis. Lo más simple es no tocar ese bloque; el `.rc.txt` trae las dos
+   > versiones por si lo necesitas.
 6. Vuelve a Visual Studio y F5. Solo los pasos 4 y 5 son necesarios la primera vez;
    después basta con exportar y recompilar.
 

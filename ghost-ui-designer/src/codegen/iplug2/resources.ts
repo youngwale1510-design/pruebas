@@ -66,10 +66,28 @@ export function generateResourcesHeader(scene: SceneDocument): string {
  *  Convención iPlug2: `NOMBRE_FN PNG NOMBRE_FN` (el nombre viene del #define). */
 export function generateResourcesRc(scene: SceneDocument): string {
   const res = collectBitmapResources(scene);
+  const plain = res.map((r) => `${r.resId} PNG ${r.resId}`);
+  // Dentro de un bloque TEXTINCLUDE cada línea es una CADENA con \r\n, y la
+  // última lleva \0. Fuera del bloque van tal cual, sin comillas.
+  const quoted = res.map(
+    (r, i) => `    "${r.resId} PNG ${r.resId}${i === res.length - 1 ? '\\0' : '\\r\\n'}"`,
+  );
   return [
-    '// Pega estas líneas en resources/main.rc, junto a "ROBOTO_FN TTF ROBOTO_FN"',
-    '// (aparece dos veces: en el bloque TEXTINCLUDE y al final del archivo).',
-    ...res.map((r) => `${r.resId} PNG ${r.resId}`),
+    '=== 1) OBLIGATORIO: al FINAL de resources/main.rc ===',
+    '// Pega estas líneas junto a la declaración suelta `ROBOTO_FN TTF ROBOTO_FN`',
+    '// que hay al final del archivo (fuera de cualquier BEGIN/END). Sin comillas:',
+    '',
+    ...plain,
+    '',
+    '=== 2) OPCIONAL: dentro del bloque `3 TEXTINCLUDE` ===',
+    '// Ese bloque solo lo usa el editor de recursos de Visual Studio. Si lo tocas,',
+    '// TODAS las líneas deben ir entre comillas; sustituye la línea que termina en',
+    '// "...ROBOTO_FN\\0" por "...ROBOTO_FN\\r\\n" y añade debajo, antes de END:',
+    '',
+    ...quoted,
+    '',
+    '// Los PNG van en resources/img/ (ya está en las rutas del compilador de',
+    '// recursos de iPlug2, ver common-win.props).',
     '',
   ].join('\n');
 }
