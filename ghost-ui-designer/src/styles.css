@@ -58,6 +58,9 @@ body {
   transition: border-color .12s;
 }
 .toolbar button:hover { border-color: var(--accent-dim); }
+.toolbar button:disabled { opacity: .4; cursor: default; }
+.toolbar button:disabled:hover { border-color: var(--border); }
+.toolbar-sep { width: 1px; align-self: stretch; background: var(--line-soft); margin: 0 2px; }
 
 .body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
 .stage-area {

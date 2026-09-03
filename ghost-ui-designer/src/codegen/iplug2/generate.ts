@@ -16,6 +16,13 @@ export function ctrlTag(id: string): string {
   return `kCtrl_${id}`;
 }
 
+/** Origen del bitmap: el margen para sombras (`props.pad`) agranda el PNG, así
+ *  que el control se ancla desplazado para que la pieza no se mueva. */
+function bitmapOrigin(c: Control): { x: number; y: number } {
+  const pad = Math.max(0, Math.round(Number(c.props.pad ?? 0) || 0));
+  return { x: c.rect.x - pad, y: c.rect.y - pad };
+}
+
 function irect(c: Control): string {
   const { x, y, w, h } = c.rect;
   return `IRECT(${x}, ${y}, ${x + w}, ${y + h})`;
@@ -38,18 +45,21 @@ function attachLine(c: Control): string {
       // Opción B: filmstrip rasterizado desde el editor (look Canvas Audio).
       const res = bitmapResId(c.id);
       const frames = controlFrames(c);
-      return `  pGraphics->AttachControl(new IBKnobControl(${c.rect.x}, ${c.rect.y}, pGraphics->LoadBitmap(${res}, ${frames}), ${tag}), ${ctrlTag(c.id)});`;
+      const o = bitmapOrigin(c);
+      return `  pGraphics->AttachControl(new IBKnobControl(${o.x}, ${o.y}, pGraphics->LoadBitmap(${res}, ${frames}), ${tag}), ${ctrlTag(c.id)});`;
     }
     case 'IBSwitchControl': {
       // Filmstrip de N estados: switch deslizante, palanca, botón…
       const res = bitmapResId(c.id);
       const frames = controlFrames(c);
-      return `  pGraphics->AttachControl(new IBSwitchControl(${c.rect.x}, ${c.rect.y}, pGraphics->LoadBitmap(${res}, ${frames}), ${tag}), ${ctrlTag(c.id)});`;
+      const o = bitmapOrigin(c);
+      return `  pGraphics->AttachControl(new IBSwitchControl(${o.x}, ${o.y}, pGraphics->LoadBitmap(${res}, ${frames}), ${tag}), ${ctrlTag(c.id)});`;
     }
     case 'IBitmapControl': {
       const res = bitmapResId(c.id);
       const frames = controlFrames(c);
-      return `  pGraphics->AttachControl(new IBitmapControl(${c.rect.x}, ${c.rect.y}, pGraphics->LoadBitmap(${res}, ${frames}), ${tag}), ${ctrlTag(c.id)});`;
+      const o = bitmapOrigin(c);
+      return `  pGraphics->AttachControl(new IBitmapControl(${o.x}, ${o.y}, pGraphics->LoadBitmap(${res}, ${frames}), ${tag}), ${ctrlTag(c.id)});`;
     }
     default:
       return `  // TODO: tipo de control no soportado: ${c.type}`;

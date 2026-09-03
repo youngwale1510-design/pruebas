@@ -2,7 +2,7 @@
 // La geometría es pura (testeable); el pintado usa el compositor compartido.
 
 import { Control, SceneDocument } from '../model/scene';
-import { renderControlFrame } from './renderControl';
+import { frameSize, renderControlFrame } from './renderControl';
 import { ImageCache } from './textures';
 
 export type Orientation = 'horizontal' | 'vertical';
@@ -58,7 +58,8 @@ export function renderFilmstrip(
   makeCanvas: (w: number, h: number) => HTMLCanvasElement,
   images?: ImageCache,
 ): { canvas: HTMLCanvasElement; layout: FilmstripLayout } {
-  const layout = filmstripLayout(frames, control.rect.w, control.rect.h, orientation);
+  const fs = frameSize(control);
+  const layout = filmstripLayout(frames, fs.w, fs.h, orientation);
   const canvas = makeCanvas(layout.sheetW, layout.sheetH);
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('No 2D context');

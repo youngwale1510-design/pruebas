@@ -69,6 +69,19 @@ export interface TicksConfig {
   size: number;       // tamaño del punto / largo de la línea (px)
 }
 
+/** Texto de una capa (etiquetas, marcas ON/OFF, nombre del plugin…). */
+export interface TextStyle {
+  content: string;
+  /** Familia CSS; usa fuentes del sistema para que el editor y el PNG coincidan. */
+  family: string;
+  size: number;          // px
+  weight: number;        // 100..900
+  letterSpacing: number; // px
+  align: 'left' | 'center' | 'right';
+  /** Acabado: plano, grabado (hundido) o realzado. Respeta la luz global. */
+  finish: 'flat' | 'engraved' | 'raised';
+}
+
 /** Animación de la capa en función del valor del control (0..1). */
 export interface LayerAnim {
   /** none: fija · rotate: gira (knob) · translate: se desplaza (switch deslizante,
@@ -118,6 +131,8 @@ export interface Layer {
   sides?: number;
   /** configuración de marcas para shape 'ticks'. */
   ticks?: TicksConfig;
+  /** contenido y estilo si la capa es de texto (kind 'text'). */
+  text?: TextStyle;
   anim?: LayerAnim;
 }
 

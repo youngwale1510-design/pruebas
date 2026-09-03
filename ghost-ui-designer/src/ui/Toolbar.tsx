@@ -6,6 +6,13 @@ export function Toolbar() {
   const selectedId = useStore((s) => s.selectedId);
   const addKnob = useStore((s) => s.addKnob);
   const addSwitch = useStore((s) => s.addSwitch);
+  const addBackground = useStore((s) => s.addBackground);
+  const addLabel = useStore((s) => s.addLabel);
+  const copyStyle = useStore((s) => s.copyStyle);
+  const pasteStyle = useStore((s) => s.pasteStyle);
+  const styleClipboard = useStore((s) => s.styleClipboard);
+  const advanced = useStore((s) => s.advanced);
+  const setAdvanced = useStore((s) => s.setAdvanced);
   const setScene = useStore((s) => s.setScene);
   const importControls = useStore((s) => s.importControls);
   const setPreview = useStore((s) => s.setPreview);
@@ -58,6 +65,23 @@ export function Toolbar() {
       <button onClick={() => addSwitch('slide')}>+ Switch</button>
       <button onClick={() => addSwitch('toggle')}>+ Palanca</button>
       <button onClick={() => addSwitch('led')}>+ LED</button>
+      <button onClick={addBackground}>+ Fondo</button>
+      <button onClick={addLabel}>+ Texto</button>
+      <span className="toolbar-sep" />
+      <button disabled={!selectedId} onClick={() => selectedId && copyStyle(selectedId)} title="Copiar el estilo (capas, efectos, materiales) del control seleccionado">
+        Copiar estilo
+      </button>
+      <button disabled={!selectedId || !styleClipboard} onClick={() => selectedId && pasteStyle(selectedId, false)} title="Aplicar el estilo copiado a este control">
+        Pegar estilo
+      </button>
+      <button disabled={!selectedId || !styleClipboard} onClick={() => selectedId && pasteStyle(selectedId, true)} title="Aplicar el estilo copiado a todos los controles del mismo tipo">
+        Pegar en todos
+      </button>
+      <span className="toolbar-sep" />
+      <label className="chk" style={{ margin: 0 }}>
+        <input type="checkbox" checked={advanced} onChange={(e) => setAdvanced(e.target.checked)} />
+        <span>Edición avanzada</span>
+      </label>
       <button onClick={preview}>Vista previa C++</button>
       <button onClick={exportFilmstrip}>Exportar filmstrip</button>
       <button onClick={doExport}>Exportar bundle</button>

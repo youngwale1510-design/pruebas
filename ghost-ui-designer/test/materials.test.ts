@@ -38,7 +38,7 @@ describe('materiales', () => {
     const scene = emptyScene();
     scene.controls.push(led);
     const src = writeSceneToSource(scene, null).source;
-    expect(src).toContain('IBSwitchControl(20, 20, pGraphics->LoadBitmap(LEDPWR_FN, 2), kPwr)');
+    expect(src).toContain('IBSwitchControl(14, 14, pGraphics->LoadBitmap(LEDPWR_FN, 2), kPwr)');
     const back = readSceneFromSource(src).controls[0];
     expect(back.layers.flatMap((l) => l.effects).some((e) => e.type === 'emissive')).toBe(true);
   });

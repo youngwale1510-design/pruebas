@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Control, Effect, EffectType, Layer, SceneDocument } from '../model/scene';
-import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed } from '../model/defaults';
+import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed, defaultBackground, defaultLabel } from '../model/defaults';
 import { MaterialId, applyMaterial } from '../model/materials';
 import { ParamDef } from '../model/scene';
 import { KnobConfig, defaultKnobConfig } from '../model/knobConfig';
@@ -15,6 +15,19 @@ interface AppState {
   addKnob: () => void;
   /** Añade un switch (deslizante o de palanca) con N pasos y su parámetro enum. */
   addSwitch: (kind: 'slide' | 'toggle' | 'led', steps?: number) => void;
+  /** Fondo del plugin (una sola vez, al fondo de la pila). */
+  addBackground: () => void;
+  /** Etiqueta de texto. */
+  addLabel: () => void;
+  /** Copia el estilo (capas + margen/marcas) del control indicado. */
+  copyStyle: (controlId: string) => void;
+  /** Pega el estilo copiado en un control, o en todos los del mismo tipo. */
+  pasteStyle: (controlId: string, toAllOfType?: boolean) => void;
+  /** Estilo copiado (portapapeles interno). */
+  styleClipboard: { layers: Layer[]; props: Control['props']; sourceType: Control['type'] } | null;
+  /** Muestra los sliders de cada efecto en el panel lateral. */
+  advanced: boolean;
+  setAdvanced: (v: boolean) => void;
   setMaterial: (controlId: string, layerId: string, material: MaterialId, fill?: string) => void;
   updateParam: (id: string, patch: Partial<ParamDef>) => void;
   /** Cambia el nº de pasos de un switch (frames del filmstrip + rango del parámetro). */
@@ -59,6 +72,9 @@ export const useStore = create<AppState>((set) => ({
   selectedId: null,
   previewCpp: '',
   previewValue: 0.5,
+  styleClipboard: null,
+  advanced: false,
+  setAdvanced: (v: boolean) => set({ advanced: v }),
 
   select: (id) => set({ selectedId: id }),
 
@@ -76,6 +92,68 @@ export const useStore = create<AppState>((set) => ({
           controls: [...s.scene.controls, knob],
         },
         selectedId: knob.id,
+      };
+    }),
+
+  addBackground: () =>
+    set((s) => {
+      if (s.scene.controls.some((c) => c.name === 'Fondo')) return {};
+      const bg = defaultBackground(makeId('bg'), s.scene.canvas.width, s.scene.canvas.height);
+      return { scene: { ...s.scene, controls: [bg, ...s.scene.controls] }, selectedId: bg.id };
+    }),
+
+  addLabel: () =>
+    set((s) => {
+      const l = defaultLabel(makeId('label'));
+      l.rect.x = 20 + (s.scene.controls.length % 4) * 100;
+      l.rect.y = 20 + Math.floor(s.scene.controls.length / 4) * 40;
+      return { scene: { ...s.scene, controls: [...s.scene.controls, l] }, selectedId: l.id };
+    }),
+
+  copyStyle: (controlId) =>
+    set((s) => {
+      const c = s.scene.controls.find((x) => x.id === controlId);
+      if (!c) return {};
+      // Se copia la apariencia, nunca la identidad: ni id, ni rect, ni parámetro.
+      const { pad, bodyInset, frames, orientation } = c.props;
+      const props: Control['props'] = {};
+      if (pad !== undefined) props.pad = pad;
+      if (bodyInset !== undefined) props.bodyInset = bodyInset;
+      if (frames !== undefined) props.frames = frames;
+      if (orientation !== undefined) props.orientation = orientation;
+      return {
+        styleClipboard: {
+          layers: JSON.parse(JSON.stringify(c.layers)) as Layer[],
+          props,
+          sourceType: c.type,
+        },
+      };
+    }),
+
+  pasteStyle: (controlId, toAllOfType = false) =>
+    set((s) => {
+      const clip = s.styleClipboard;
+      if (!clip) return {};
+      const target = s.scene.controls.find((x) => x.id === controlId);
+      if (!target) return {};
+      const ids = toAllOfType
+        ? s.scene.controls.filter((x) => x.type === target.type).map((x) => x.id)
+        : [controlId];
+      return {
+        scene: {
+          ...s.scene,
+          controls: s.scene.controls.map((c) => {
+            if (!ids.includes(c.id)) return c;
+            // Los switches conservan sus pasos; el resto hereda los frames del origen.
+            const props: Control['props'] = { ...c.props, ...clip.props };
+            if (c.type === 'IBSwitchControl') props.frames = c.props.frames;
+            return {
+              ...c,
+              layers: JSON.parse(JSON.stringify(clip.layers)).map((l: Layer) => ({ ...l, id: makeId('lyr') })),
+              props,
+            };
+          }),
+        },
       };
     }),
 

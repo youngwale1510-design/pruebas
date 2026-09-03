@@ -87,6 +87,15 @@ export function PropertiesPanel() {
       )}
 
       <label>
+        Margen para sombras/halos (px) <b>{Number(control.props.pad ?? 0)}</b>
+        <input
+          type="range" min={0} max={20} value={Number(control.props.pad ?? 0)}
+          onChange={(e) => update(control.id, { props: { ...control.props, pad: Number(e.target.value) } })}
+        />
+        <span className="hint">Si la sombra o el halo se ven cortados en el borde del PNG, sube este margen.</span>
+      </label>
+
+      <label>
         Margen para marcas (encoge el knob) <b>{Math.round(Number(control.props.bodyInset ?? 0) * 100)}%</b>
         <input
           type="range" min={0} max={40} value={Math.round(Number(control.props.bodyInset ?? 0) * 100)}

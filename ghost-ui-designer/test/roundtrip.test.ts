@@ -121,7 +121,7 @@ describe('switches en el codegen', () => {
     scene.params.push({ id: 'mode', name: 'Mode', type: 'enum', min: 0, max: 2, default: 0 });
     scene.controls.push(defaultToggleSwitch('sw_mode', 'Mode', 'mode', 3));
     const { source } = writeSceneToSource(scene, null);
-    expect(source).toContain('new IBSwitchControl(20, 20, pGraphics->LoadBitmap(SWMODE_FN, 3), kMode)');
+    expect(source).toContain('new IBSwitchControl(14, 14, pGraphics->LoadBitmap(SWMODE_FN, 3), kMode)');
     const parsed = readSceneFromSource(source);
     expect(parsed.controls[0].type).toBe('IBSwitchControl');
     expect(parsed.controls[0].props.frames).toBe(3);

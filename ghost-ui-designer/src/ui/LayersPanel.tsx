@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useStore } from '../app/store';
 import { EffectType, Layer, LayerShape } from '../model/scene';
 import { makeId } from '../model/defaults';
@@ -90,6 +91,8 @@ export function LayersPanel() {
   const removeEffect = useStore((s) => s.removeEffect);
   const updateEffect = useStore((s) => s.updateEffect);
   const setMaterial = useStore((s) => s.setMaterial);
+  const advanced = useStore((s) => s.advanced);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const control = scene.controls.find((c) => c.id === selectedId);
   if (!control) return null;
@@ -107,13 +110,16 @@ export function LayersPanel() {
         const t = l.ticks ?? { count: 11, style: 'dot' as const, radius: 0.92, spanDeg: 270, size: 3 };
         const setTicks = (patch: Partial<typeof t>) =>
           updateLayer(control.id, l.id, { ticks: { ...t, ...patch } });
+        const isOpen = !collapsed[l.id];
         return (
           <fieldset key={l.id}>
-            <legend style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-              <span>{l.name}</span>
+            <legend style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', cursor: 'pointer' }}
+              onClick={() => setCollapsed((c) => ({ ...c, [l.id]: isOpen }))}>
+              <span>{isOpen ? '▾' : '▸'} {l.name}</span>
               <button className="btn" style={{ padding: '1px 7px' }} title="Quitar capa"
-                onClick={() => removeLayer(control.id, l.id)}>✕</button>
+                onClick={(ev) => { ev.stopPropagation(); removeLayer(control.id, l.id); }}>✕</button>
             </legend>
+            {!isOpen ? null : (<>
 
             <div className="row" style={{ alignItems: 'center', gap: 8 }}>
               <input
@@ -135,7 +141,45 @@ export function LayersPanel() {
               <img src={l.fillImage} alt="" style={{ maxWidth: '100%', maxHeight: 70, borderRadius: 5, marginTop: 6, border: '1px solid var(--border)' }} />
             )}
 
-            {l.shape !== 'ticks' && (
+            {l.kind === 'text' && (() => {
+              const t = l.text ?? { content: '', family: '"IBM Plex Sans", system-ui, sans-serif', size: 16, weight: 600, letterSpacing: 1.5, align: 'center' as const, finish: 'engraved' as const };
+              const setText = (patch: Partial<typeof t>) => updateLayer(control.id, l.id, { text: { ...t, ...patch } });
+              return (
+                <>
+                  <label className="k3-field" style={{ marginTop: 8 }}>
+                    <span>Texto</span>
+                    <input type="text" value={t.content} onChange={(e) => setText({ content: e.target.value })} />
+                  </label>
+                  <div className="row">
+                    <label className="k3-field" style={{ flex: 1 }}><span>Tamaño <b>{t.size}px</b></span>
+                      <input type="range" min={8} max={48} step={1} value={t.size}
+                        onChange={(e) => setText({ size: Number(e.target.value) })} /></label>
+                    <label className="k3-field" style={{ flex: 1 }}><span>Grosor <b>{t.weight}</b></span>
+                      <input type="range" min={300} max={800} step={100} value={t.weight}
+                        onChange={(e) => setText({ weight: Number(e.target.value) })} /></label>
+                  </div>
+                  <div className="row">
+                    <label className="k3-field" style={{ flex: 1 }}><span>Espaciado <b>{t.letterSpacing}px</b></span>
+                      <input type="range" min={0} max={6} step={0.5} value={t.letterSpacing}
+                        onChange={(e) => setText({ letterSpacing: Number(e.target.value) })} /></label>
+                    <label className="k3-field" style={{ flex: 1 }}><span>Alinear</span>
+                      <select value={t.align} onChange={(e) => setText({ align: e.target.value as typeof t.align })}>
+                        <option value="left">Izquierda</option>
+                        <option value="center">Centro</option>
+                        <option value="right">Derecha</option>
+                      </select></label>
+                  </div>
+                  <label className="k3-field"><span>Acabado</span>
+                    <select value={t.finish} onChange={(e) => setText({ finish: e.target.value as typeof t.finish })}>
+                      <option value="flat">Plano</option>
+                      <option value="engraved">Grabado (hundido)</option>
+                      <option value="raised">Realzado</option>
+                    </select></label>
+                </>
+              );
+            })()}
+
+            {l.shape !== 'ticks' && l.kind !== 'text' && (
             <label className="k3-field" style={{ marginTop: 8 }}>
               <span>Forma</span>
               <select value={l.shape ?? 'ellipse'} onChange={(e) => updateLayer(control.id, l.id, { shape: e.target.value as LayerShape })}>
@@ -188,7 +232,6 @@ export function LayersPanel() {
               </label>
             )}
 
-            {l.shape !== 'ticks' && (<>
             {l.rectNorm && (
               <div className="row">
                 {(['x', 'y', 'w', 'h'] as const).map((k) => (
@@ -201,6 +244,7 @@ export function LayersPanel() {
               </div>
             )}
 
+            {l.shape !== 'ticks' && l.kind !== 'text' && (<>
             <label className="k3-field" style={{ marginTop: 6 }}>
               <span>Animación con el valor</span>
               <select value={l.anim?.mode ?? 'none'}
@@ -261,8 +305,8 @@ export function LayersPanel() {
               })}
             </div>
 
-            {/* Parámetros de los efectos activos */}
-            {l.effects.filter((e) => e.enabled && EFFECT_PARAMS[e.type]).map((e) => (
+            {/* Parámetros de los efectos activos (edición avanzada) */}
+            {advanced && l.effects.filter((e) => e.enabled && EFFECT_PARAMS[e.type]).map((e) => (
               <div key={e.id} style={{ borderTop: '1px solid var(--line-soft)', paddingTop: 6, marginTop: 6 }}>
                 <span style={{ fontSize: 11, color: 'var(--muted)' }}>{EFFECTS.find((x) => x[0] === e.type)?.[1] ?? e.type}</span>
                 {EFFECT_PARAMS[e.type]!.map((p) => {
@@ -291,7 +335,8 @@ export function LayersPanel() {
               </div>
             ))}
 
-            {/* Luces / reflejos extra (cada reflejo con su ángulo) */}
+            {/* Luces / reflejos extra (cada reflejo con su ángulo) — edición avanzada */}
+            {advanced && (
             <div style={{ marginTop: 8 }}>
               <div className="k3-field"><span>Reflejos / luces</span></div>
               {speculars.map((e, i) => {
@@ -321,6 +366,13 @@ export function LayersPanel() {
                 + Añadir reflejo
               </button>
             </div>
+            )}
+            {!advanced && l.effects.some((e) => e.enabled) && (
+              <p className="hint" style={{ marginTop: 6 }}>
+                Activa "Edición avanzada" en la barra para ajustar cada efecto (tamaño, fuerza, ángulo…).
+              </p>
+            )}
+            </>)}
             </>)}
           </fieldset>
         );
@@ -336,6 +388,11 @@ export function LayersPanel() {
           opacity: 1, shape: 'ticks', fill: '#c9c9d0', effects: [],
           ticks: { count: 11, style: 'dot', radius: 0.94, spanDeg: 270, size: 3 },
         }); }}>+ Marcas</button>
+        <button className="btn" onClick={() => addLayer(control.id, {
+          id: makeId('lyr'), name: 'Texto', kind: 'text', visible: true, blendMode: 'normal',
+          opacity: 1, fill: '#d8dae0', rectNorm: { x: 0, y: 0.75, w: 1, h: 0.2 }, effects: [],
+          text: { content: 'LABEL', family: '"IBM Plex Sans", system-ui, sans-serif', size: 12, weight: 600, letterSpacing: 1, align: 'center', finish: 'engraved' },
+        })}>+ Texto</button>
       </div>
     </div>
   );

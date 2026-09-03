@@ -114,7 +114,7 @@ export function defaultSlideSwitch(id: string, name: string, paramId?: string, s
     name,
     rect: { x: 20, y: 20, w, h },
     paramId,
-    props: { frames: steps, orientation: 'vertical' },
+    props: { frames: steps, orientation: 'vertical', pad: 6 },
     layers: [
       layer('Pista', {
         shape: 'roundRect',
@@ -160,7 +160,7 @@ export function defaultToggleSwitch(id: string, name: string, paramId?: string, 
     name,
     rect: { x: 20, y: 20, w, h },
     paramId,
-    props: { frames: steps, orientation: 'vertical' },
+    props: { frames: steps, orientation: 'vertical', pad: 6 },
     layers: [
       layer('Placa', {
         shape: 'roundRect',
@@ -245,6 +245,67 @@ export function defaultToggleSwitch(id: string, name: string, paramId?: string, 
   };
 }
 
+/** Fondo del plugin: panel a tamaño de lienzo. Se dibuja el primero y se exporta
+ *  como PNG de 1 frame (IBitmapControl), así que lo que ves es lo que compila. */
+export function defaultBackground(id: string, width: number, height: number): Control {
+  return {
+    id,
+    type: 'IBitmapControl',
+    name: 'Fondo',
+    rect: { x: 0, y: 0, w: width, h: height },
+    props: { frames: 1, orientation: 'vertical' },
+    layers: [
+      layer('Panel', {
+        shape: 'rect',
+        rectNorm: { x: 0, y: 0, w: 1, h: 1 },
+        fill: '#22252b',
+        effects: [
+          fx('brushed', {}),
+          fx('sheen', { width: 0.4, strength: 0.18, pos: 0.25 }),
+          fx('noise', { amount: 0.05 }),
+          fx('gradientOverlay', { type: 'radial', from: 'rgba(255,255,255,0.07)', to: 'rgba(0,0,0,0.5)' }),
+        ],
+      }),
+    ],
+    effects: [],
+  };
+}
+
+/** Etiqueta de texto. También es un bitmap de 1 frame: se hornea con la misma luz
+ *  global, así que no hace falta embeber fuentes en el plugin. */
+export function defaultLabel(id: string, content = 'ETIQUETA'): Control {
+  return {
+    id,
+    type: 'IBitmapControl',
+    name: content,
+    rect: { x: 20, y: 20, w: 120, h: 28 },
+    props: { frames: 1, orientation: 'vertical', pad: 4 },
+    layers: [
+      {
+        id: makeId('lyr'),
+        name: 'Texto',
+        kind: 'text',
+        visible: true,
+        blendMode: 'normal',
+        opacity: 1,
+        fill: '#d8dae0',
+        rectNorm: { x: 0, y: 0, w: 1, h: 1 },
+        effects: [],
+        text: {
+          content,
+          family: '"IBM Plex Sans", system-ui, sans-serif',
+          size: 16,
+          weight: 600,
+          letterSpacing: 1.5,
+          align: 'center',
+          finish: 'engraved',
+        },
+      },
+    ],
+    effects: [],
+  };
+}
+
 /** LED con bisel cromado: N estados (2 = apagado/encendido; más = intensidades). */
 export function defaultLed(id: string, name: string, paramId?: string, steps = 2, color = '#ff3020'): Control {
   return {
@@ -253,7 +314,7 @@ export function defaultLed(id: string, name: string, paramId?: string, steps = 2
     name,
     rect: { x: 20, y: 20, w: 40, h: 40 },
     paramId,
-    props: { frames: steps, orientation: 'vertical' },
+    props: { frames: steps, orientation: 'vertical', pad: 6 },
     layers: [
       layer('Bisel', {
         shape: 'ellipse',
@@ -291,7 +352,7 @@ export function defaultKnob(id: string, name: string, paramId?: string): Control
     name,
     rect: { x: 20, y: 20, w: 96, h: 96 },
     paramId,
-    props: { frames: 61, orientation: 'vertical' },
+    props: { frames: 61, orientation: 'vertical', pad: 8 },
     layers: defaultKnobLayers(),
     effects: [],
   };

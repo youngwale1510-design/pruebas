@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveLight, rotationForValue, shadowOffset } from '../src/render/light';
-import { layerBox, leverGeometry, snapValue, travelOffset } from '../src/render/renderControl';
+import { frameSize, layerBox, leverGeometry, snapValue, travelOffset } from '../src/render/renderControl';
 import {
   filmstripLayout,
   frameOrigin,
@@ -140,5 +140,22 @@ describe('switches por pasos', () => {
     expect(Math.abs(gm.tip.y - gm.pivot.y)).toBeLessThan(1);
     expect(g1.tip.y).toBeLessThan(g1.pivot.y);
     expect(Math.abs(g0.tip.y - g0.pivot.y)).toBeCloseTo(Math.abs(g1.tip.y - g1.pivot.y), 5);
+  });
+});
+
+describe('margen de sombra (pad) y texto', () => {
+  it('frameSize agranda el lienzo por el margen y lo centra', () => {
+    const k = defaultKnob('k', 'K', 'p');
+    k.props.pad = 8;
+    const fs = frameSize(k);
+    expect(fs.w).toBe(k.rect.w + 16);
+    expect(fs.h).toBe(k.rect.h + 16);
+    expect(fs.pad).toBe(8);
+  });
+  it('sin pad, frameSize es igual al rect', () => {
+    const k = defaultKnob('k2', 'K2', 'p');
+    delete (k.props as any).pad;
+    const fs = frameSize(k);
+    expect(fs).toEqual({ w: k.rect.w, h: k.rect.h, pad: 0 });
   });
 });

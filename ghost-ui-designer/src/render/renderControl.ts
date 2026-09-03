@@ -151,9 +151,51 @@ function drawTicks(ctx: Ctx, w: number, h: number, layer: Layer) {
   ctx.restore();
 }
 
+/** Texto de una capa. El acabado grabado/realzado usa la luz global, así que
+ *  las etiquetas se integran con el resto del panel. */
+function drawText(ctx: Ctx, w: number, h: number, layer: Layer, light: LightVectors) {
+  const t = layer.text;
+  if (!t || !t.content) return;
+  const box = layerBox(w, h, layer);
+  ctx.save();
+  ctx.globalAlpha = layer.opacity;
+  ctx.font = `${t.weight} ${t.size}px ${t.family}`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = t.align;
+  const x = t.align === 'left' ? box.x : t.align === 'right' ? box.x + box.w : box.x + box.w / 2;
+  const y = box.y + box.h / 2;
+  // letterSpacing no está en todos los navegadores; se emula si hace falta.
+  const spacing = t.letterSpacing || 0;
+  const put = (dx: number, dy: number, color: string) => {
+    ctx.fillStyle = color;
+    if (spacing === 0) { ctx.fillText(t.content, x + dx, y + dy); return; }
+    const chars = [...t.content];
+    const widths = chars.map((c) => ctx.measureText(c).width);
+    const total = widths.reduce((a, b) => a + b, 0) + spacing * (chars.length - 1);
+    let cx = t.align === 'left' ? x : t.align === 'right' ? x - total : x - total / 2;
+    const prev = ctx.textAlign;
+    ctx.textAlign = 'left';
+    chars.forEach((c, i) => { ctx.fillText(c, cx + dx, y + dy); cx += widths[i] + spacing; });
+    ctx.textAlign = prev;
+  };
+  const d = Math.max(1, t.size * 0.06);
+  const inten = 0.35 + 0.45 * light.intensity;
+  if (t.finish === 'engraved') {
+    // Hundido: sombra hacia la luz, brillo en el lado opuesto.
+    put(light.dx * d, light.dy * d, `rgba(255,255,255,${inten * 0.7})`);
+    put(-light.dx * d, -light.dy * d, `rgba(0,0,0,${inten})`);
+  } else if (t.finish === 'raised') {
+    put(light.dx * d, light.dy * d, `rgba(0,0,0,${inten})`);
+    put(-light.dx * d, -light.dy * d, `rgba(255,255,255,${inten * 0.7})`);
+  }
+  put(0, 0, layer.fill ?? '#e8e9ec');
+  ctx.restore();
+}
+
 function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number, light: LightVectors, images?: ImageCache) {
   if (!layer.visible) return;
   if (layer.shape === 'ticks') { drawTicks(ctx, w, h, layer); return; }
+  if (layer.kind === 'text') { drawText(ctx, w, h, layer, light); return; }
   const mode = layer.anim?.mode ?? 'none';
   const rotate = mode === 'rotate';
   const deg = rotate ? rotationForValue(value, layer.anim!.minDeg ?? -135, layer.anim!.maxDeg ?? 135) : 0;
@@ -218,6 +260,16 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
   ctx.restore();
 }
 
+/**
+ * Tamaño real del frame: el rect del control más el margen (`props.pad`) que deja
+ * sitio a sombras y halos. Sin él, el filmstrip corta la sombra por el borde.
+ * El control se ancla en (x - pad, y - pad) para que la pieza no se mueva. Puro.
+ */
+export function frameSize(control: Control): { w: number; h: number; pad: number } {
+  const pad = Math.max(0, Math.round(Number(control.props.pad ?? 0) || 0));
+  return { w: control.rect.w + pad * 2, h: control.rect.h + pad * 2, pad };
+}
+
 /** Controles por pasos (switches): el valor se cuantiza a N estados. Puro. */
 export function snapValue(control: Control, value: number): number {
   if (control.type !== 'IBSwitchControl') return value;
@@ -237,8 +289,12 @@ export function renderControlFrame(
   images?: ImageCache,
 ) {
   const { w, h } = control.rect;
+  const { pad } = frameSize(control);
   const light = resolveLight(scene.light);
   value = snapValue(control, value);
+  // Todo se dibuja en coordenadas del rect; el margen solo desplaza el origen.
+  ctx.save();
+  if (pad) ctx.translate(pad, pad);
   // Margen del cuerpo: encoge todas las capas (menos las marcas) hacia el centro
   // para dejar sitio a las marcas exteriores. Fracción 0..0.4.
   const bodyInset = Math.max(0, Math.min(0.4, Number(control.props.bodyInset ?? 0) || 0));
@@ -252,4 +308,5 @@ export function renderControlFrame(
     renderLayer(ctx, w, h, layer, value, light, images);
     ctx.restore();
   }
+  ctx.restore();
 }

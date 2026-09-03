@@ -3,7 +3,7 @@
 // de modo que lo que ves en el editor es idéntico a lo que se exporta.
 
 import { Control, SceneDocument } from '../model/scene';
-import { renderControlFrame } from './renderControl';
+import { frameSize, renderControlFrame } from './renderControl';
 import { renderFilmstrip, Orientation } from './filmstrip';
 import { ImageCache } from './textures';
 
@@ -21,7 +21,8 @@ export function renderControlToCanvas(
   value: number,
   images?: ImageCache,
 ): HTMLCanvasElement {
-  const canvas = makeCanvas(control.rect.w, control.rect.h);
+  const fs = frameSize(control);
+  const canvas = makeCanvas(fs.w, fs.h);
   const ctx = canvas.getContext('2d')!;
   renderControlFrame(ctx, control, scene, value, images);
   return canvas;

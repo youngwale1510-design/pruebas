@@ -3,6 +3,7 @@ import { Image as KonvaImage, Group, Rect } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { Control, SceneDocument } from '../model/scene';
 import { renderControlToCanvas } from '../render/dom';
+import { frameSize } from '../render/renderControl';
 import { ImageCache, preloadTextures } from '../render/textures';
 
 interface Props {
@@ -22,6 +23,7 @@ interface Props {
  */
 export function ControlImage({ control, scene, value, selected, onSelect, onMove }: Props) {
   const { x, y, w, h } = control.rect;
+  const { pad } = frameSize(control);
   const stripUri = control.props.filmstripDataUri as string | undefined;
   const frames = Number(control.props.frames ?? 1) || 1;
   const orientation = (control.props.orientation as string) ?? 'vertical';
@@ -61,16 +63,22 @@ export function ControlImage({ control, scene, value, selected, onSelect, onMove
     }
     return renderControlToCanvas(control, scene, value, textures);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stripUri, stripImg, frames, orientation, JSON.stringify(control.layers), w, h, value, JSON.stringify(scene.light), textures]);
+  }, [stripUri, stripImg, frames, orientation, JSON.stringify(control.layers), w, h, control.props.pad, value, JSON.stringify(scene.light), textures]);
 
   const onDragEnd = (e: KonvaEventObject<DragEvent>) =>
-    onMove(Math.round(e.target.x()), Math.round(e.target.y()));
+    onMove(Math.round(e.target.x() + pad), Math.round(e.target.y() + pad));
+
+  // El canvas del filmstrip importado no lleva margen (pad solo aplica al
+  // compositor 2D); el resto usa el tamaño real del frame (rect + 2*pad) para
+  // no deformar la pieza al encajarla en un rect más chico.
+  const cw = stripUri && stripImg ? w : canvas.width;
+  const ch = stripUri && stripImg ? h : canvas.height;
 
   return (
-    <Group x={x} y={y} draggable onClick={onSelect} onTap={onSelect} onDragEnd={onDragEnd}>
-      <KonvaImage image={canvas} width={w} height={h} />
+    <Group x={x - pad} y={y - pad} draggable onClick={onSelect} onTap={onSelect} onDragEnd={onDragEnd}>
+      <KonvaImage image={canvas} width={cw} height={ch} />
       {selected && (
-        <Rect width={w} height={h} stroke="#4c9aff" dash={[4, 3]} strokeWidth={1} />
+        <Rect x={pad} y={pad} width={w} height={h} stroke="#4c9aff" dash={[4, 3]} strokeWidth={1} />
       )}
     </Group>
   );
