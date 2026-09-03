@@ -12,6 +12,8 @@ export function CanvasPanel() {
   const bg = scene.controls.find((c) => c.name === 'Fondo');
   const bgLayer = bg?.layers[0];
 
+  const updateControl = useStore((s) => s.updateControl);
+
   const pickImage = async () => {
     const res = await window.ghost.importImage();
     if (!res) return;
@@ -22,6 +24,12 @@ export function CanvasPanel() {
     }
     if (!target) return;
     updateLayer(target.id, target.layers[0].id, { fillImage: res.dataUri, fillImageMode: 'cover' });
+    // El lienzo del plugin toma el tamaño real de la imagen, y el fondo se
+    // estira a ese mismo tamaño para no dejar tiras del color plano alrededor.
+    if (res.width > 0 && res.height > 0) {
+      setCanvas({ width: res.width, height: res.height });
+      updateControl(target.id, { rect: { x: 0, y: 0, w: res.width, h: res.height } });
+    }
     select(target.id);
   };
 
