@@ -88,7 +88,7 @@ export function generateControlBlock(c: Control): string {
  */
 function generateSizeMenu(): string {
   const btn = (label: string, scale: string, x: string) =>
-    `  pGraphics->AttachControl(new IVButtonControl(IRECT(${x}, 4, ${x} + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, ${scale}f); }, "${label}"));`;
+    `  pGraphics->AttachControl(new IVButtonControl(IRECT(${x}, 4, ${x} + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, ${scale}f); }, "${label}", ghostSizeMenuStyle));`;
   return [
     '  // Selector de tamaño (100% / 75% / 50%) — generado por Ghost UI Designer.',
     '  {',
@@ -96,6 +96,10 @@ function generateSizeMenu(): string {
     '    const int x100 = pGraphics->Width() - pad - sw;',
     '    const int x75 = (x100 - pad - sw) > 0 ? (x100 - pad - sw) : 0;',
     '    const int x50 = (x75 - pad - sw) > 0 ? (x75 - pad - sw) : 0;',
+    // Sin texto de "valor" (el botón no representa un parámetro, no aplica);
+    // la fuente del label se deja en su default (DEFAULT_FONT) para no
+    // depender de con qué nombre registró el .ttf el LoadFont() de tu DSP.
+    '    const IVStyle ghostSizeMenuStyle = DEFAULT_STYLE.WithShowValue(false);',
     btn('100%', '1.', 'x100'),
     btn('75%', '.75', 'x75'),
     btn('50%', '.5', 'x50'),

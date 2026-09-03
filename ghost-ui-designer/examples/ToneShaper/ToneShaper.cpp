@@ -45,9 +45,10 @@ ToneShaper::ToneShaper(const InstanceInfo& info)
     const int x100 = pGraphics->Width() - pad - sw;
     const int x75 = (x100 - pad - sw) > 0 ? (x100 - pad - sw) : 0;
     const int x50 = (x75 - pad - sw) > 0 ? (x75 - pad - sw) : 0;
-  pGraphics->AttachControl(new IVButtonControl(IRECT(x100, 4, x100 + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, 1.f); }, "100%"));
-  pGraphics->AttachControl(new IVButtonControl(IRECT(x75, 4, x75 + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, .75f); }, "75%"));
-  pGraphics->AttachControl(new IVButtonControl(IRECT(x50, 4, x50 + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, .5f); }, "50%"));
+    const IVStyle ghostSizeMenuStyle = DEFAULT_STYLE.WithShowValue(false);
+  pGraphics->AttachControl(new IVButtonControl(IRECT(x100, 4, x100 + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, 1.f); }, "100%", ghostSizeMenuStyle));
+  pGraphics->AttachControl(new IVButtonControl(IRECT(x75, 4, x75 + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, .75f); }, "75%", ghostSizeMenuStyle));
+  pGraphics->AttachControl(new IVButtonControl(IRECT(x50, 4, x50 + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, .5f); }, "50%", ghostSizeMenuStyle));
   }
 // [GHOST:LAYOUT END]
     // --- Fin de la zona gestionada ---
