@@ -115,6 +115,18 @@ Necesitas: **Git for Windows**, **Visual Studio 2022 Community** (carga de traba
    ventana) y 6 (tags del `.h`) ya los hace solo el diseñador en cada
    exportación.
 
+## Tamaño de ventana: 100% siempre cabe en pantalla, y el plugin trae 100%/75%/50%
+
+- El panel "Lienzo" del diseñador nunca deja poner un tamaño más grande de lo
+  que cabe en tu pantalla (se ve el tope justo debajo de Ancho/Alto). Si
+  insertas una imagen de fondo más grande que la pantalla, se escala hacia
+  abajo sola conservando la proporción.
+- Todo plugin que exportes trae, en la esquina superior derecha, tres
+  botones pequeños **100% / 75% / 50%** para achicar la ventana sin perder el
+  diseño (usan `IGraphics::Resize`, el mismo mecanismo del tirador de esquina
+  que ya arrastra para redimensionar). Útil si el "100%" de tu diseño no cabe
+  en un monitor más chico que el tuyo.
+
 ## Compilar en macOS / Linux (resumen)
 
 Mismos scripts en un terminal normal y `python3 duplicate.py …`; luego abre el

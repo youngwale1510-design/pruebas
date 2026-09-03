@@ -39,6 +39,16 @@ ToneShaper::ToneShaper(const InstanceInfo& info)
   // [GHOST:DATA]eyJpZCI6InN3X2J5cGFzcyIsInR5cGUiOiJJVlRvZ2dsZUNvbnRyb2wiLCJuYW1lIjoiQnlwYXNzIiwicmVjdCI6eyJ4IjoyOTAsInkiOjEzMCwidyI6NzAsImgiOjQwfSwicGFyYW1JZCI6ImJ5cGFzcyIsInByb3BzIjp7fSwibGF5ZXJzIjpbXSwiZWZmZWN0cyI6W119
   pGraphics->AttachControl(new IVToggleControl(IRECT(290, 130, 360, 170), kBypass, "Bypass"), kCtrl_sw_bypass);
 // [GHOST:CONTROL END id=sw_bypass]
+  // Selector de tamaño (100% / 75% / 50%) — generado por Ghost UI Designer.
+  {
+    const int sw = 34, sh = 16, pad = 4;
+    const int x100 = pGraphics->Width() - pad - sw;
+    const int x75 = (x100 - pad - sw) > 0 ? (x100 - pad - sw) : 0;
+    const int x50 = (x75 - pad - sw) > 0 ? (x75 - pad - sw) : 0;
+  pGraphics->AttachControl(new IVButtonControl(IRECT(x100, 4, x100 + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, 1.f); }, "100%"));
+  pGraphics->AttachControl(new IVButtonControl(IRECT(x75, 4, x75 + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, .75f); }, "75%"));
+  pGraphics->AttachControl(new IVButtonControl(IRECT(x50, 4, x50 + sw, 4 + sh), [pGraphics](IControl*) { pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, .5f); }, "50%"));
+  }
 // [GHOST:LAYOUT END]
     // --- Fin de la zona gestionada ---
   };

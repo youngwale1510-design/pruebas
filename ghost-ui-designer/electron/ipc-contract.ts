@@ -41,6 +41,9 @@ export interface GhostApi {
   importImage(): Promise<{ name: string; dataUri: string; width: number; height: number } | null>;
   /** Guarda un PNG (data URI) al disco vía diálogo. Devuelve la ruta o null. */
   saveImage(dataUri: string, suggestedName: string): Promise<string | null>;
+  /** Área útil de la pantalla principal (sin barra de tareas), para acotar el
+   *  tamaño máximo ("100%") del lienzo del plugin. */
+  getScreenSize(): Promise<{ width: number; height: number }>;
 }
 
 export const IPC = {
@@ -52,4 +55,5 @@ export const IPC = {
   exportBundle: 'ghost:exportBundle',
   importImage: 'ghost:importImage',
   saveImage: 'ghost:saveImage',
+  getScreenSize: 'ghost:getScreenSize',
 } as const;

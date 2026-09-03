@@ -139,3 +139,33 @@ describe('recursos para main.rc', () => {
     expect(rc).toContain('SWMODE_FN PNG SWMODE_FN');
   });
 });
+
+describe('selector de tamaño (100%/75%/50%) en todo plugin exportado', () => {
+  it('genera los 3 botones con IGraphics::Resize(PLUG_WIDTH, PLUG_HEIGHT, escala)', () => {
+    const scene = sceneWithKnob();
+    const { source } = writeSceneToSource(scene, null);
+    expect(source).toContain('IVButtonControl');
+    expect(source).toContain('pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, 1.f)');
+    expect(source).toContain('pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, .75f)');
+    expect(source).toContain('pGraphics->Resize(PLUG_WIDTH, PLUG_HEIGHT, .5f)');
+    expect(source).toContain('"100%"');
+    expect(source).toContain('"75%"');
+    expect(source).toContain('"50%"');
+  });
+
+  it('no interfiere con la lectura de los controles reales (round-trip)', () => {
+    const scene = sceneWithKnob();
+    const { source } = writeSceneToSource(scene, null);
+    const parsed = readSceneFromSource(source);
+    expect(parsed.controls).toHaveLength(1);
+    expect(parsed.controls[0].id).toBe('knob_gain');
+  });
+
+  it('idempotente: no crece ni duplica botones al regenerar sin cambios', () => {
+    const scene = sceneWithKnob();
+    const a = writeSceneToSource(scene, null).source;
+    const b = writeSceneToSource(scene, a).source;
+    expect((b.match(/IVButtonControl/g) ?? []).length).toBe(3);
+    expect(b).toBe(a);
+  });
+});

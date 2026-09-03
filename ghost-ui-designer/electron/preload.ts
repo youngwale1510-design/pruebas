@@ -13,6 +13,7 @@ const api: GhostApi = {
     ipcRenderer.invoke(IPC.exportBundle, scene, assets),
   importImage: () => ipcRenderer.invoke(IPC.importImage),
   saveImage: (dataUri, suggestedName) => ipcRenderer.invoke(IPC.saveImage, dataUri, suggestedName),
+  getScreenSize: () => ipcRenderer.invoke(IPC.getScreenSize),
 };
 
 contextBridge.exposeInMainWorld('ghost', api);

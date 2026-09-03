@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, screen } from 'electron';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -149,6 +149,14 @@ ipcMain.handle(
     return { dir, merged, ...h, configFound, configChanged };
   },
 );
+
+/** Área útil de la pantalla principal (sin barra de tareas), para no dejar
+ *  diseñar un lienzo (el "100%" del plugin) más grande de lo que cabe. */
+ipcMain.handle(IPC.getScreenSize, () => {
+  const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+  // Margen para la barra de título de la app standalone y un respiro visual.
+  return { width: Math.max(200, width - 40), height: Math.max(200, height - 100) };
+});
 
 ipcMain.handle(IPC.importImage, async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog(dlgWin(), {
