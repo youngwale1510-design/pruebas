@@ -3,7 +3,7 @@
 // por el rasterizador de filmstrips -> el editor se ve idéntico al plugin.
 
 import { Control, Layer, SceneDocument } from '../model/scene';
-import { EffectHints, applyEffectsAbove, applyEffectsBelow } from './effects';
+import { EffectHints, PathFn, applyEffectsAbove, applyEffectsBelow } from './effects';
 import { LightVectors, resolveLight, rotateLight, rotationForValue } from './light';
 import { ImageCache, drawImageCover } from './textures';
 
@@ -219,10 +219,31 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
     box = { ...box, x: box.x + off.dx, y: box.y + off.dy };
   }
 
+  const tex = layer.fillImage && images ? images[layer.fillImage] : undefined;
+  // Para una imagen importada, la sombra/glow deben salir de su transparencia
+  // REAL, no del rect/forma vectorial que solo delimita el control en el
+  // lienzo. `paintTex` dibuja la imagen (recortada a la forma) mientras las
+  // sombras están activas, así el canvas las calcula a partir del alfa real.
+  const isTile = (layer.fillImageMode ?? 'cover') === 'tile';
+  const paintTex: PathFn | undefined = tex
+    ? (c: Ctx) => {
+        c.save();
+        pathFn(c);
+        c.clip();
+        if (isTile) {
+          const pat = c.createPattern(tex, 'repeat');
+          if (pat) { c.fillStyle = pat; c.fillRect(box.x, box.y, box.w, box.h); }
+        } else {
+          drawImageCover(c, tex, box);
+        }
+        c.restore();
+      }
+    : undefined;
+
   // Sombra proyectada / glow en espacio FIJO (no giran con la pieza).
   ctx.save();
   ctx.globalAlpha = layer.opacity;
-  applyEffectsBelow(ctx, pathFn, layer.effects, light, box, hints);
+  applyEffectsBelow(ctx, pathFn, layer.effects, light, box, hints, paintTex);
   ctx.restore();
 
   ctx.save();
@@ -238,25 +259,27 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
     ctx.rotate((deg * Math.PI) / 180);
     ctx.translate(-w / 2, -h / 2);
   }
-  const tex = layer.fillImage && images ? images[layer.fillImage] : undefined;
-  if (tex) {
-    // Relleno por textura (cover) recortado a la forma.
-    ctx.save();
-    pathFn(ctx);
-    ctx.clip();
-    if ((layer.fillImageMode ?? 'cover') === 'tile') {
-      const pat = ctx.createPattern(tex, 'repeat');
-      if (pat) { ctx.fillStyle = pat; ctx.fillRect(box.x, box.y, box.w, box.h); }
-    } else {
-      drawImageCover(ctx, tex, box);
-    }
-    ctx.restore();
+  if (tex && paintTex) {
+    // El relleno y los efectos "de encima" (bisel, cromo, moleteado…) se
+    // pintan en un lienzo aparte y se recortan por la transparencia REAL del
+    // PNG (destination-in), no solo por la forma: así un logo redondo con
+    // esquinas transparentes no se biselea por fuera de su propio contorno.
+    const off = document.createElement('canvas');
+    off.width = Math.max(1, Math.round(w));
+    off.height = Math.max(1, Math.round(h));
+    const octx = off.getContext('2d')!;
+    paintTex(octx);
+    applyEffectsAbove(octx, pathFn, box, layer.effects, L, hints);
+    octx.globalCompositeOperation = 'destination-in';
+    paintTex(octx);
+    octx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(off, 0, 0);
   } else {
     pathFn(ctx);
     ctx.fillStyle = layer.fill ?? '#333333';
     ctx.fill();
+    applyEffectsAbove(ctx, pathFn, box, layer.effects, L, hints);
   }
-  applyEffectsAbove(ctx, pathFn, box, layer.effects, L, hints);
   ctx.restore();
 }
 

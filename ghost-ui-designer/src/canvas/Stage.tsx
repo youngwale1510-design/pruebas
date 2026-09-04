@@ -3,29 +3,31 @@ import { Layer, Line, Rect, Stage as KonvaStage, Text } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { useStore } from '../app/store';
 import { ControlImage } from './ControlImage';
+import { normalizeMarquee, rectsIntersect } from '../app/align';
 
 const RULER = 20; // grosor de la regla, en px de pantalla
 const TICK_COLOR = '#5a5f6b';
 const GUIDE_COLOR = '#57b6c9';
+const MARQUEE_MIN_DRAG = 3; // por debajo de esto, un "arrastre" se trata como clic
 
-/** Reglas superior/izquierda con marcas cada 50px (mismas unidades que el lienzo). */
+/** Reglas superior/izquierda en PORCENTAJE del lienzo (10 marcas, 0..100%). */
 function Rulers({ width, height }: { width: number; height: number }) {
-  const step = 50;
+  const N = 10;
   const hTicks = [];
-  for (let x = 0; x <= width; x += step) {
+  for (let i = 0; i <= N; i++) {
+    const x = (width * i) / N;
     hTicks.push(
-      <Line key={`h${x}`} points={[RULER + x, RULER - 6, RULER + x, RULER]} stroke={TICK_COLOR} strokeWidth={1} />,
+      <Line key={`h${i}`} points={[RULER + x, RULER - 6, RULER + x, RULER]} stroke={TICK_COLOR} strokeWidth={1} />,
     );
-    hTicks.push(<Text key={`ht${x}`} x={RULER + x + 2} y={2} text={String(x)} fontSize={9} fill={TICK_COLOR} />);
+    hTicks.push(<Text key={`ht${i}`} x={RULER + x + 2} y={2} text={`${i * 10}%`} fontSize={9} fill={TICK_COLOR} />);
   }
   const vTicks = [];
-  for (let y = 0; y <= height; y += step) {
+  for (let i = 0; i <= N; i++) {
+    const y = (height * i) / N;
     vTicks.push(
-      <Line key={`v${y}`} points={[RULER - 6, RULER + y, RULER, RULER + y]} stroke={TICK_COLOR} strokeWidth={1} />,
+      <Line key={`v${i}`} points={[RULER - 6, RULER + y, RULER, RULER + y]} stroke={TICK_COLOR} strokeWidth={1} />,
     );
-    vTicks.push(
-      <Text key={`vt${y}`} x={2} y={RULER + y + 2} text={String(y)} fontSize={9} fill={TICK_COLOR} rotation={0} />,
-    );
+    vTicks.push(<Text key={`vt${i}`} x={2} y={RULER + y + 2} text={`${i * 10}%`} fontSize={9} fill={TICK_COLOR} />);
   }
   return (
     <>
@@ -37,11 +39,18 @@ function Rulers({ width, height }: { width: number; height: number }) {
   );
 }
 
+/** ¿Es un modificador de selección múltiple? Shift (estándar) o Ctrl/Cmd
+ *  (alternativa, para quien viene de otras apps donde Ctrl es lo habitual). */
+function isAdditiveEvent(evt: MouseEvent | undefined): boolean {
+  return !!evt && (evt.shiftKey || evt.ctrlKey || evt.metaKey);
+}
+
 export function Stage() {
   const scene = useStore((s) => s.scene);
   const selectedIds = useStore((s) => s.selectedIds);
   const select = useStore((s) => s.select);
   const toggleSelect = useStore((s) => s.toggleSelect);
+  const selectMany = useStore((s) => s.selectMany);
   const moveControl = useStore((s) => s.moveControl);
   const snapMove = useStore((s) => s.snapMove);
   const previewValue = useStore((s) => s.previewValue);
@@ -50,13 +59,33 @@ export function Stage() {
   const removeGuide = useStore((s) => s.removeGuide);
 
   const [dragGuide, setDragGuide] = useState<{ orientation: 'h' | 'v'; pos: number } | null>(null);
+  const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number; additive: boolean } | null>(null);
+  const [dragLabel, setDragLabel] = useState<{ x: number; y: number; text: string } | null>(null);
+  const [liveRect, setLiveRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const selectedId = useStore((s) => s.selectedId);
+  const selectedControl = scene.controls.find((c) => c.id === selectedId) ?? null;
 
   const { width, height, bg } = scene.canvas;
 
   const onMove = (id: string, x: number, y: number) => {
     const snapped = snapMove(id, x, y);
     moveControl(id, snapped.x, snapped.y);
+    setDragLabel(null);
+    setLiveRect(null);
   };
+
+  const onDragLive = (id: string, x: number, y: number) => {
+    const pctX = Math.round((x / width) * 1000) / 10;
+    const pctY = Math.round((y / height) * 1000) / 10;
+    setDragLabel({ x, y, text: `X ${Math.round(x)}px (${pctX}%)  Y ${Math.round(y)}px (${pctY}%)` });
+    const c = scene.controls.find((k) => k.id === id);
+    if (c) setLiveRect({ x, y, w: c.rect.w, h: c.rect.h });
+  };
+
+  // El HUD muestra la posición/tamaño en vivo mientras arrastras; si no hay
+  // arrastre en curso, muestra los valores actuales del control seleccionado.
+  const hud = liveRect ?? (selectedControl ? selectedControl.rect : null);
+  const hudPct = (v: number, total: number) => (total > 0 ? Math.round((v / total) * 1000) / 10 : 0);
 
   return (
     <div className="canvas-wrap" style={{ padding: 0 }}>
@@ -64,21 +93,46 @@ export function Stage() {
         width={width + RULER}
         height={height + RULER}
         onMouseDown={(e) => {
-          if (e.target === e.target.getStage()) select(null);
-        }}
-        onMouseMove={(e) => {
-          if (!dragGuide) return;
+          if (e.target !== e.target.getStage()) return;
           const stage = e.target.getStage();
           const pos = stage?.getPointerPosition();
           if (!pos) return;
-          setDragGuide({
-            ...dragGuide,
-            pos: dragGuide.orientation === 'v' ? pos.x - RULER : pos.y - RULER,
+          setMarquee({
+            x0: pos.x - RULER,
+            y0: pos.y - RULER,
+            x1: pos.x - RULER,
+            y1: pos.y - RULER,
+            additive: isAdditiveEvent(e.evt),
           });
         }}
+        onMouseMove={(e) => {
+          const stage = e.target.getStage();
+          const pos = stage?.getPointerPosition();
+          if (!pos) return;
+          if (dragGuide) {
+            setDragGuide({ ...dragGuide, pos: dragGuide.orientation === 'v' ? pos.x - RULER : pos.y - RULER });
+          }
+          if (marquee) {
+            setMarquee({ ...marquee, x1: pos.x - RULER, y1: pos.y - RULER });
+          }
+        }}
         onMouseUp={() => {
-          if (dragGuide && dragGuide.pos > 0) addGuide(dragGuide.orientation, dragGuide.pos);
-          setDragGuide(null);
+          if (dragGuide) {
+            if (dragGuide.pos > 0) addGuide(dragGuide.orientation, dragGuide.pos);
+            setDragGuide(null);
+          }
+          if (marquee) {
+            const dx = Math.abs(marquee.x1 - marquee.x0);
+            const dy = Math.abs(marquee.y1 - marquee.y0);
+            if (dx < MARQUEE_MIN_DRAG && dy < MARQUEE_MIN_DRAG) {
+              if (!marquee.additive) select(null);
+            } else {
+              const box = normalizeMarquee(marquee.x0, marquee.y0, marquee.x1, marquee.y1);
+              const ids = scene.controls.filter((c) => rectsIntersect(box, c.rect)).map((c) => c.id);
+              selectMany(ids, marquee.additive);
+            }
+            setMarquee(null);
+          }
         }}
       >
         <Layer x={RULER} y={RULER}>
@@ -92,6 +146,7 @@ export function Stage() {
               selected={selectedIds.includes(c.id)}
               onSelect={(additive) => (additive ? toggleSelect(c.id) : select(c.id))}
               onMove={(x, y) => onMove(c.id, x, y)}
+              onDragLive={(x, y) => onDragLive(c.id, x, y)}
             />
           ))}
           {guides.v.map((x) => (
@@ -122,6 +177,21 @@ export function Stage() {
           {dragGuide && dragGuide.orientation === 'h' && (
             <Line points={[0, dragGuide.pos, width, dragGuide.pos]} stroke={GUIDE_COLOR} strokeWidth={1} dash={[4, 3]} />
           )}
+          {marquee && (
+            <Rect
+              {...normalizeMarquee(marquee.x0, marquee.y0, marquee.x1, marquee.y1)}
+              fill="rgba(76,154,255,0.12)"
+              stroke="#4c9aff"
+              strokeWidth={1}
+              dash={[4, 3]}
+            />
+          )}
+          {dragLabel && (
+            <>
+              <Rect x={dragLabel.x + 12} y={dragLabel.y - 22} width={180} height={18} fill="#101114" cornerRadius={3} opacity={0.9} />
+              <Text x={dragLabel.x + 16} y={dragLabel.y - 19} text={dragLabel.text} fontSize={11} fill="#e8e9ec" />
+            </>
+          )}
         </Layer>
         <Layer>
           <Rulers width={width} height={height} />
@@ -151,8 +221,16 @@ export function Stage() {
         </Layer>
       </KonvaStage>
       <p className="hint" style={{ margin: '6px 0 0', textAlign: 'center' }}>
-        Arrastra desde la regla para crear una guía · clic en una guía para quitarla · Shift+clic para seleccionar varios
+        Arrastra sobre el lienzo para seleccionar varios (o Shift/Ctrl+clic) · arrastra desde la regla para crear una guía
       </p>
+      {hud && (
+        <div className="coord-hud">
+          <span>X <b>{Math.round(hud.x)}px</b> <i>{hudPct(hud.x, width)}%</i></span>
+          <span>Y <b>{Math.round(hud.y)}px</b> <i>{hudPct(hud.y, height)}%</i></span>
+          <span>W <b>{Math.round(hud.w)}px</b> <i>{hudPct(hud.w, width)}%</i></span>
+          <span>H <b>{Math.round(hud.h)}px</b> <i>{hudPct(hud.h, height)}%</i></span>
+        </div>
+      )}
     </div>
   );
 }

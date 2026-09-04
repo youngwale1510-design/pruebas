@@ -21,6 +21,9 @@ interface AppState {
   select: (id: string | null) => void;
   /** Suma o quita `id` de la selección (clic con Shift), sin tocar el resto. */
   toggleSelect: (id: string) => void;
+  /** Reemplaza la selección por `ids`, o la SUMA a la actual si `additive`
+   *  (selección por arrastre/marquee, con Shift u otros ya seleccionados). */
+  selectMany: (ids: string[], additive: boolean) => void;
   alignSelected: (kind: AlignKind) => void;
   distributeSelected: (axis: 'h' | 'v') => void;
   matchSizeSelected: (dim: MatchDim) => void;
@@ -70,6 +73,13 @@ interface AppState {
   /** Carga controles leídos de un .cpp: completa capas por tipo y crea los parámetros que falten. */
   importControls: (controls: Control[], pluginName: string) => void;
   setPreview: (cpp: string) => void;
+
+  /** Deshacer/rehacer (Ctrl+Z / Ctrl+Shift+Z o Ctrl+Y). Cada cambio de `scene`
+   *  queda en el historial automáticamente (ver `subscribe` más abajo). */
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
 }
 
 /** Aplica una transformación a una capa concreta de un control. */
@@ -107,6 +117,12 @@ export const useStore = create<AppState>((set, get) => ({
       const on = s.selectedIds.includes(id);
       const ids = on ? s.selectedIds.filter((x) => x !== id) : [...s.selectedIds, id];
       return { selectedIds: ids, selectedId: ids.length ? ids[ids.length - 1] : null };
+    }),
+
+  selectMany: (ids, additive) =>
+    set((s) => {
+      const merged = additive ? [...s.selectedIds, ...ids.filter((id) => !s.selectedIds.includes(id))] : ids;
+      return { selectedIds: merged, selectedId: merged.length ? merged[merged.length - 1] : null };
     }),
 
   alignSelected: (kind) =>
@@ -417,7 +433,12 @@ export const useStore = create<AppState>((set, get) => ({
     })),
 
   setPreviewValue: (v) => set({ previewValue: Math.max(0, Math.min(1, v)) }),
-  setScene: (scene) => set({ scene, selectedId: null, selectedIds: [] }),
+  setScene: (scene) => {
+    applyingHistory = true;
+    set({ scene, selectedId: null, selectedIds: [] });
+    applyingHistory = false;
+    resetHistory();
+  },
   importControls: (controls, pluginName) =>
     set((s) => {
       const params = [...s.scene.params];
@@ -436,6 +457,7 @@ export const useStore = create<AppState>((set, get) => ({
         }
         return c;
       });
+      queueMicrotask(resetHistory);
       return {
         scene: { ...s.scene, meta: { ...s.scene.meta, pluginName }, params, controls: prepared },
         selectedId: prepared[0]?.id ?? null,
@@ -443,6 +465,58 @@ export const useStore = create<AppState>((set, get) => ({
       };
     }),
   setPreview: (cpp) => set({ previewCpp: cpp }),
+
+  canUndo: false,
+  canRedo: false,
+  undo: () => {
+    if (history.past.length === 0) return;
+    const s = get();
+    const prev = history.past.pop()!;
+    history.future.push(s.scene);
+    applyingHistory = true;
+    set({ scene: prev, selectedId: null, selectedIds: [] });
+    applyingHistory = false;
+    syncHistoryFlags();
+  },
+  redo: () => {
+    if (history.future.length === 0) return;
+    const s = get();
+    const next = history.future.pop()!;
+    history.past.push(s.scene);
+    applyingHistory = true;
+    set({ scene: next, selectedId: null, selectedIds: [] });
+    applyingHistory = false;
+    syncHistoryFlags();
+  },
 }));
+
+// Historial de deshacer/rehacer: cada vez que `scene` cambia (por cualquier
+// acción), se guarda la escena ANTERIOR. Así no hace falta tocar cada acción
+// del store una por una. `applyingHistory` evita que undo()/redo() se
+// registren a sí mismos como un cambio más.
+const HISTORY_LIMIT = 50;
+const history: { past: SceneDocument[]; future: SceneDocument[] } = { past: [], future: [] };
+let applyingHistory = false;
+
+function syncHistoryFlags() {
+  useStore.setState({ canUndo: history.past.length > 0, canRedo: history.future.length > 0 });
+}
+
+/** Limpia el historial (al cargar un proyecto/.cpp entero no tiene sentido
+ *  poder "deshacer" hacia la escena anterior). */
+function resetHistory() {
+  history.past = [];
+  history.future = [];
+  syncHistoryFlags();
+}
+
+useStore.subscribe((state, prevState) => {
+  if (applyingHistory) return;
+  if (state.scene === prevState.scene) return;
+  history.past.push(prevState.scene);
+  if (history.past.length > HISTORY_LIMIT) history.past.shift();
+  history.future = [];
+  syncHistoryFlags();
+});
 
 export { defaultKnobConfig };

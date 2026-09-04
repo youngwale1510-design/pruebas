@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { alignRects, distributeRects, matchSizeRects, snapRect } from '../src/app/align';
+import { alignRects, distributeRects, matchSizeRects, normalizeMarquee, rectsIntersect, snapRect } from '../src/app/align';
 
 describe('alignRects', () => {
   const rects = [
@@ -133,5 +133,21 @@ describe('snapRect', () => {
     const out = snapRect({ x: 101, y: 500, w: 10, h: 10 }, { h: [50], v: [100] }, [], 6);
     expect(out.x).toBe(100);
     expect(out.y).toBe(500);
+  });
+});
+
+describe('rectsIntersect / normalizeMarquee (selección por arrastre)', () => {
+  it('detecta solape', () => {
+    expect(rectsIntersect({ x: 0, y: 0, w: 10, h: 10 }, { x: 5, y: 5, w: 10, h: 10 })).toBe(true);
+  });
+  it('detecta que NO se tocan', () => {
+    expect(rectsIntersect({ x: 0, y: 0, w: 10, h: 10 }, { x: 20, y: 20, w: 10, h: 10 })).toBe(false);
+  });
+  it('un rect completamente dentro de otro también cuenta', () => {
+    expect(rectsIntersect({ x: 0, y: 0, w: 100, h: 100 }, { x: 10, y: 10, w: 5, h: 5 })).toBe(true);
+  });
+  it('normaliza sin importar la dirección del arrastre', () => {
+    expect(normalizeMarquee(50, 50, 10, 10)).toEqual({ x: 10, y: 10, w: 40, h: 40 });
+    expect(normalizeMarquee(10, 10, 50, 50)).toEqual({ x: 10, y: 10, w: 40, h: 40 });
   });
 });

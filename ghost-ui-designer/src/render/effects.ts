@@ -20,7 +20,7 @@ export interface EffectHints {
 }
 
 type Ctx = CanvasRenderingContext2D;
-type PathFn = (ctx: Ctx) => void;
+export type PathFn = (ctx: Ctx) => void;
 
 function num(e: Effect, k: string, d: number): number {
   const v = e.params[k];
@@ -53,6 +53,7 @@ export function drawDropShadow(
   pathFn: PathFn,
   e: Effect,
   light: LightVectors,
+  paint?: PathFn,
 ) {
   const dist = num(e, 'distance', 4) * (light.lenK ?? 1);
   const useLight = bool(e, 'useLight', true);
@@ -64,8 +65,10 @@ export function drawDropShadow(
   ctx.shadowOffsetX = dx;
   ctx.shadowOffsetY = dy;
   ctx.fillStyle = 'rgba(0,0,0,1)';
-  pathFn(ctx);
-  ctx.fill();
+  // Con una imagen importada (`paint`), la sombra sale de su transparencia
+  // REAL en vez de la forma vectorial que solo delimita el control.
+  if (paint) paint(ctx);
+  else { pathFn(ctx); ctx.fill(); }
   ctx.restore();
 }
 
@@ -207,13 +210,13 @@ export function drawNoise(
 }
 
 /** Resplandor exterior. */
-export function drawGlow(ctx: Ctx, pathFn: PathFn, e: Effect) {
+export function drawGlow(ctx: Ctx, pathFn: PathFn, e: Effect, paint?: PathFn) {
   ctx.save();
   ctx.shadowColor = str(e, 'color', 'rgba(120,180,255,0.7)');
   ctx.shadowBlur = num(e, 'blur', 12);
   ctx.fillStyle = 'rgba(0,0,0,0.001)';
-  pathFn(ctx);
-  ctx.fill();
+  if (paint) paint(ctx);
+  else { pathFn(ctx); ctx.fill(); }
   ctx.restore();
 }
 
@@ -493,10 +496,11 @@ export function drawExtrude(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: Lig
 }
 
 /** Oclusión de contacto: sombra corta y densa alrededor + sesgo a favor de la luz. */
-export function drawContactShadow(ctx: Ctx, pathFn: PathFn, e: Effect, gl: LightVectors) {
+export function drawContactShadow(ctx: Ctx, pathFn: PathFn, e: Effect, gl: LightVectors, paint?: PathFn) {
   const light = effLight(e, gl);
   const size = num(e, 'size', 3);
   const strength = num(e, 'strength', 0.8);
+  const draw = paint ?? ((c: Ctx) => { pathFn(c); c.fill(); });
   ctx.save();
   ctx.globalCompositeOperation = 'multiply';
   // 1) ambiente: todo alrededor
@@ -504,12 +508,12 @@ export function drawContactShadow(ctx: Ctx, pathFn: PathFn, e: Effect, gl: Light
   ctx.shadowBlur = size * 1.6;
   ctx.shadowOffsetX = 0; ctx.shadowOffsetY = size * 0.4;
   ctx.fillStyle = 'rgba(0,0,0,1)';
-  pathFn(ctx); ctx.fill();
+  draw(ctx);
   // 2) contacto direccional (muy corto, muy oscuro)
   ctx.shadowColor = `rgba(0,0,0,${0.9 * strength})`;
   ctx.shadowBlur = size * 0.8;
   ctx.shadowOffsetX = light.dx * size * 0.8; ctx.shadowOffsetY = light.dy * size * 0.8 + size * 0.5;
-  pathFn(ctx); ctx.fill();
+  draw(ctx);
   ctx.restore();
 }
 
@@ -809,6 +813,10 @@ export function applyEffectsBelow(
   light: LightVectors,
   bounds?: Box,
   hints: EffectHints = {},
+  /** Si la capa es una imagen importada, dibuja su silueta REAL (transparencia
+   *  incluida) para que sombra/glow salgan de ahí y no del rect/forma que solo
+   *  delimita el control. */
+  paint?: PathFn,
 ) {
   const b = bounds ?? { x: 0, y: 0, w: 0, h: 0 };
   const run = (type: EffectType, fn: (e: Effect) => void) => {
@@ -816,9 +824,9 @@ export function applyEffectsBelow(
   };
   // Orden: bloom/glow (más lejos) -> sombra larga -> contacto -> pared (encima de las sombras).
   run('emissive', (e) => drawEmissiveBloom(ctx, b, e, hints.value));
-  run('glow', (e) => drawGlow(ctx, pathFn, e));
-  run('dropShadow', (e) => drawDropShadow(ctx, pathFn, e, light));
-  run('contactShadow', (e) => drawContactShadow(ctx, pathFn, e, light));
+  run('glow', (e) => drawGlow(ctx, pathFn, e, paint));
+  run('dropShadow', (e) => drawDropShadow(ctx, pathFn, e, light, paint));
+  run('contactShadow', (e) => drawContactShadow(ctx, pathFn, e, light, paint));
   run('extrude', (e) => drawExtrude(ctx, pathFn, b, e, light, hints.fill));
 }
 

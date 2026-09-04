@@ -14,6 +14,8 @@ interface Props {
   selected: boolean;
   onSelect: (additive: boolean) => void;
   onMove: (x: number, y: number) => void;
+  /** Se llama en cada frame de arrastre (antes de soltar), para mostrar un lector en vivo de X/Y. */
+  onDragLive?: (x: number, y: number) => void;
 }
 
 /**
@@ -21,7 +23,7 @@ interface Props {
  * (hecho en Photoshop, Blender, etc.) dibuja el frame correspondiente; si no,
  * usa el compositor 2D (mismo motor que hornea el filmstrip).
  */
-export function ControlImage({ control, scene, value, selected, onSelect, onMove }: Props) {
+export function ControlImage({ control, scene, value, selected, onSelect, onMove, onDragLive }: Props) {
   const { x, y, w, h } = control.rect;
   const { pad } = frameSize(control);
   const stripUri = control.props.filmstripDataUri as string | undefined;
@@ -67,6 +69,8 @@ export function ControlImage({ control, scene, value, selected, onSelect, onMove
 
   const onDragEnd = (e: KonvaEventObject<DragEvent>) =>
     onMove(Math.round(e.target.x() + pad), Math.round(e.target.y() + pad));
+  const onDragMove = (e: KonvaEventObject<DragEvent>) =>
+    onDragLive?.(Math.round(e.target.x() + pad), Math.round(e.target.y() + pad));
 
   // El canvas del filmstrip importado no lleva margen (pad solo aplica al
   // compositor 2D); el resto usa el tamaño real del frame (rect + 2*pad) para
@@ -75,12 +79,13 @@ export function ControlImage({ control, scene, value, selected, onSelect, onMove
   const ch = stripUri && stripImg ? h : canvas.height;
 
   const handleSelect = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
-    const additive = !!(e.evt && 'shiftKey' in e.evt && (e.evt as MouseEvent).shiftKey);
+    const evt = e.evt as MouseEvent | undefined;
+    const additive = !!(evt && (evt.shiftKey || evt.ctrlKey || evt.metaKey));
     onSelect(additive);
   };
 
   return (
-    <Group x={x - pad} y={y - pad} draggable onClick={handleSelect} onTap={handleSelect} onDragEnd={onDragEnd}>
+    <Group x={x - pad} y={y - pad} draggable onClick={handleSelect} onTap={handleSelect} onDragMove={onDragMove} onDragEnd={onDragEnd}>
       <KonvaImage image={canvas} width={cw} height={ch} />
       {selected && (
         // Selección alrededor de TODO lo visible (incluida la sombra en el

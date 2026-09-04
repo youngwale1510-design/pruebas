@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Stage } from './canvas/Stage';
 import { PropertiesPanel } from './ui/PropertiesPanel';
 import { LayersPanel } from './ui/LayersPanel';
@@ -11,6 +12,24 @@ import { useStore } from './app/store';
 export function App() {
   const previewCpp = useStore((s) => s.previewCpp);
   const bridgeOk = typeof window !== 'undefined' && !!(window as unknown as { ghost?: unknown }).ghost;
+
+  // Ctrl+Z / Cmd+Z deshace; Ctrl+Shift+Z, Ctrl+Y o Cmd+Shift+Z rehace. Se
+  // ignora mientras se escribe en un input/textarea/select para no pisar el
+  // deshacer nativo del navegador dentro de un campo de texto.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (!mod || e.key.toLowerCase() !== 'z' && e.key.toLowerCase() !== 'y') return;
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      e.preventDefault();
+      const { undo, redo } = useStore.getState();
+      if (e.key.toLowerCase() === 'y' || e.shiftKey) redo();
+      else undo();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <div className="app">

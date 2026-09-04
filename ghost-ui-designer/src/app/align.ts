@@ -131,3 +131,14 @@ export function snapRect(
     y: snapAxis(rect.y, rect.h, yCandidates),
   };
 }
+
+/** ¿Se solapan dos rects? (para la selección por arrastre / marquee). */
+export function rectsIntersect(a: RectLike, b: RectLike): boolean {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/** Normaliza un rectángulo de selección arrastrado en cualquier dirección
+ *  (el usuario puede soltar arriba-izquierda del punto de partida). */
+export function normalizeMarquee(x0: number, y0: number, x1: number, y1: number): RectLike {
+  return { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) };
+}

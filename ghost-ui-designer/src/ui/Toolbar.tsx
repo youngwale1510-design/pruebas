@@ -21,6 +21,10 @@ export function Toolbar() {
   const setScene = useStore((s) => s.setScene);
   const importControls = useStore((s) => s.importControls);
   const setPreview = useStore((s) => s.setPreview);
+  const undo = useStore((s) => s.undo);
+  const redo = useStore((s) => s.redo);
+  const canUndo = useStore((s) => s.canUndo);
+  const canRedo = useStore((s) => s.canRedo);
 
   const preview = async () => {
     const cpp = await window.ghost.previewCpp(scene, null);
@@ -105,6 +109,9 @@ export function Toolbar() {
   return (
     <div className="toolbar">
       <strong>Ghost UI Designer</strong>
+      <button disabled={!canUndo} onClick={undo} title="Deshacer (Ctrl+Z)">↶ Deshacer</button>
+      <button disabled={!canRedo} onClick={redo} title="Rehacer (Ctrl+Shift+Z / Ctrl+Y)">↷ Rehacer</button>
+      <span className="toolbar-sep" />
       <button onClick={addKnob}>+ Knob</button>
       <button onClick={() => addSwitch('slide')}>+ Switch</button>
       <button onClick={() => addSwitch('toggle')}>+ Palanca</button>
