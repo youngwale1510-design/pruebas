@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Layer, Line, Rect, Stage as KonvaStage, Text } from 'react-konva';
+import { Group, Layer, Line, Rect, Stage as KonvaStage, Text } from 'react-konva';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import { useStore } from '../app/store';
 import { ControlImage } from './ControlImage';
 import { normalizeMarquee, rectsIntersect } from '../app/align';
+import type { RefBox } from '../model/scene';
 
 const RULER = 20; // grosor de la regla, en px de pantalla
 const TICK_COLOR = '#5a5f6b';
@@ -45,6 +46,69 @@ function isAdditiveEvent(evt: MouseEvent | undefined): boolean {
   return !!evt && (evt.shiftKey || evt.ctrlKey || evt.metaKey);
 }
 
+const REF_COLOR = '#e0665a';
+
+/** Caja de referencia: cuadro punteado no-exportable para marcar el espacio de
+ *  un elemento que Ghost no diseña (visualizador, control hecho a mano…). */
+function RefBoxNode({ box, selected }: { box: RefBox; selected: boolean }) {
+  const selectRefBox = useStore((s) => s.selectRefBox);
+  const moveRefBox = useStore((s) => s.moveRefBox);
+  const resizeRefBox = useStore((s) => s.resizeRefBox);
+  const renameRefBox = useStore((s) => s.renameRefBox);
+  const removeRefBox = useStore((s) => s.removeRefBox);
+  const { w, h } = box.rect;
+
+  return (
+    <Group
+      x={box.rect.x}
+      y={box.rect.y}
+      draggable
+      onClick={(e: KonvaEventObject<MouseEvent>) => { e.cancelBubble = true; selectRefBox(box.id); }}
+      onTap={(e: KonvaEventObject<TouchEvent>) => { e.cancelBubble = true; selectRefBox(box.id); }}
+      onDragEnd={(e: KonvaEventObject<DragEvent>) => moveRefBox(box.id, e.target.x(), e.target.y())}
+    >
+      <Rect width={w} height={h} fill="rgba(224,102,90,0.08)" stroke={REF_COLOR} strokeWidth={1.5} dash={[6, 4]} />
+      <Text
+        text={box.label}
+        x={4}
+        y={4}
+        fontSize={11}
+        fill={REF_COLOR}
+        onDblClick={(e: KonvaEventObject<MouseEvent>) => {
+          e.cancelBubble = true;
+          const next = window.prompt('Nombre de la referencia:', box.label);
+          if (next && next.trim()) renameRefBox(box.id, next.trim());
+        }}
+      />
+      {selected && (
+        <>
+          <Text
+            text="✕ quitar"
+            x={w - 46}
+            y={4}
+            fontSize={10}
+            fill={REF_COLOR}
+            onClick={(e: KonvaEventObject<MouseEvent>) => { e.cancelBubble = true; removeRefBox(box.id); }}
+          />
+          <Rect
+            x={w - 8}
+            y={h - 8}
+            width={8}
+            height={8}
+            fill={REF_COLOR}
+            draggable
+            onDragMove={(e: KonvaEventObject<DragEvent>) => { e.cancelBubble = true; }}
+            onDragEnd={(e: KonvaEventObject<DragEvent>) => {
+              e.cancelBubble = true;
+              resizeRefBox(box.id, e.target.x() + 8, e.target.y() + 8);
+            }}
+          />
+        </>
+      )}
+    </Group>
+  );
+}
+
 export function Stage() {
   const scene = useStore((s) => s.scene);
   const selectedIds = useStore((s) => s.selectedIds);
@@ -57,6 +121,8 @@ export function Stage() {
   const guides = useStore((s) => s.guides);
   const addGuide = useStore((s) => s.addGuide);
   const removeGuide = useStore((s) => s.removeGuide);
+  const selectedRefBoxId = useStore((s) => s.selectedRefBoxId);
+  const selectRefBox = useStore((s) => s.selectRefBox);
 
   const [dragGuide, setDragGuide] = useState<{ orientation: 'h' | 'v'; pos: number } | null>(null);
   const [marquee, setMarquee] = useState<{ x0: number; y0: number; x1: number; y1: number; additive: boolean } | null>(null);
@@ -125,7 +191,7 @@ export function Stage() {
             const dx = Math.abs(marquee.x1 - marquee.x0);
             const dy = Math.abs(marquee.y1 - marquee.y0);
             if (dx < MARQUEE_MIN_DRAG && dy < MARQUEE_MIN_DRAG) {
-              if (!marquee.additive) select(null);
+              if (!marquee.additive) { select(null); selectRefBox(null); }
             } else {
               const box = normalizeMarquee(marquee.x0, marquee.y0, marquee.x1, marquee.y1);
               const ids = scene.controls.filter((c) => rectsIntersect(box, c.rect)).map((c) => c.id);
@@ -148,6 +214,9 @@ export function Stage() {
               onMove={(x, y) => onMove(c.id, x, y)}
               onDragLive={(x, y) => onDragLive(c.id, x, y)}
             />
+          ))}
+          {(scene.refBoxes ?? []).map((b) => (
+            <RefBoxNode key={b.id} box={b} selected={selectedRefBoxId === b.id} />
           ))}
           {guides.v.map((x) => (
             <Line
@@ -221,7 +290,7 @@ export function Stage() {
         </Layer>
       </KonvaStage>
       <p className="hint" style={{ margin: '6px 0 0', textAlign: 'center' }}>
-        Arrastra sobre el lienzo para seleccionar varios (o Shift/Ctrl+clic) · arrastra desde la regla para crear una guía
+        Arrastra sobre el lienzo para seleccionar varios (o Shift/Ctrl+clic) · arrastra desde la regla para crear una guía · doble clic en una referencia (cuadro punteado) para renombrarla, arrastra su esquina para cambiar el tamaño
       </p>
       {hud && (
         <div className="coord-hud">

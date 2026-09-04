@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Control, Effect, EffectType, Layer, SceneDocument } from '../model/scene';
+import { Control, Effect, EffectType, Layer, RefBox, SceneDocument } from '../model/scene';
 import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed, defaultBackground, defaultLabel, defaultImage } from '../model/defaults';
 import { AlignKind, Guides, MatchDim, alignRects, distributeRects, matchSizeRects, snapRect } from './align';
 import { MaterialId, applyMaterial } from '../model/materials';
@@ -16,6 +16,15 @@ interface AppState {
   previewValue: number; // 0..1, para previsualizar el giro de los controles
   /** Guías de regla (solo en el editor; no se guardan en el proyecto). */
   guides: Guides;
+  /** Caja de referencia seleccionada (para moverla/redimensionarla/borrarla). */
+  selectedRefBoxId: string | null;
+  selectRefBox: (id: string | null) => void;
+  /** Añade una caja de referencia nueva (marcador visual; no se exporta al .cpp). */
+  addRefBox: () => void;
+  moveRefBox: (id: string, x: number, y: number) => void;
+  resizeRefBox: (id: string, w: number, h: number) => void;
+  renameRefBox: (id: string, label: string) => void;
+  removeRefBox: (id: string) => void;
 
   /** Selecciona un único control (limpia el resto de la selección). null = deselecciona. */
   select: (id: string | null) => void;
@@ -104,6 +113,7 @@ export const useStore = create<AppState>((set, get) => ({
   selectedId: null,
   selectedIds: [],
   guides: { h: [], v: [] },
+  selectedRefBoxId: null,
   previewCpp: '',
   previewValue: 0.5,
   styleClipboard: null,
@@ -124,6 +134,58 @@ export const useStore = create<AppState>((set, get) => ({
       const merged = additive ? [...s.selectedIds, ...ids.filter((id) => !s.selectedIds.includes(id))] : ids;
       return { selectedIds: merged, selectedId: merged.length ? merged[merged.length - 1] : null };
     }),
+
+  selectRefBox: (id) => set({ selectedRefBoxId: id }),
+
+  addRefBox: () =>
+    set((s) => {
+      const n = (s.scene.refBoxes ?? []).length + 1;
+      const box: RefBox = {
+        id: makeId('ref'),
+        label: `Referencia ${n}`,
+        rect: { x: 20 + ((n - 1) % 4) * 30, y: 20 + ((n - 1) % 4) * 30, w: 120, h: 40 },
+      };
+      return {
+        scene: { ...s.scene, refBoxes: [...(s.scene.refBoxes ?? []), box] },
+        selectedRefBoxId: box.id,
+      };
+    }),
+
+  moveRefBox: (id, x, y) =>
+    set((s) => ({
+      scene: {
+        ...s.scene,
+        refBoxes: (s.scene.refBoxes ?? []).map((b) =>
+          b.id === id ? { ...b, rect: { ...b.rect, x: Math.round(x), y: Math.round(y) } } : b,
+        ),
+      },
+    })),
+
+  resizeRefBox: (id, w, h) =>
+    set((s) => ({
+      scene: {
+        ...s.scene,
+        refBoxes: (s.scene.refBoxes ?? []).map((b) =>
+          b.id === id
+            ? { ...b, rect: { ...b.rect, w: Math.max(10, Math.round(w)), h: Math.max(10, Math.round(h)) } }
+            : b,
+        ),
+      },
+    })),
+
+  renameRefBox: (id, label) =>
+    set((s) => ({
+      scene: {
+        ...s.scene,
+        refBoxes: (s.scene.refBoxes ?? []).map((b) => (b.id === id ? { ...b, label } : b)),
+      },
+    })),
+
+  removeRefBox: (id) =>
+    set((s) => ({
+      scene: { ...s.scene, refBoxes: (s.scene.refBoxes ?? []).filter((b) => b.id !== id) },
+      selectedRefBoxId: s.selectedRefBoxId === id ? null : s.selectedRefBoxId,
+    })),
 
   alignSelected: (kind) =>
     set((s) => {
@@ -435,7 +497,9 @@ export const useStore = create<AppState>((set, get) => ({
   setPreviewValue: (v) => set({ previewValue: Math.max(0, Math.min(1, v)) }),
   setScene: (scene) => {
     applyingHistory = true;
-    set({ scene, selectedId: null, selectedIds: [] });
+    // Proyectos guardados antes de que existieran las cajas de referencia no
+    // traen `refBoxes`; se normaliza a [] para no romper el resto del código.
+    set({ scene: { ...scene, refBoxes: scene.refBoxes ?? [] }, selectedId: null, selectedIds: [], selectedRefBoxId: null });
     applyingHistory = false;
     resetHistory();
   },

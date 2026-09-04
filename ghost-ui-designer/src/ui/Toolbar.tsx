@@ -25,6 +25,7 @@ export function Toolbar() {
   const redo = useStore((s) => s.redo);
   const canUndo = useStore((s) => s.canUndo);
   const canRedo = useStore((s) => s.canRedo);
+  const addRefBox = useStore((s) => s.addRefBox);
 
   const preview = async () => {
     const cpp = await window.ghost.previewCpp(scene, null);
@@ -119,6 +120,9 @@ export function Toolbar() {
       <button onClick={addBackground}>+ Fondo</button>
       <button onClick={addLabel}>+ Texto</button>
       <button onClick={insertImage}>+ Imagen</button>
+      <button onClick={addRefBox} title="Cuadro punteado, solo visual, para marcar dónde va algo que Ghost no diseña (un visualizador, un control hecho a mano, etc.) y respetar su espacio. No se exporta al .cpp.">
+        + Referencia
+      </button>
       <span className="toolbar-sep" />
       <button disabled={!selectedId} onClick={() => selectedId && copyStyle(selectedId)} title="Copiar el estilo (capas, efectos, materiales) del control seleccionado">
         Copiar estilo

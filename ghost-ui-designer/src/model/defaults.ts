@@ -23,6 +23,7 @@ export function emptyScene(pluginName = 'MyPlugin'): SceneDocument {
     assets: { textures: [], filmstrips: [] },
     params: [],
     controls: [],
+    refBoxes: [],
   };
 }
 

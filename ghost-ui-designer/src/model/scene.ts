@@ -195,6 +195,18 @@ export interface FilmstripAsset {
   orientation: 'horizontal' | 'vertical';
 }
 
+/**
+ * Caja de referencia: anotación puramente visual del editor (nunca se exporta
+ * al .cpp ni cuenta como control). Sirve para marcar en el lienzo dónde va un
+ * elemento que Ghost no diseña (un visualizador, un control hecho a mano,
+ * etc.) para poder respetar su espacio al acomodar los controles reales.
+ */
+export interface RefBox {
+  id: string;
+  label: string;
+  rect: Rect;
+}
+
 export interface LightSource {
   angleDeg: number; // dirección de la luz global (0 = derecha, 90 = abajo)
   intensity: number; // 0..1
@@ -210,4 +222,7 @@ export interface SceneDocument {
   assets: { textures: TextureAsset[]; filmstrips: FilmstripAsset[] };
   params: ParamDef[];
   controls: Control[];
+  /** Cajas de referencia (ver `RefBox`); opcional para no romper proyectos
+   *  guardados antes de que existiera esta función. */
+  refBoxes?: RefBox[];
 }
