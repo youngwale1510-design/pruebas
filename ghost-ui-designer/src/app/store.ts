@@ -79,8 +79,10 @@ interface AppState {
   updateEffect: (controlId: string, layerId: string, effectId: string, params: Effect['params']) => void;
   setPreviewValue: (v: number) => void;
   setScene: (scene: SceneDocument) => void;
-  /** Carga controles leídos de un .cpp: completa capas por tipo y crea los parámetros que falten. */
-  importControls: (controls: Control[], pluginName: string) => void;
+  /** Carga controles leídos de un .cpp: completa capas por tipo y crea los
+   *  parámetros que falten. `refBoxes` (detectadas automáticamente para los
+   *  elementos que Ghost no gestiona) se SUMAN a las que ya hubiera. */
+  importControls: (controls: Control[], pluginName: string, refBoxes?: RefBox[]) => void;
   setPreview: (cpp: string) => void;
 
   /** Deshacer/rehacer (Ctrl+Z / Ctrl+Shift+Z o Ctrl+Y). Cada cambio de `scene`
@@ -503,7 +505,7 @@ export const useStore = create<AppState>((set, get) => ({
     applyingHistory = false;
     resetHistory();
   },
-  importControls: (controls, pluginName) =>
+  importControls: (controls, pluginName, refBoxes) =>
     set((s) => {
       const params = [...s.scene.params];
       const prepared = controls.map((c) => {
@@ -523,7 +525,13 @@ export const useStore = create<AppState>((set, get) => ({
       });
       queueMicrotask(resetHistory);
       return {
-        scene: { ...s.scene, meta: { ...s.scene.meta, pluginName }, params, controls: prepared },
+        scene: {
+          ...s.scene,
+          meta: { ...s.scene.meta, pluginName },
+          params,
+          controls: prepared,
+          refBoxes: refBoxes && refBoxes.length > 0 ? [...(s.scene.refBoxes ?? []), ...refBoxes] : s.scene.refBoxes,
+        },
         selectedId: prepared[0]?.id ?? null,
         selectedIds: prepared[0] ? [prepared[0].id] : [],
       };

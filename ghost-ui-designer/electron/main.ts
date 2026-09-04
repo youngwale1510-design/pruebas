@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { SceneDocument } from '../src/model/scene';
 import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
 import { generateResourcesHeader, generateResourcesRc } from '../src/codegen/iplug2/resources';
-import { syncConfigSize, syncHeaderEnums } from '../src/codegen/iplug2/header';
+import { readConfigSize, syncConfigSize, syncHeaderEnums } from '../src/codegen/iplug2/header';
 import { IPC, type FilmstripPng } from './ipc-contract';
 
 /** Ventana padre para los diálogos (si no, en Windows pueden abrirse detrás). */
@@ -74,7 +74,7 @@ ipcMain.handle(IPC.exportCpp, async (_e, scene: SceneDocument, target: string) =
   return { merged, ...h };
 });
 
-ipcMain.handle(IPC.importCpp, async (_e, target?: string) => {
+ipcMain.handle(IPC.importCpp, async (_e, target?: string, fallbackWidth?: number, fallbackHeight?: number) => {
   let file = target;
   if (!file) {
     const { canceled, filePaths } = await dialog.showOpenDialog(dlgWin(), {
@@ -85,8 +85,21 @@ ipcMain.handle(IPC.importCpp, async (_e, target?: string) => {
     file = filePaths[0];
   }
   const source = await readFile(file, 'utf8');
-  const { found, controls } = readSceneFromSource(source);
-  return { path: file, found, controls };
+
+  // El tamaño real del plugin (para resolver las cuentas de IRECT de los
+  // elementos escritos a mano) vive en config.h, junto al .cpp; si no está,
+  // se usa el tamaño de lienzo actual del editor como mejor esfuerzo.
+  let plugW = fallbackWidth;
+  let plugH = fallbackHeight;
+  const configPath = path.join(path.dirname(file), 'config.h');
+  if (existsSync(configPath)) {
+    const size = readConfigSize(await readFile(configPath, 'utf8'));
+    if (size.width) plugW = size.width;
+    if (size.height) plugH = size.height;
+  }
+
+  const { found, controls, refBoxes } = readSceneFromSource(source, plugW, plugH);
+  return { path: file, found, controls, refBoxes };
 });
 
 ipcMain.handle(IPC.previewCpp, async (_e, scene: SceneDocument, existing: string | null) => {

@@ -40,15 +40,24 @@ export function Toolbar() {
   };
 
   const openCpp = async () => {
-    const res = await window.ghost.importCpp();
+    const res = await window.ghost.importCpp(undefined, scene.canvas.width, scene.canvas.height);
     if (!res) return;
     if (!res.found) {
       alert('Ese .cpp no tiene marcadores // [GHOST:LAYOUT ...]. Pide el plugin con la GUI marcada o añade los marcadores.');
       return;
     }
     const name = res.path.replace(/\\/g, '/').split('/').pop()!.replace(/\.(cpp|cc|cxx|h|hpp)$/i, '');
-    importControls(res.controls, name);
-    alert(`${res.controls.length} controles cargados desde ${name}. Al exportar el bundle, elige la carpeta del proyecto iPlug2 y se actualizará solo la región marcada.`);
+    importControls(res.controls, name, res.refBoxes);
+    const lines = [`${res.controls.length} controles cargados desde ${name}.`];
+    if (res.refBoxes.length > 0) {
+      lines.push(
+        '',
+        `También se agregaron ${res.refBoxes.length} caja(s) de referencia (cuadros punteados) para lo que Ghost no diseña`,
+        '(texto fijo, visualizadores, controles sin parámetro…). Revisa su posición/tamaño en el lienzo.',
+      );
+    }
+    lines.push('', 'Al exportar el bundle, elige la carpeta del proyecto iPlug2 y se actualizará solo la región marcada.');
+    alert(lines.join('\n'));
   };
 
   const doExport = async () => {

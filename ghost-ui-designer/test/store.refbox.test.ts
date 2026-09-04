@@ -55,6 +55,17 @@ describe('store: cajas de referencia', () => {
     expect(useStore.getState().selectedRefBoxId).toBeNull();
   });
 
+  it('importControls SUMA las refBoxes detectadas a las que ya hubiera', () => {
+    useStore.getState().addRefBox(); // ya había una puesta a mano
+    useStore.getState().importControls(
+      [],
+      'GhostDuck',
+      [{ id: 'ref_auto1', label: 'Scope', rect: { x: 10, y: 60, w: 380, h: 140 } }],
+    );
+    const labels = useStore.getState().scene.refBoxes!.map((b) => b.label);
+    expect(labels).toEqual(['Referencia 1', 'Scope']);
+  });
+
   it('setScene normaliza proyectos viejos sin refBoxes a []', () => {
     useStore.getState().setScene({
       version: 1,

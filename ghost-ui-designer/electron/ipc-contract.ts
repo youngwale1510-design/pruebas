@@ -1,5 +1,5 @@
 // Contrato compartido entre main y renderer para los canales IPC.
-import type { Control, SceneDocument } from '../src/model/scene';
+import type { Control, RefBox, SceneDocument } from '../src/model/scene';
 
 /** PNG de filmstrip generado en el renderer (identidad visual garantizada). */
 export interface FilmstripPng {
@@ -17,8 +17,17 @@ export interface GhostApi {
   /** Genera/actualiza el .cpp en `path` preservando el código escrito a mano. */
   exportCpp(scene: SceneDocument, path: string): Promise<{ merged: boolean; headerFound: boolean; headerChanged: boolean }>;
   /** Abre un diálogo (o usa `path`) y reconstruye los controles desde los
-   *  marcadores del .cpp. `null` si el usuario cancela. */
-  importCpp(path?: string): Promise<{ path: string; found: boolean; controls: Control[] } | null>;
+   *  marcadores del .cpp — o, si el layout está en C++ plano (sin marcadores
+   *  de Ghost), los reconstruye automáticamente: controles editables donde
+   *  reconoce un knob/switch con parámetro, y cajas de referencia (`refBoxes`)
+   *  para todo lo demás (texto fijo, visualizadores...). `fallbackWidth/Height`
+   *  son el tamaño de lienzo a usar si no se encuentra un config.h junto al
+   *  .cpp con PLUG_WIDTH/PLUG_HEIGHT. `null` si el usuario cancela. */
+  importCpp(
+    path?: string,
+    fallbackWidth?: number,
+    fallbackHeight?: number,
+  ): Promise<{ path: string; found: boolean; controls: Control[]; refBoxes: RefBox[] } | null>;
   /** Vista previa del C++ generado (sin escribir a disco). */
   previewCpp(scene: SceneDocument, existingSource: string | null): Promise<string>;
   /**

@@ -6,7 +6,8 @@ const api: GhostApi = {
     ipcRenderer.invoke(IPC.saveProject, scene, suggestedPath),
   openProject: () => ipcRenderer.invoke(IPC.openProject),
   exportCpp: (scene, path) => ipcRenderer.invoke(IPC.exportCpp, scene, path),
-  importCpp: (path) => ipcRenderer.invoke(IPC.importCpp, path),
+  importCpp: (path, fallbackWidth, fallbackHeight) =>
+    ipcRenderer.invoke(IPC.importCpp, path, fallbackWidth, fallbackHeight),
   previewCpp: (scene, existingSource) =>
     ipcRenderer.invoke(IPC.previewCpp, scene, existingSource),
   exportBundle: (scene, assets) =>

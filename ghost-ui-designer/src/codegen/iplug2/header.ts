@@ -131,6 +131,15 @@ export function syncHeaderEnums(existingSource: string, scene: SceneDocument): H
 }
 
 
+/** Lee `#define PLUG_WIDTH/HEIGHT N` de un config.h, si están. Se usa al
+ *  importar un .cpp para saber el tamaño real del lienzo del plugin (y así
+ *  resolver bien las cuentas de IRECT de los elementos fijos). */
+export function readConfigSize(source: string): { width?: number; height?: number } {
+  const w = source.match(/#define\s+PLUG_WIDTH\s+(\d+)/);
+  const h = source.match(/#define\s+PLUG_HEIGHT\s+(\d+)/);
+  return { width: w ? Number(w[1]) : undefined, height: h ? Number(h[1]) : undefined };
+}
+
 export interface ConfigSyncResult {
   source: string;
   found: boolean; // true si se encontró al menos un #define PLUG_WIDTH/HEIGHT
