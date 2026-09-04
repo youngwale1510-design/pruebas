@@ -247,6 +247,28 @@ export function defaultToggleSwitch(id: string, name: string, paramId?: string, 
 
 /** Fondo del plugin: panel a tamaño de lienzo. Se dibuja el primero y se exporta
  *  como PNG de 1 frame (IBitmapControl), así que lo que ves es lo que compila. */
+/** Imagen libre (logo, sello, marca…): un rect movible/redimensionable con una
+ *  sola capa de textura. A diferencia de "Fondo" no se estira al lienzo ni
+ *  está limitada a una sola instancia; se posiciona donde haga falta. */
+export function defaultImage(id: string, name = 'Imagen'): Control {
+  return {
+    id,
+    type: 'IBitmapControl',
+    name,
+    rect: { x: 20, y: 20, w: 120, h: 120 },
+    props: { frames: 1, orientation: 'vertical' },
+    layers: [
+      layer('Imagen', {
+        shape: 'rect',
+        rectNorm: { x: 0, y: 0, w: 1, h: 1 },
+        fill: '#3a3a42',
+        effects: [],
+      }),
+    ],
+    effects: [],
+  };
+}
+
 export function defaultBackground(id: string, width: number, height: number): Control {
   return {
     id,

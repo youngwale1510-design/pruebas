@@ -4,6 +4,7 @@ import { LayersPanel } from './ui/LayersPanel';
 import { Knob3DPanel } from './ui/Knob3DPanel';
 import { LightPanel } from './ui/LightPanel';
 import { CanvasPanel } from './ui/CanvasPanel';
+import { AlignPanel } from './ui/AlignPanel';
 import { Toolbar } from './ui/Toolbar';
 import { useStore } from './app/store';
 
@@ -30,6 +31,7 @@ export function App() {
         </main>
         <aside className="sidebar">
           <CanvasPanel />
+          <AlignPanel />
           <LightPanel />
           <PropertiesPanel />
           <LayersPanel />

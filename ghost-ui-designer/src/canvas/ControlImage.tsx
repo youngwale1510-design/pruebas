@@ -12,7 +12,7 @@ interface Props {
   /** valor 0..1 con el que se previsualiza el control en el editor. */
   value: number;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (additive: boolean) => void;
   onMove: (x: number, y: number) => void;
 }
 
@@ -74,8 +74,13 @@ export function ControlImage({ control, scene, value, selected, onSelect, onMove
   const cw = stripUri && stripImg ? w : canvas.width;
   const ch = stripUri && stripImg ? h : canvas.height;
 
+  const handleSelect = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
+    const additive = !!(e.evt && 'shiftKey' in e.evt && (e.evt as MouseEvent).shiftKey);
+    onSelect(additive);
+  };
+
   return (
-    <Group x={x - pad} y={y - pad} draggable onClick={onSelect} onTap={onSelect} onDragEnd={onDragEnd}>
+    <Group x={x - pad} y={y - pad} draggable onClick={handleSelect} onTap={handleSelect} onDragEnd={onDragEnd}>
       <KonvaImage image={canvas} width={cw} height={ch} />
       {selected && (
         // Selección alrededor de TODO lo visible (incluida la sombra en el

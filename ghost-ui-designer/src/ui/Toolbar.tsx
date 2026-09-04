@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useStore } from '../app/store';
 import { exportBundle, exportControlFilmstripPng } from '../app/exportBundle';
 
@@ -8,6 +9,10 @@ export function Toolbar() {
   const addSwitch = useStore((s) => s.addSwitch);
   const addBackground = useStore((s) => s.addBackground);
   const addLabel = useStore((s) => s.addLabel);
+  const addImage = useStore((s) => s.addImage);
+  const updateControl = useStore((s) => s.updateControl);
+  const updateLayer = useStore((s) => s.updateLayer);
+  const select = useStore((s) => s.select);
   const copyStyle = useStore((s) => s.copyStyle);
   const pasteStyle = useStore((s) => s.pasteStyle);
   const styleClipboard = useStore((s) => s.styleClipboard);
@@ -72,6 +77,24 @@ export function Toolbar() {
     alert(lines.join('\n'));
   };
 
+  const [includeSize, setIncludeSize] = useState(false);
+
+  const insertImage = async () => {
+    addImage();
+    const img = useStore.getState().scene.controls.at(-1);
+    if (!img) return;
+    const res = await window.ghost.importImage();
+    if (!res) return;
+    let w = img.rect.w, h = img.rect.h;
+    if (res.width > 0 && res.height > 0) {
+      w = 120;
+      h = Math.max(20, Math.min(400, Math.round(120 * (res.height / res.width))));
+    }
+    updateControl(img.id, { rect: { ...img.rect, w, h } });
+    updateLayer(img.id, img.layers[0].id, { fillImage: res.dataUri, fillImageMode: 'cover' });
+    select(img.id);
+  };
+
   const exportFilmstrip = async () => {
     const id = selectedId ?? scene.controls[0]?.id;
     if (!id) { alert('Selecciona un control primero.'); return; }
@@ -88,16 +111,21 @@ export function Toolbar() {
       <button onClick={() => addSwitch('led')}>+ LED</button>
       <button onClick={addBackground}>+ Fondo</button>
       <button onClick={addLabel}>+ Texto</button>
+      <button onClick={insertImage}>+ Imagen</button>
       <span className="toolbar-sep" />
       <button disabled={!selectedId} onClick={() => selectedId && copyStyle(selectedId)} title="Copiar el estilo (capas, efectos, materiales) del control seleccionado">
         Copiar estilo
       </button>
-      <button disabled={!selectedId || !styleClipboard} onClick={() => selectedId && pasteStyle(selectedId, false)} title="Aplicar el estilo copiado a este control">
+      <button disabled={!selectedId || !styleClipboard} onClick={() => selectedId && pasteStyle(selectedId, false, includeSize)} title="Aplicar el estilo copiado a este control">
         Pegar estilo
       </button>
-      <button disabled={!selectedId || !styleClipboard} onClick={() => selectedId && pasteStyle(selectedId, true)} title="Aplicar el estilo copiado a todos los controles del mismo tipo">
+      <button disabled={!selectedId || !styleClipboard} onClick={() => selectedId && pasteStyle(selectedId, true, includeSize)} title="Aplicar el estilo copiado a todos los controles del mismo tipo">
         Pegar en todos
       </button>
+      <label className="chk" style={{ margin: 0 }} title="Al pegar, también copiar el ancho/alto (W×H) del control de origen">
+        <input type="checkbox" checked={includeSize} onChange={(e) => setIncludeSize(e.target.checked)} />
+        <span>incluir tamaño</span>
+      </label>
       <span className="toolbar-sep" />
       <label className="chk" style={{ margin: 0 }}>
         <input type="checkbox" checked={advanced} onChange={(e) => setAdvanced(e.target.checked)} />
