@@ -94,6 +94,24 @@ describe('round-trip iPlug2', () => {
     const c = writeSceneToSource(scene, b).source;
     expect(c).toBe(b);
   });
+
+  it('detecta cajas de referencia (Scope) AUNQUE ya haya controles reales de Ghost', () => {
+    // Este es justo el caso de un proyecto que ya se diseñó en Ghost (tiene
+    // sus knobs con marcadores // [GHOST:CONTROL ...]) pero además tiene un
+    // Scope escrito a mano, fuera de la zona gestionada. Antes, como ya había
+    // controles "reales", el escaneo de cajas de referencia ni se intentaba.
+    const scene = sceneWithKnob();
+    const first = writeSceneToSource(scene, null).source;
+    const withScope = first.replace(
+      'const IRECT b = pGraphics->GetBounds();',
+      'const IRECT b = pGraphics->GetBounds();\n  IRECT scopeRect = b.ReduceFromTop(80.f);\n  pGraphics->AttachControl(mScope = new IGDuckScopeControl(scopeRect), kCtrlTagScope);',
+    );
+    const parsed = readSceneFromSource(withScope);
+    expect(parsed.controls).toHaveLength(1); // el knob de Ghost sigue ahí
+    expect(parsed.refBoxes.some((b) => b.label === 'IGDuckScopeControl' || /scope/i.test(b.label))).toBe(true);
+    const scope = parsed.refBoxes.find((b) => /scope/i.test(b.label) || b.label === 'IGDuckScopeControl')!;
+    expect(scope.sourceTag).toBe('kCtrlTagScope');
+  });
 });
 
 describe('payload sin imágenes embebidas', () => {

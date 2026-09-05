@@ -54,9 +54,21 @@ export interface ReadSceneResult {
  */
 export function readSceneFromSource(source: string, plugW?: number, plugH?: number): ReadSceneResult {
   const region = parseSource(source);
+
   if (region.controls.length > 0) {
-    return { found: region.found, controls: region.controls, refBoxes: [] };
+    // El cuerpo ya tiene controles reales de Ghost (marcadores // [GHOST:
+    // CONTROL ...]). El header/kick/scope hecho a mano SIEMPRE vive fuera de
+    // esa zona, así que se escanea solo `prefix + suffix` (todo menos el
+    // cuerpo gestionado) para encontrarlo como caja de referencia. Sin esto,
+    // un proyecto que ya tiene sus knobs diseñados en Ghost nunca mostraba
+    // la caja del Scope: antes ni se intentaba el escaneo en este caso.
+    const legacy = scanLegacyLayout(region.prefix + region.suffix, plugW ?? 400, plugH ?? 300);
+    return { found: region.found, controls: region.controls, refBoxes: legacy.refBoxes };
   }
+
+  // Sin controles reales de Ghost (cuerpo vacío, o con AttachControl escrito
+  // a mano/por otra IA dentro de la propia zona marcada): se escanea el
+  // archivo entero, como antes.
   const legacy = scanLegacyLayout(source, plugW ?? 400, plugH ?? 300);
   return { found: region.found, controls: legacy.controls, refBoxes: legacy.refBoxes };
 }
