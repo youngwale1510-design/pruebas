@@ -20,6 +20,32 @@ END
 ROBOTO_FN TTF ROBOTO_FN
 `;
 
+// resources/main.rc REAL de iPlug2: trae un bloque TEXTINCLUDE con la MISMA
+// declaración entre comillas (para el editor de recursos de Visual Studio)
+// ANTES, en el archivo, que la línea suelta sin comillas. Si el escaneo de
+// "la primera línea con TTF" no distingue una de otra, el bloque de Ghost
+// termina pegado dentro del string del TEXTINCLUDE en vez de junto a la
+// declaración suelta de más abajo.
+const RC_WITH_TEXTINCLUDE = `#include "resource.h"
+
+3 TEXTINCLUDE
+BEGIN
+    "resource.h\\0"
+END
+
+3 TEXTINCLUDE
+BEGIN
+    "ROBOTO_FN TTF ROBOTO_FN\\0"
+END
+
+STRINGTABLE
+BEGIN
+  IDS_BUNDLE_NAME "MyPlugin"
+END
+
+ROBOTO_FN TTF ROBOTO_FN
+`;
+
 describe('syncResourcesRc: añade a resources/main.rc los PNG que falten', () => {
   it('primera vez: crea el bloque marcado pegado tras la línea TTF', () => {
     const r = syncResourcesRc(FRESH_RC, sceneWithKnob());
@@ -61,6 +87,25 @@ describe('syncResourcesRc: añade a resources/main.rc los PNG que falten', () =>
     expect(withBoth.changed).toBe(true);
     expect(withBoth.source.match(/KNOBGAIN_FN PNG KNOBGAIN_FN/g)).toHaveLength(1);
     expect(withBoth.source).toContain('KNOBTONE_FN PNG KNOBTONE_FN');
+  });
+
+  it('con TEXTINCLUDE: pega tras la declaración SUELTA, no dentro del string entre comillas', () => {
+    const r = syncResourcesRc(RC_WITH_TEXTINCLUDE, sceneWithKnob());
+    expect(r.changed).toBe(true);
+
+    const quotedIdx = r.source.indexOf('"ROBOTO_FN TTF ROBOTO_FN\\0"');
+    const bareIdx = r.source.indexOf('\nROBOTO_FN TTF ROBOTO_FN\n');
+    const blockIdx = r.source.indexOf(RCMARK.begin);
+
+    expect(quotedIdx).toBeGreaterThanOrEqual(0);
+    expect(bareIdx).toBeGreaterThanOrEqual(0);
+    // El bloque debe quedar DESPUÉS de la línea suelta, no metido entre la
+    // línea entre comillas y el END del TEXTINCLUDE.
+    expect(blockIdx).toBeGreaterThan(bareIdx);
+    // Y el string entre comillas debe seguir intacto: nada de Ghost se metió
+    // entre esa línea y el END de SU bloque TEXTINCLUDE.
+    const endAfterQuoted = r.source.indexOf('END', quotedIdx);
+    expect(r.source.slice(quotedIdx, endAfterQuoted)).not.toContain(RCMARK.begin);
   });
 
   it('sin línea TTF: agrega el bloque al final del archivo', () => {

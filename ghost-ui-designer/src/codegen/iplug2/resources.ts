@@ -135,7 +135,14 @@ export function syncResourcesRc(existingSource: string, scene: SceneDocument): R
     suffix = existingSource.slice(endIdx + RCMARK.end.length).replace(/^\n/, '');
   } else {
     existingLines = [];
-    const fontLine = existingSource.match(/^.*\bTTF\b.*$/m);
+    // OJO: un .rc típico tiene la MISMA declaración dos veces — una suelta,
+    // sin comillas (`ROBOTO_FN TTF ROBOTO_FN`), y otra dentro del bloque
+    // `TEXTINCLUDE`, entre comillas y con `\0`/`\r\n` al final (para el editor
+    // de recursos de Visual Studio). El bloque TEXTINCLUDE suele ir ANTES en
+    // el archivo, así que un match "primera línea con TTF" sin más cae ahí, y
+    // el resultado queda pegado dentro del string en vez de después de la
+    // declaración suelta. Se descartan las líneas con comillas para evitarlo.
+    const fontLine = existingSource.match(/^(?!.*").*\bTTF\b.*$/m);
     if (fontLine && fontLine.index !== undefined) {
       const insertAt = fontLine.index + fontLine[0].length;
       prefix = existingSource.slice(0, insertAt);

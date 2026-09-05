@@ -13,6 +13,7 @@
 // "necesarias" también. Como es más grave romper la compilación que mover un
 // par de líneas de más, ante la duda se incluye.
 
+import path from 'node:path';
 import { Parser, Language, Node as TSNode } from 'web-tree-sitter';
 import { RE } from '../markers';
 
@@ -21,7 +22,24 @@ let cppLang: Language | null = null;
 /** Carga (una sola vez) el runtime de tree-sitter + la gramática de C++. */
 async function loadCpp(): Promise<Language> {
   if (cppLang) return cppLang;
-  await Parser.init();
+
+  // `web-tree-sitter` intenta ubicar su propio `tree-sitter.wasm` "al lado"
+  // del JS que lo ejecuta (mirando `import.meta.url`). Eso funciona en un
+  // proyecto normal, pero acá el `.ts` de Electron se empaqueta en un solo
+  // `dist-electron/main.js` con Rollup — el wasm real sigue en
+  // `node_modules/web-tree-sitter/`, no al lado del bundle. Sin decirle
+  // dónde buscar, `Parser.init()` falla en silencio (o revienta) y CUALQUIER
+  // exportación que intente mover un elemento (`moveElementInLayout`) se cae.
+  // Se le pasa `locateFile` apuntando a la ubicación real en disco.
+  //
+  // OJO: no se puede usar `require.resolve('web-tree-sitter/tree-sitter.wasm')`
+  // — el `exports` del package.json de esta versión no expone ese subpath (y
+  // el que sí declara, `web-tree-sitter.wasm`, no existe como archivo). Por
+  // eso se resuelve el propio paquete (que sí es un export válido) y se arma
+  // la ruta al `.wasm` real a mano desde su carpeta.
+  const wasmDir = path.dirname(require.resolve('web-tree-sitter'));
+  await Parser.init({ locateFile: (file: string) => path.join(wasmDir, file) });
+
   const wasmPath = require.resolve('tree-sitter-cpp/tree-sitter-cpp.wasm');
   cppLang = await Language.load(wasmPath);
   return cppLang;
