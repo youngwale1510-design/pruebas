@@ -68,6 +68,12 @@ interface AppState {
   setSteps: (controlId: string, steps: number) => void;
   updateControl: (id: string, patch: Partial<Control>) => void;
   moveControl: (id: string, x: number, y: number) => void;
+  /** Orden de dibujo (qué queda delante/detrás de qué): el que está más al
+   *  final de `scene.controls` se dibuja último, o sea, queda ENCIMA. */
+  bringToFront: (id: string) => void;
+  sendToBack: (id: string) => void;
+  bringForward: (id: string) => void;
+  sendBackward: (id: string) => void;
   setKnob3d: (id: string, cfg: KnobConfig | undefined) => void;
   /** Cambia una luz global por su índice (0 = principal). */
   setLight: (index: number, patch: Partial<LightSource>) => void;
@@ -453,6 +459,44 @@ export const useStore = create<AppState>((set, get) => ({
         ),
       },
     })),
+
+  bringToFront: (id) =>
+    set((s) => {
+      const i = s.scene.controls.findIndex((c) => c.id === id);
+      if (i === -1 || i === s.scene.controls.length - 1) return {};
+      const controls = [...s.scene.controls];
+      const [c] = controls.splice(i, 1);
+      controls.push(c);
+      return { scene: { ...s.scene, controls } };
+    }),
+
+  sendToBack: (id) =>
+    set((s) => {
+      const i = s.scene.controls.findIndex((c) => c.id === id);
+      if (i <= 0) return {};
+      const controls = [...s.scene.controls];
+      const [c] = controls.splice(i, 1);
+      controls.unshift(c);
+      return { scene: { ...s.scene, controls } };
+    }),
+
+  bringForward: (id) =>
+    set((s) => {
+      const i = s.scene.controls.findIndex((c) => c.id === id);
+      if (i === -1 || i === s.scene.controls.length - 1) return {};
+      const controls = [...s.scene.controls];
+      [controls[i], controls[i + 1]] = [controls[i + 1], controls[i]];
+      return { scene: { ...s.scene, controls } };
+    }),
+
+  sendBackward: (id) =>
+    set((s) => {
+      const i = s.scene.controls.findIndex((c) => c.id === id);
+      if (i <= 0) return {};
+      const controls = [...s.scene.controls];
+      [controls[i], controls[i - 1]] = [controls[i - 1], controls[i]];
+      return { scene: { ...s.scene, controls } };
+    }),
 
   setKnob3d: (id, cfg) =>
     set((s) => ({

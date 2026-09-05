@@ -16,9 +16,17 @@ export function PropertiesPanel() {
   const selectedId = useStore((s) => s.selectedId);
   const update = useStore((s) => s.updateControl);
   const setSteps = useStore((s) => s.setSteps);
+  const bringToFront = useStore((s) => s.bringToFront);
+  const sendToBack = useStore((s) => s.sendToBack);
+  const bringForward = useStore((s) => s.bringForward);
+  const sendBackward = useStore((s) => s.sendBackward);
 
   const control = scene.controls.find((c) => c.id === selectedId);
   if (!control) return <div className="panel">Selecciona un control</div>;
+
+  const zIndex = scene.controls.findIndex((c) => c.id === control.id);
+  const isFront = zIndex === scene.controls.length - 1;
+  const isBack = zIndex === 0;
 
   const setRect = (k: keyof Control['rect'], v: number) =>
     update(control.id, { rect: { ...control.rect, [k]: v } });
@@ -74,6 +82,17 @@ export function PropertiesPanel() {
           </label>
         ))}
       </div>
+
+      <label>
+        Orden (qué queda delante/detrás de qué)
+        <div className="row" style={{ gap: 4, marginTop: 3 }}>
+          <button className="btn" disabled={isBack} onClick={() => sendToBack(control.id)} title="Enviar al fondo (detrás de todo)">⇊ Al fondo</button>
+          <button className="btn" disabled={isBack} onClick={() => sendBackward(control.id)} title="Enviar un paso atrás">↓ Atrás</button>
+          <button className="btn" disabled={isFront} onClick={() => bringForward(control.id)} title="Traer un paso al frente">↑ Frente</button>
+          <button className="btn" disabled={isFront} onClick={() => bringToFront(control.id)} title="Traer al frente (delante de todo)">⇈ Al frente</button>
+        </div>
+        <span className="hint">Si un control queda tapado por otro (ej. un fondo), tráelo al frente aquí.</span>
+      </label>
 
       {control.type === 'IBSwitchControl' && (
         <label>
