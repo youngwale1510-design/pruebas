@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Control, Effect, EffectType, FontAsset, Layer, LightSource, RefBox, SceneDocument } from '../model/scene';
-import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed, defaultLedButton, defaultBackground, defaultLabel, defaultImage } from '../model/defaults';
+import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed, defaultLedButton, defaultBackground, defaultLabel, defaultBadgeLabel, defaultImage } from '../model/defaults';
 import { AlignKind, Guides, MatchDim, alignRects, distributeRects, matchSizeRects, snapRect } from './align';
 import { MaterialId, applyMaterial } from '../model/materials';
 import { ParamDef } from '../model/scene';
@@ -50,6 +50,8 @@ interface AppState {
   addBackground: () => void;
   /** Etiqueta de texto. */
   addLabel: () => void;
+  /** Placa de texto: fondo de color + texto encima (ver `defaultBadgeLabel`). */
+  addBadge: () => void;
   /** Copia el estilo (capas + margen/marcas) del control indicado. */
   copyStyle: (controlId: string) => void;
   /** Pega el estilo copiado en un control, o en todos los del mismo tipo.
@@ -317,6 +319,15 @@ export const useStore = create<AppState>((set, get) => ({
       const l = defaultLabel(makeId('label'));
       l.rect.x = 20 + (s.scene.controls.length % 4) * 100;
       l.rect.y = 20 + Math.floor(s.scene.controls.length / 4) * 40;
+      return { scene: { ...s.scene, controls: [...s.scene.controls, l] }, selectedId: l.id, selectedIds: [l.id] };
+    }),
+
+  addBadge: () =>
+    set((s) => {
+      const n = s.scene.controls.filter((c) => c.name.startsWith('Placa')).length + 1;
+      const l = defaultBadgeLabel(makeId('badge'), `Placa ${n}`);
+      l.rect.x = 20 + (s.scene.controls.length % 4) * 110;
+      l.rect.y = 20 + Math.floor(s.scene.controls.length / 4) * 42;
       return { scene: { ...s.scene, controls: [...s.scene.controls, l] }, selectedId: l.id, selectedIds: [l.id] };
     }),
 

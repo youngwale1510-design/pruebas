@@ -368,6 +368,55 @@ export function defaultLed(id: string, name: string, paramId?: string, steps = 2
 }
 
 /**
+ * Placa de texto: fondo de color sólido (redondeado) con el texto encima en
+ * un color contrastante — como las etiquetas "SUB"/"BASS"/"LO MID" de un
+ * canal de consola real. Dos capas: Fondo (el color) + Texto (encima); cada
+ * una se edita por separado en "Capas y efectos" (color, tamaño, etc.).
+ */
+export function defaultBadgeLabel(id: string, content = 'LABEL', bg = '#c81e2c', fg = '#f4ece0'): Control {
+  return {
+    id,
+    type: 'IBitmapControl',
+    name: content,
+    rect: { x: 20, y: 20, w: 100, h: 30 },
+    props: { frames: 1, orientation: 'vertical', pad: 4 },
+    layers: [
+      layer('Fondo', {
+        shape: 'roundRect',
+        cornerRadius: 4,
+        fill: bg,
+        effects: [
+          fx('dropShadow', { distance: 1, blur: 3, color: 'rgba(0,0,0,0.5)', useLight: true }),
+          fx('bevel', { size: 2 }),
+          fx('gradientOverlay', { type: 'linear', angle: 90, from: 'rgba(255,255,255,0.12)', to: 'rgba(0,0,0,0.18)' }),
+        ],
+      }),
+      {
+        id: makeId('lyr'),
+        name: 'Texto',
+        kind: 'text',
+        visible: true,
+        blendMode: 'normal',
+        opacity: 1,
+        fill: fg,
+        rectNorm: { x: 0, y: 0, w: 1, h: 1 },
+        effects: [],
+        text: {
+          content,
+          family: '"IBM Plex Sans", system-ui, sans-serif',
+          size: 13,
+          weight: 700,
+          letterSpacing: 0.5,
+          align: 'center',
+          finish: 'flat',
+        },
+      },
+    ],
+    effects: [],
+  };
+}
+
+/**
  * Botón LED: un pulsador RECTANGULAR retroiluminado con su etiqueta de texto
  * — como los botones "INPUT"/"REPRO" de un amp/pedal real — en vez del
  * puntito de luz de `defaultLed`. Apagado se ve como una tecla clara normal;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseColor, shade } from '../src/render/color';
 import { applyMaterial, materialEffects, MATERIALS, PLACEMENT_EFFECTS } from '../src/model/materials';
-import { defaultLed, defaultLedButton, defaultToggleSwitch } from '../src/model/defaults';
+import { defaultBadgeLabel, defaultLed, defaultLedButton, defaultToggleSwitch } from '../src/model/defaults';
 import { writeSceneToSource, readSceneFromSource } from '../src/codegen/roundtrip';
 import { emptyScene } from '../src/model/defaults';
 
@@ -65,5 +65,22 @@ describe('materiales', () => {
     expect(src).toContain('IBSwitchControl(14, 14, pGraphics->LoadBitmap(BTNBYPASS_FN, 2), kBypass)');
     const back = readSceneFromSource(src).controls[0];
     expect(back.layers.map((l) => l.name)).toEqual(['Marco', 'Cara', 'Texto']);
+  });
+  it('Placa: fondo de color + texto encima, y round-trip', () => {
+    const badge = defaultBadgeLabel('badge_sub', 'SUB', '#c81e2c', '#f4ece0');
+    expect(badge.layers.map((l) => l.name)).toEqual(['Fondo', 'Texto']);
+    const fondo = badge.layers.find((l) => l.name === 'Fondo')!;
+    expect(fondo.kind).toBe('shape');
+    expect(fondo.shape).toBe('roundRect');
+    expect(fondo.fill).toBe('#c81e2c');
+    const texto = badge.layers.find((l) => l.name === 'Texto')!;
+    expect(texto.kind).toBe('text');
+    expect(texto.fill).toBe('#f4ece0');
+    expect(texto.text?.content).toBe('SUB');
+    const scene = emptyScene();
+    scene.controls.push(badge);
+    const src = writeSceneToSource(scene, null).source;
+    const back = readSceneFromSource(src).controls[0];
+    expect(back.layers.map((l) => l.name)).toEqual(['Fondo', 'Texto']);
   });
 });

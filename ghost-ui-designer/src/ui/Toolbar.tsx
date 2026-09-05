@@ -9,6 +9,7 @@ export function Toolbar() {
   const addSwitch = useStore((s) => s.addSwitch);
   const addBackground = useStore((s) => s.addBackground);
   const addLabel = useStore((s) => s.addLabel);
+  const addBadge = useStore((s) => s.addBadge);
   const addImage = useStore((s) => s.addImage);
   const updateControl = useStore((s) => s.updateControl);
   const updateLayer = useStore((s) => s.updateLayer);
@@ -141,6 +142,7 @@ export function Toolbar() {
       </button>
       <button onClick={addBackground}>+ Fondo</button>
       <button onClick={addLabel}>+ Texto</button>
+      <button onClick={addBadge} title="Fondo de color + texto encima (como las etiquetas SUB/BASS de una consola)">+ Placa</button>
       <button onClick={insertImage}>+ Imagen</button>
       <button onClick={addRefBox} title="Cuadro punteado, solo visual, para marcar dónde va algo que Ghost no diseña (un visualizador, un control hecho a mano, etc.) y respetar su espacio. No se exporta al .cpp.">
         + Referencia
