@@ -201,6 +201,19 @@ export interface FilmstripAsset {
 }
 
 /**
+ * Fuente importada por el usuario (.ttf/.otf/.woff/.woff2), embebida como data
+ * URI (funciona sin internet, a diferencia de las de Google Fonts). `family`
+ * es el nombre con el que se registra vía FontFace y el que aparece en
+ * `TextStyle.family` de las capas que la usan.
+ */
+export interface FontAsset {
+  id: string;
+  name: string; // nombre de archivo original, solo para mostrar en la lista
+  family: string; // nombre único registrado (p.ej. "Ghost-font-a1b2")
+  dataUri: string;
+}
+
+/**
  * Caja de referencia: anotación puramente visual del editor (nunca se exporta
  * al .cpp ni cuenta como control). Sirve para marcar en el lienzo dónde va un
  * elemento que Ghost no diseña (un visualizador, un control hecho a mano,
@@ -234,7 +247,7 @@ export interface SceneDocument {
    *  tiempo de ejecución (`renderControlFrame` usa un valor por defecto si lo
    *  estuviera). */
   lights: LightSource[];
-  assets: { textures: TextureAsset[]; filmstrips: FilmstripAsset[] };
+  assets: { textures: TextureAsset[]; filmstrips: FilmstripAsset[]; fonts?: FontAsset[] };
   params: ParamDef[];
   controls: Control[];
   /** Cajas de referencia (ver `RefBox`); opcional para no romper proyectos

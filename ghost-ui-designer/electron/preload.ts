@@ -13,6 +13,7 @@ const api: GhostApi = {
   exportBundle: (scene, assets) =>
     ipcRenderer.invoke(IPC.exportBundle, scene, assets),
   importImage: () => ipcRenderer.invoke(IPC.importImage),
+  importFont: () => ipcRenderer.invoke(IPC.importFont),
   saveImage: (dataUri, suggestedName) => ipcRenderer.invoke(IPC.saveImage, dataUri, suggestedName),
   getScreenSize: () => ipcRenderer.invoke(IPC.getScreenSize),
 };

@@ -211,6 +211,21 @@ ipcMain.handle(IPC.importImage, async () => {
   };
 });
 
+ipcMain.handle(IPC.importFont, async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog(dlgWin(), {
+    properties: ['openFile'],
+    filters: [{ name: 'Fuente', extensions: ['ttf', 'otf', 'woff', 'woff2'] }],
+    title: 'Importar fuente (.ttf/.otf/.woff/.woff2)',
+  });
+  if (canceled || filePaths.length === 0) return null;
+  const p = filePaths[0];
+  const buf = await readFile(p);
+  const ext = path.extname(p).toLowerCase();
+  const mime =
+    ext === '.otf' ? 'font/otf' : ext === '.woff' ? 'font/woff' : ext === '.woff2' ? 'font/woff2' : 'font/ttf';
+  return { name: path.basename(p), dataUri: `data:${mime};base64,${buf.toString('base64')}` };
+});
+
 ipcMain.handle(IPC.saveImage, async (_e, dataUri: string, suggestedName: string) => {
   const { canceled, filePath } = await dialog.showSaveDialog(dlgWin(), {
     defaultPath: suggestedName || 'filmstrip.png',

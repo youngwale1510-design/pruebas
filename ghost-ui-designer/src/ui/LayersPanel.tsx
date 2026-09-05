@@ -3,6 +3,7 @@ import { useStore } from '../app/store';
 import { EffectType, Layer, LayerShape } from '../model/scene';
 import { makeId } from '../model/defaults';
 import { MATERIALS, MaterialId } from '../model/materials';
+import { ensureFontLoaded, PRESET_FONTS } from '../render/fonts';
 
 const SHAPES: [LayerShape, string][] = [
   ['ellipse', 'Círculo'], ['scalloped', 'Estriado'], ['polygon', 'Polígono'],
@@ -92,10 +93,22 @@ export function LayersPanel() {
   const updateEffect = useStore((s) => s.updateEffect);
   const setMaterial = useStore((s) => s.setMaterial);
   const advanced = useStore((s) => s.advanced);
+  const addFontAsset = useStore((s) => s.addFontAsset);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const control = scene.controls.find((c) => c.id === selectedId);
   if (!control) return null;
+
+  const customFonts = scene.assets.fonts ?? [];
+
+  const importFont = async () => {
+    const res = await window.ghost.importFont();
+    if (!res) return null;
+    const asset = { id: makeId('font'), name: res.name, family: `Ghost-${makeId('f')}`, dataUri: res.dataUri };
+    await ensureFontLoaded(asset);
+    addFontAsset(asset);
+    return asset.family;
+  };
 
   const importTexture = async (layerId: string) => {
     const res = await window.ghost.importImage();
@@ -149,6 +162,30 @@ export function LayersPanel() {
                   <label className="k3-field" style={{ marginTop: 8 }}>
                     <span>Texto</span>
                     <input type="text" value={t.content} onChange={(e) => setText({ content: e.target.value })} />
+                  </label>
+                  <label className="k3-field">
+                    <span>Fuente</span>
+                    <select
+                      value={t.family}
+                      onChange={async (e) => {
+                        if (e.target.value === '__import__') {
+                          const family = await importFont();
+                          if (family) setText({ family });
+                          return;
+                        }
+                        setText({ family: e.target.value });
+                      }}
+                    >
+                      <optgroup label="Preinstaladas">
+                        {PRESET_FONTS.map((f) => <option key={f.family} value={f.family}>{f.label}</option>)}
+                      </optgroup>
+                      {customFonts.length > 0 && (
+                        <optgroup label="Importadas">
+                          {customFonts.map((f) => <option key={f.id} value={f.family}>{f.name}</option>)}
+                        </optgroup>
+                      )}
+                      <option value="__import__">Importar fuente (.ttf/.otf/.woff)…</option>
+                    </select>
                   </label>
                   <div className="row">
                     <label className="k3-field" style={{ flex: 1 }}><span>Tamaño <b>{t.size}px</b></span>

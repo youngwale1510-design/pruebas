@@ -8,10 +8,19 @@ import { CanvasPanel } from './ui/CanvasPanel';
 import { AlignPanel } from './ui/AlignPanel';
 import { Toolbar } from './ui/Toolbar';
 import { useStore } from './app/store';
+import { ensureSceneFontsLoaded } from './render/fonts';
 
 export function App() {
   const previewCpp = useStore((s) => s.previewCpp);
+  const fonts = useStore((s) => s.scene.assets.fonts);
   const bridgeOk = typeof window !== 'undefined' && !!(window as unknown as { ghost?: unknown }).ghost;
+
+  // Las fuentes custom (.ttf/.otf importadas) viven embebidas en el .ghostui;
+  // hay que volver a registrarlas (FontFace) cada vez que se abre un proyecto,
+  // porque el registro de fuentes del navegador no persiste entre recargas.
+  useEffect(() => {
+    ensureSceneFontsLoaded(fonts);
+  }, [fonts]);
 
   // Ctrl+Z / Cmd+Z deshace; Ctrl+Shift+Z, Ctrl+Y o Cmd+Shift+Z rehace. Se
   // ignora mientras se escribe en un input/textarea/select para no pisar el

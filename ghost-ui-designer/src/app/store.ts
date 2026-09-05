@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Control, Effect, EffectType, Layer, LightSource, RefBox, SceneDocument } from '../model/scene';
+import { Control, Effect, EffectType, FontAsset, Layer, LightSource, RefBox, SceneDocument } from '../model/scene';
 import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed, defaultBackground, defaultLabel, defaultImage } from '../model/defaults';
 import { AlignKind, Guides, MatchDim, alignRects, distributeRects, matchSizeRects, snapRect } from './align';
 import { MaterialId, applyMaterial } from '../model/materials';
@@ -73,6 +73,9 @@ interface AppState {
   addLight: () => void;
   /** Quita una luz por índice. La principal (0) nunca se puede quitar si es la única. */
   removeLight: (index: number) => void;
+  /** Registra una fuente importada (.ttf/.otf/...) en la escena, para poder
+   *  elegirla luego en cualquier capa de texto. */
+  addFontAsset: (asset: FontAsset) => void;
   /** Cambia tamaño/color de fondo del lienzo del plugin (PLUG_WIDTH/HEIGHT). */
   setCanvas: (patch: Partial<SceneDocument['canvas']>) => void;
   updateLayer: (controlId: string, layerId: string, patch: Partial<Layer>) => void;
@@ -464,6 +467,11 @@ export const useStore = create<AppState>((set, get) => ({
       if (s.scene.lights.length <= 1) return {};
       return { scene: { ...s.scene, lights: s.scene.lights.filter((_, i) => i !== index) } };
     }),
+
+  addFontAsset: (asset) =>
+    set((s) => ({
+      scene: { ...s.scene, assets: { ...s.scene.assets, fonts: [...(s.scene.assets.fonts ?? []), asset] } },
+    })),
 
   setCanvas: (patch) =>
     set((s) => ({ scene: { ...s.scene, canvas: { ...s.scene.canvas, ...patch } } })),

@@ -52,6 +52,8 @@ export interface GhostApi {
   /** Abre una imagen del disco (textura o filmstrip) y la devuelve embebida como
    *  data URI + sus dimensiones. */
   importImage(): Promise<{ name: string; dataUri: string; width: number; height: number } | null>;
+  /** Abre una fuente (.ttf/.otf/.woff/.woff2) y la devuelve embebida como data URI. */
+  importFont(): Promise<{ name: string; dataUri: string } | null>;
   /** Guarda un PNG (data URI) al disco vía diálogo. Devuelve la ruta o null. */
   saveImage(dataUri: string, suggestedName: string): Promise<string | null>;
   /** Área útil de la pantalla principal (sin barra de tareas), para acotar el
@@ -67,6 +69,7 @@ export const IPC = {
   previewCpp: 'ghost:previewCpp',
   exportBundle: 'ghost:exportBundle',
   importImage: 'ghost:importImage',
+  importFont: 'ghost:importFont',
   saveImage: 'ghost:saveImage',
   getScreenSize: 'ghost:getScreenSize',
 } as const;

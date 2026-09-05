@@ -20,7 +20,7 @@ export function emptyScene(pluginName = 'MyPlugin'): SceneDocument {
     meta: { pluginName, author: '' },
     canvas: { width: 400, height: 300, bg: '#1e1e22' },
     lights: [{ angleDeg: 120, intensity: 0.7 }],
-    assets: { textures: [], filmstrips: [] },
+    assets: { textures: [], filmstrips: [], fonts: [] },
     params: [],
     controls: [],
     refBoxes: [],
