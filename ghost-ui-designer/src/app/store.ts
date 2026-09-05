@@ -25,6 +25,9 @@ interface AppState {
   resizeRefBox: (id: string, w: number, h: number) => void;
   renameRefBox: (id: string, label: string) => void;
   removeRefBox: (id: string) => void;
+  /** Marca (o borra, con `undefined`) el lado de la zona de Ghost al que debe
+   *  moverse este elemento hecho a mano al exportar (requiere `sourceTag`). */
+  setRefBoxOrder: (id: string, order: 'before' | 'after' | undefined) => void;
 
   /** Selecciona un único control (limpia el resto de la selección). null = deselecciona. */
   select: (id: string | null) => void;
@@ -203,6 +206,14 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => ({
       scene: { ...s.scene, refBoxes: (s.scene.refBoxes ?? []).filter((b) => b.id !== id) },
       selectedRefBoxId: s.selectedRefBoxId === id ? null : s.selectedRefBoxId,
+    })),
+
+  setRefBoxOrder: (id, order) =>
+    set((s) => ({
+      scene: {
+        ...s.scene,
+        refBoxes: (s.scene.refBoxes ?? []).map((b) => (b.id === id ? { ...b, order } : b)),
+      },
     })),
 
   alignSelected: (kind) =>

@@ -56,6 +56,7 @@ function RefBoxNode({ box, selected }: { box: RefBox; selected: boolean }) {
   const resizeRefBox = useStore((s) => s.resizeRefBox);
   const renameRefBox = useStore((s) => s.renameRefBox);
   const removeRefBox = useStore((s) => s.removeRefBox);
+  const setRefBoxOrder = useStore((s) => s.setRefBoxOrder);
   const { w, h } = box.rect;
 
   return (
@@ -103,6 +104,32 @@ function RefBoxNode({ box, selected }: { box: RefBox; selected: boolean }) {
               resizeRefBox(box.id, e.target.x() + 8, e.target.y() + 8);
             }}
           />
+          {box.sourceTag && (
+            <>
+              <Text
+                text={box.order === 'before' ? '● Antes' : '○ Antes'}
+                x={4}
+                y={h - 14}
+                fontSize={10}
+                fill={REF_COLOR}
+                onClick={(e: KonvaEventObject<MouseEvent>) => {
+                  e.cancelBubble = true;
+                  setRefBoxOrder(box.id, box.order === 'before' ? undefined : 'before');
+                }}
+              />
+              <Text
+                text={box.order === 'after' ? '● Después' : '○ Después'}
+                x={54}
+                y={h - 14}
+                fontSize={10}
+                fill={REF_COLOR}
+                onClick={(e: KonvaEventObject<MouseEvent>) => {
+                  e.cancelBubble = true;
+                  setRefBoxOrder(box.id, box.order === 'after' ? undefined : 'after');
+                }}
+              />
+            </>
+          )}
         </>
       )}
     </Group>

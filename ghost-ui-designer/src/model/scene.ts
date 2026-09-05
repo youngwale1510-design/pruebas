@@ -223,6 +223,15 @@ export interface RefBox {
   id: string;
   label: string;
   rect: Rect;
+  /** Tag/identificador (p.ej. `kCtrlTagScope`) usado para ubicar, en el .cpp
+   *  original, el statement de C++ que crea este elemento hecho a mano. Solo
+   *  presente cuando `legacyParse` pudo reconocerlo; sin esto no hay forma de
+   *  reordenar la caja en el código fuente. */
+  sourceTag?: string;
+  /** Si el usuario pide mover este elemento respecto a la zona de Ghost:
+   *  'before' = antes de `LAYOUT BEGIN`, 'after' = después de `LAYOUT END`.
+   *  Sin definir = se deja donde ya estaba en el archivo. */
+  order?: 'before' | 'after';
 }
 
 export interface LightSource {

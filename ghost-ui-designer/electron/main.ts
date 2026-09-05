@@ -6,6 +6,7 @@ import type { SceneDocument } from '../src/model/scene';
 import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
 import { generateResourcesHeader, generateResourcesRc, syncResourcesRc } from '../src/codegen/iplug2/resources';
 import { readConfigSize, syncConfigSize, syncHeaderEnums } from '../src/codegen/iplug2/header';
+import { moveElementInLayout } from '../src/codegen/iplug2/cppDeps';
 import { IPC, type FilmstripPng } from './ipc-contract';
 
 /** Ventana padre para los diálogos (si no, en Windows pueden abrirse detrás). */
@@ -120,7 +121,18 @@ ipcMain.handle(
     // 1) C++ con round-trip (preserva el código a mano si el archivo ya existe).
     const cppPath = path.join(dir, `${name}.cpp`);
     const existing = existsSync(cppPath) ? await readFile(cppPath, 'utf8') : null;
-    const { source, merged } = writeSceneToSource(scene, existing);
+    const { source: mergedSource, merged } = writeSceneToSource(scene, existing);
+
+    // 1a) Si el usuario pidió mover algún elemento hecho a mano (una RefBox
+    // con `sourceTag`+`order`) respecto a la zona de Ghost, se hace la cirugía
+    // de C++ (arrastrando sus dependencias reales vía tree-sitter) antes de
+    // escribir el archivo final.
+    let source = mergedSource;
+    for (const box of scene.refBoxes ?? []) {
+      if (!box.sourceTag || !box.order) continue;
+      const r = await moveElementInLayout(source, box.sourceTag, box.order);
+      if (r.changed) source = r.source;
+    }
     await writeFile(cppPath, source, 'utf8');
 
     // 1b) Enums EParams/ECtrlTags del .h (si existe): se les añade lo que falte.

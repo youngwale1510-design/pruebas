@@ -252,7 +252,7 @@ function handleAttachControl(
 
   const strArg = ctorArgs.slice(1).find((a) => a.trim().startsWith('"'));
   const label = strArg ? unquote(strArg) : tagArg ? humanizeTag(tagArg) : typeName;
-  refBoxes.push({ id: makeId('ref'), label: label.slice(0, 40), rect });
+  refBoxes.push({ id: makeId('ref'), label: label.slice(0, 40), rect, sourceTag: tagArg });
 }
 
 /**
