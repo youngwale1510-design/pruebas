@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Control, Effect, EffectType, FontAsset, Layer, LightSource, RefBox, SceneDocument } from '../model/scene';
-import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed, defaultBackground, defaultLabel, defaultImage } from '../model/defaults';
+import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed, defaultLedButton, defaultBackground, defaultLabel, defaultImage } from '../model/defaults';
 import { AlignKind, Guides, MatchDim, alignRects, distributeRects, matchSizeRects, snapRect } from './align';
 import { MaterialId, applyMaterial } from '../model/materials';
 import { ParamDef } from '../model/scene';
@@ -45,7 +45,7 @@ interface AppState {
   addImage: () => void;
   addKnob: () => void;
   /** Añade un switch (deslizante o de palanca) con N pasos y su parámetro enum. */
-  addSwitch: (kind: 'slide' | 'toggle' | 'led', steps?: number) => void;
+  addSwitch: (kind: 'slide' | 'toggle' | 'led' | 'ledButton', steps?: number) => void;
   /** Fondo del plugin (una sola vez, al fondo de la pila). */
   addBackground: () => void;
   /** Etiqueta de texto. */
@@ -374,8 +374,17 @@ export const useStore = create<AppState>((set, get) => ({
     set((s) => {
       const n = s.scene.controls.length + 1;
       const pid = `param${n}`;
-      const make = kind === 'slide' ? defaultSlideSwitch : kind === 'led' ? defaultLed : defaultToggleSwitch;
-      const sw = make(makeId(kind), `${kind === 'slide' ? 'Switch' : kind === 'led' ? 'LED' : 'Palanca'} ${n}`, pid, steps);
+      const make =
+        kind === 'slide' ? defaultSlideSwitch
+        : kind === 'led' ? defaultLed
+        : kind === 'ledButton' ? defaultLedButton
+        : defaultToggleSwitch;
+      const label =
+        kind === 'slide' ? 'Switch'
+        : kind === 'led' ? 'LED'
+        : kind === 'ledButton' ? 'Botón LED'
+        : 'Palanca';
+      const sw = make(makeId(kind), `${label} ${n}`, pid, steps);
       sw.rect.x = 20 + ((n - 1) % 4) * 100;
       sw.rect.y = 20 + Math.floor((n - 1) / 4) * 130;
       const param: ParamDef = { id: pid, name: `Param ${n}`, type: 'enum', min: 0, max: steps - 1, default: 0 };

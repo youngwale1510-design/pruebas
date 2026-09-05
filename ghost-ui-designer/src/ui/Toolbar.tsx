@@ -136,6 +136,9 @@ export function Toolbar() {
       <button onClick={() => addSwitch('slide')}>+ Switch</button>
       <button onClick={() => addSwitch('toggle')}>+ Palanca</button>
       <button onClick={() => addSwitch('led')}>+ LED</button>
+      <button onClick={() => addSwitch('ledButton')} title="Pulsador iluminado (con cuerpo pulsable): al hacer clic en el plugin, prende/apaga lo que controle">
+        + Botón LED
+      </button>
       <button onClick={addBackground}>+ Fondo</button>
       <button onClick={addLabel}>+ Texto</button>
       <button onClick={insertImage}>+ Imagen</button>

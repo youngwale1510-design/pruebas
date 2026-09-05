@@ -367,6 +367,51 @@ export function defaultLed(id: string, name: string, paramId?: string, steps = 2
   };
 }
 
+/**
+ * Botón LED: un pulsador iluminado (como el power/bypass de un pedal real),
+ * no solo el puntito de luz de `defaultLed`. Tiene un cuerpo pulsable propio
+ * (más grande, con bisel/chaflán/sombra de contacto para que se vea que se
+ * puede presionar) más el LED encastrado en el centro. Por defecto arranca en
+ * 2 estados (on/off) ligado a un parámetro: al hacer clic en el plugin de
+ * verdad, prende/apaga lo que sea que controle (bypass, un modo, etc.).
+ */
+export function defaultLedButton(id: string, name: string, paramId?: string, steps = 2, color = '#ff3020'): Control {
+  return {
+    id,
+    type: 'IBSwitchControl',
+    name,
+    rect: { x: 20, y: 20, w: 60, h: 60 },
+    paramId,
+    props: { frames: steps, orientation: 'vertical', pad: 6 },
+    layers: [
+      layer('Cuerpo', {
+        shape: 'ellipse',
+        inset: 0.04,
+        fill: '#2a2c31',
+        effects: [
+          fx('dropShadow', { distance: 3, blur: 8, color: 'rgba(0,0,0,0.6)', useLight: true }),
+          fx('contactShadow', { size: 3, strength: 0.65 }),
+          fx('extrude', { height: 3 }),
+          fx('bevel', { size: 4 }),
+          fx('chamfer', { steps: 2, width: 2 }),
+          fx('rim', { size: 2 }),
+        ],
+      }),
+      layer('Lente', {
+        shape: 'ellipse',
+        inset: 0.32,
+        fill: '#2a0808',
+        effects: [
+          fx('recess', { depth: 0.6, lip: 1.5 }),
+          fx('emissive', { color, strength: 1, radius: 2.6, followValue: true }),
+          fx('rim', { size: 1.5 }),
+        ],
+      }),
+    ],
+    effects: [],
+  };
+}
+
 /** Knob por defecto: control bitmap (opción B) con capas y 61 frames. */
 export function defaultKnob(id: string, name: string, paramId?: string): Control {
   return {

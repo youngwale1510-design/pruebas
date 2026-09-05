@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseColor, shade } from '../src/render/color';
 import { applyMaterial, materialEffects, MATERIALS, PLACEMENT_EFFECTS } from '../src/model/materials';
-import { defaultLed, defaultToggleSwitch } from '../src/model/defaults';
+import { defaultLed, defaultLedButton, defaultToggleSwitch } from '../src/model/defaults';
 import { writeSceneToSource, readSceneFromSource } from '../src/codegen/roundtrip';
 import { emptyScene } from '../src/model/defaults';
 
@@ -41,5 +41,25 @@ describe('materiales', () => {
     expect(src).toContain('IBSwitchControl(14, 14, pGraphics->LoadBitmap(LEDPWR_FN, 2), kPwr)');
     const back = readSceneFromSource(src).controls[0];
     expect(back.layers.flatMap((l) => l.effects).some((e) => e.type === 'emissive')).toBe(true);
+  });
+  it('Botón LED: cuerpo pulsable + LED, N estados, emisivo que sigue el valor, y round-trip', () => {
+    const btn = defaultLedButton('btn_bypass', 'Bypass', 'bypass', 2, '#ff3020');
+    expect(btn.type).toBe('IBSwitchControl');
+    expect(btn.props.frames).toBe(2);
+    expect(btn.layers.map((l) => l.name)).toEqual(['Cuerpo', 'Lente']);
+    // el cuerpo tiene que verse pulsable: bisel + chaflán + sombra de contacto.
+    const cuerpo = btn.layers.find((l) => l.name === 'Cuerpo')!;
+    expect(cuerpo.effects.some((e) => e.type === 'bevel')).toBe(true);
+    expect(cuerpo.effects.some((e) => e.type === 'chamfer')).toBe(true);
+    expect(cuerpo.effects.some((e) => e.type === 'contactShadow')).toBe(true);
+    const em = btn.layers.flatMap((l) => l.effects).find((e) => e.type === 'emissive')!;
+    expect(em.params.followValue).toBe(true);
+    expect(em.params.color).toBe('#ff3020');
+    const scene = emptyScene();
+    scene.controls.push(btn);
+    const src = writeSceneToSource(scene, null).source;
+    expect(src).toContain('IBSwitchControl(14, 14, pGraphics->LoadBitmap(BTNBYPASS_FN, 2), kBypass)');
+    const back = readSceneFromSource(src).controls[0];
+    expect(back.layers.map((l) => l.name)).toEqual(['Cuerpo', 'Lente']);
   });
 });
