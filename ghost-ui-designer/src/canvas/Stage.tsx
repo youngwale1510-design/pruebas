@@ -57,7 +57,9 @@ function RefBoxNode({ box, selected }: { box: RefBox; selected: boolean }) {
   const renameRefBox = useStore((s) => s.renameRefBox);
   const removeRefBox = useStore((s) => s.removeRefBox);
   const setRefBoxOrder = useStore((s) => s.setRefBoxOrder);
+  const setRefBoxRemove = useStore((s) => s.setRefBoxRemove);
   const { w, h } = box.rect;
+  const markedForDeletion = !!box.remove;
 
   return (
     <Group
@@ -68,9 +70,16 @@ function RefBoxNode({ box, selected }: { box: RefBox; selected: boolean }) {
       onTap={(e: KonvaEventObject<TouchEvent>) => { e.cancelBubble = true; selectRefBox(box.id); }}
       onDragEnd={(e: KonvaEventObject<DragEvent>) => moveRefBox(box.id, e.target.x(), e.target.y())}
     >
-      <Rect width={w} height={h} fill="rgba(224,102,90,0.08)" stroke={REF_COLOR} strokeWidth={1.5} dash={[6, 4]} />
+      <Rect
+        width={w}
+        height={h}
+        fill={markedForDeletion ? 'rgba(224,102,90,0.16)' : 'rgba(224,102,90,0.08)'}
+        stroke={REF_COLOR}
+        strokeWidth={markedForDeletion ? 2 : 1.5}
+        dash={markedForDeletion ? [3, 3] : [6, 4]}
+      />
       <Text
-        text={box.label}
+        text={markedForDeletion ? `🗑 ${box.label}` : box.label}
         x={4}
         y={4}
         fontSize={11}
@@ -123,8 +132,10 @@ function RefBoxNode({ box, selected }: { box: RefBox; selected: boolean }) {
                 y={h - 14}
                 fontSize={10}
                 fill={REF_COLOR}
+                opacity={markedForDeletion ? 0.4 : 1}
                 onClick={(e: KonvaEventObject<MouseEvent>) => {
                   e.cancelBubble = true;
+                  if (markedForDeletion) return;
                   setRefBoxOrder(box.id, box.order === 'before' ? undefined : 'before');
                 }}
               />
@@ -134,9 +145,23 @@ function RefBoxNode({ box, selected }: { box: RefBox; selected: boolean }) {
                 y={h - 14}
                 fontSize={10}
                 fill={REF_COLOR}
+                opacity={markedForDeletion ? 0.4 : 1}
                 onClick={(e: KonvaEventObject<MouseEvent>) => {
                   e.cancelBubble = true;
+                  if (markedForDeletion) return;
                   setRefBoxOrder(box.id, box.order === 'after' ? undefined : 'after');
+                }}
+              />
+              <Text
+                text={markedForDeletion ? '☑ Borrar del código' : '☐ Borrar del código'}
+                x={4}
+                y={h + 2}
+                fontSize={10}
+                fill={REF_COLOR}
+                onClick={(e: KonvaEventObject<MouseEvent>) => {
+                  e.cancelBubble = true;
+                  setRefBoxRemove(box.id, !markedForDeletion);
+                  if (!markedForDeletion) setRefBoxOrder(box.id, undefined);
                 }}
               />
             </>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dependencyClosure, moveElementInLayout } from '../src/codegen/iplug2/cppDeps';
+import { dependencyClosure, moveElementInLayout, moveElementsInLayout, removeElementFromSource } from '../src/codegen/iplug2/cppDeps';
 
 // Extracto real del mLayoutFunc de GhostDuck: header + kick indicator + scope,
 // todos derivando de un mismo `b` que se va "comiendo" con ReduceFromTop.
@@ -204,5 +204,54 @@ describe('cppDeps: moveElementInLayout (mover un elemento respecto a la zona de 
     const r = await moveElementInLayout(SRC_WITH_MARKERS, anchor, 'after');
     expect(r.changed).toBe(false);
     expect(r.blockedReason).toBeDefined();
+  });
+});
+
+const GHOSTDUCK_ANCHOR =
+  'new ITextControl(header.GetFromTop(26.f).GetFromLeft(300.f), "GHOSTDUCK", IText(22.f, COLOR_WHITE, "Roboto-Regular", EAlign::Near, EVAlign::Bottom))';
+const SIDECHAIN_ANCHOR =
+  'new ITextControl(header.GetFromBottom(16.f).GetFromLeft(300.f), "sidechain ducker", IText(11.f, COLOR_MID_GRAY, "Roboto-Regular", EAlign::Near, EVAlign::Top))';
+
+describe('cppDeps: borrar + mover juntos (quedarse con Scope y Kick, tirar el header)', () => {
+  it('borrar el texto del header (GHOSTDUCK) es seguro: nadie más lo usa', async () => {
+    const r = await removeElementFromSource(SRC_WITH_MARKERS, GHOSTDUCK_ANCHOR);
+    expect(r.changed).toBe(true);
+    expect(r.source).not.toContain('GHOSTDUCK');
+    // El resto sigue intacto.
+    expect(r.source).toContain('kCtrlTagKickIndicator');
+    expect(r.source).toContain('kCtrlTagScope');
+  });
+
+  it('borrar `header` mismo NO es seguro: el kick y el scope (via b) lo siguen necesitando', async () => {
+    const r = await removeElementFromSource(SRC_WITH_MARKERS, 'header = b.ReduceFromTop(44.f)');
+    expect(r.changed).toBe(false);
+    expect(r.blockedReason).toBeDefined();
+  });
+
+  it('el caso real: borrando el header/subtítulo, mover Scope+Kick JUNTOS después de Ghost ya es seguro', async () => {
+    // Primero se tira lo que el usuario no quiere conservar.
+    let source = SRC_WITH_MARKERS;
+    source = (await removeElementFromSource(source, GHOSTDUCK_ANCHOR)).source;
+    source = (await removeElementFromSource(source, SIDECHAIN_ANCHOR)).source;
+    expect(source).not.toContain('GHOSTDUCK');
+    expect(source).not.toContain('sidechain ducker');
+
+    // Moverlos por separado seguiría fallando (cada uno necesita lo que el
+    // otro usa: `header`/`b`)...
+    const separateKick = await moveElementInLayout(source, 'kCtrlTagKickIndicator', 'after');
+    expect(separateKick.changed).toBe(false);
+    expect(separateKick.blockedReason).toBeDefined();
+
+    // ...pero movidos JUNTOS (el Scope y el Kick, lo único que el usuario
+    // quiere conservar) ya no le falta nada a nadie que se quede atrás.
+    const joint = await moveElementsInLayout(source, ['kCtrlTagKickIndicator', 'kCtrlTagScope'], 'after');
+    expect(joint.changed).toBe(true);
+    expect(joint.blockedReason).toBeUndefined();
+
+    const endIdx = joint.source.indexOf('[GHOST:LAYOUT END');
+    expect(joint.source.indexOf('kCtrlTagKickIndicator')).toBeGreaterThan(endIdx);
+    expect(joint.source.indexOf('kCtrlTagScope')).toBeGreaterThan(endIdx);
+    // El orden relativo original (kick antes que scope) se mantiene.
+    expect(joint.source.indexOf('kCtrlTagKickIndicator')).toBeLessThan(joint.source.indexOf('kCtrlTagScope'));
   });
 });

@@ -55,6 +55,24 @@ describe('store: cajas de referencia', () => {
     expect(useStore.getState().selectedRefBoxId).toBeNull();
   });
 
+  it('setRefBoxOrder marca (y borra, con undefined) el lado pedido', () => {
+    useStore.getState().addRefBox();
+    const id = useStore.getState().scene.refBoxes![0].id;
+    useStore.getState().setRefBoxOrder(id, 'after');
+    expect(useStore.getState().scene.refBoxes!.find((b) => b.id === id)!.order).toBe('after');
+    useStore.getState().setRefBoxOrder(id, undefined);
+    expect(useStore.getState().scene.refBoxes!.find((b) => b.id === id)!.order).toBeUndefined();
+  });
+
+  it('setRefBoxRemove marca (y desmarca) la caja para borrar su statement al exportar', () => {
+    useStore.getState().addRefBox();
+    const id = useStore.getState().scene.refBoxes![0].id;
+    useStore.getState().setRefBoxRemove(id, true);
+    expect(useStore.getState().scene.refBoxes!.find((b) => b.id === id)!.remove).toBe(true);
+    useStore.getState().setRefBoxRemove(id, false);
+    expect(useStore.getState().scene.refBoxes!.find((b) => b.id === id)!.remove).toBe(false);
+  });
+
   it('importControls SUMA las refBoxes detectadas a las que ya hubiera', () => {
     useStore.getState().addRefBox(); // ya había una puesta a mano
     useStore.getState().importControls(

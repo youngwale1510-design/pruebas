@@ -28,6 +28,9 @@ interface AppState {
   /** Marca (o borra, con `undefined`) el lado de la zona de Ghost al que debe
    *  moverse este elemento hecho a mano al exportar (requiere `sourceTag`). */
   setRefBoxOrder: (id: string, order: 'before' | 'after' | undefined) => void;
+  /** Marca (o desmarca) esta caja para que su statement de C++ se borre del
+   *  .cpp al exportar (requiere `sourceTag`). */
+  setRefBoxRemove: (id: string, remove: boolean) => void;
 
   /** Selecciona un único control (limpia el resto de la selección). null = deselecciona. */
   select: (id: string | null) => void;
@@ -213,6 +216,14 @@ export const useStore = create<AppState>((set, get) => ({
       scene: {
         ...s.scene,
         refBoxes: (s.scene.refBoxes ?? []).map((b) => (b.id === id ? { ...b, order } : b)),
+      },
+    })),
+
+  setRefBoxRemove: (id, remove) =>
+    set((s) => ({
+      scene: {
+        ...s.scene,
+        refBoxes: (s.scene.refBoxes ?? []).map((b) => (b.id === id ? { ...b, remove } : b)),
       },
     })),
 

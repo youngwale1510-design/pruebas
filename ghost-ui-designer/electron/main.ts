@@ -6,7 +6,7 @@ import type { SceneDocument } from '../src/model/scene';
 import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
 import { generateResourcesHeader, generateResourcesRc, syncResourcesRc } from '../src/codegen/iplug2/resources';
 import { readConfigSize, syncConfigSize, syncHeaderEnums } from '../src/codegen/iplug2/header';
-import { moveElementInLayout } from '../src/codegen/iplug2/cppDeps';
+import { moveElementInLayout, moveElementsInLayout, removeElementFromSource } from '../src/codegen/iplug2/cppDeps';
 import { IPC, type FilmstripPng } from './ipc-contract';
 
 /** Ventana padre para los diálogos (si no, en Windows pueden abrirse detrás). */
@@ -123,17 +123,44 @@ ipcMain.handle(
     const existing = existsSync(cppPath) ? await readFile(cppPath, 'utf8') : null;
     const { source: mergedSource, merged } = writeSceneToSource(scene, existing);
 
-    // 1a) Si el usuario pidió mover algún elemento hecho a mano (una RefBox
-    // con `sourceTag`+`order`) respecto a la zona de Ghost, se hace la cirugía
-    // de C++ (arrastrando sus dependencias reales vía tree-sitter) antes de
-    // escribir el archivo final.
+    // 1a) Cirugía de C++ sobre elementos hechos a mano (vía tree-sitter),
+    // antes de escribir el archivo final:
+    //  - primero se borran los que el usuario marcó para eliminar (una RefBox
+    //    ya no deja huella en el .cpp una vez borrada);
+    //  - luego se mueven los que pidieron Antes/Después, agrupados por lado:
+    //    intentar moverlos JUNTOS (no uno por uno) es lo que permite mover,
+    //    p.ej., el Scope y el Kick Indicator cuando comparten una variable
+    //    que nadie más usa ya (porque lo demás se borró) — por separado cada
+    //    uno se vería bloqueado por el otro. Si el movimiento conjunto falla,
+    //    se reintenta cada uno por separado por si alguno sí es seguro solo.
     let source = mergedSource;
     const moveWarnings: string[] = [];
+
     for (const box of scene.refBoxes ?? []) {
-      if (!box.sourceTag || !box.order) continue;
-      const r = await moveElementInLayout(source, box.sourceTag, box.order);
+      if (!box.sourceTag || !box.remove) continue;
+      const r = await removeElementFromSource(source, box.sourceTag);
       if (r.changed) source = r.source;
-      else if (r.blockedReason) moveWarnings.push(`"${box.label}": ${r.blockedReason}`);
+      else if (r.blockedReason) moveWarnings.push(`"${box.label}" (borrar): ${r.blockedReason}`);
+    }
+
+    const toMove = (scene.refBoxes ?? []).filter((b) => b.sourceTag && b.order && !b.remove);
+    for (const direction of ['before', 'after'] as const) {
+      const group = toMove.filter((b) => b.order === direction);
+      if (group.length === 0) continue;
+
+      const anchors = group.map((b) => b.sourceTag!);
+      const joint = await moveElementsInLayout(source, anchors, direction);
+      if (joint.changed) {
+        source = joint.source;
+        continue;
+      }
+      if (!joint.blockedReason) continue; // ya estaba bien puesto, o algún ancla no se encontró
+
+      for (const box of group) {
+        const r = await moveElementInLayout(source, box.sourceTag!, direction);
+        if (r.changed) source = r.source;
+        else if (r.blockedReason) moveWarnings.push(`"${box.label}": ${r.blockedReason}`);
+      }
     }
     await writeFile(cppPath, source, 'utf8');
 

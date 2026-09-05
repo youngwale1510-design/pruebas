@@ -230,8 +230,14 @@ export interface RefBox {
   sourceTag?: string;
   /** Si el usuario pide mover este elemento respecto a la zona de Ghost:
    *  'before' = antes de `LAYOUT BEGIN`, 'after' = después de `LAYOUT END`.
-   *  Sin definir = se deja donde ya estaba en el archivo. */
+   *  Sin definir = se deja donde ya estaba en el archivo. Se ignora si
+   *  `remove` está activo. */
   order?: 'before' | 'after';
+  /** Si está en true, al exportar se borra del .cpp el statement que creó
+   *  este elemento hecho a mano (p.ej. un texto ya rediseñado en Ghost).
+   *  Solo se aplica si es seguro (ver `removeElementFromSource`); si no, se
+   *  deja como estaba y se avisa por qué. */
+  remove?: boolean;
 }
 
 export interface LightSource {

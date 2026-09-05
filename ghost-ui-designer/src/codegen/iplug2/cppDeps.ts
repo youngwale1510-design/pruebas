@@ -114,7 +114,7 @@ function blockStatements(compound: TSNode, source: string): { node: TSNode; span
 }
 
 /**
- * Busca, en todo `source`, el statement que corresponde a `anchor`. Dos
+ * Busca, en un árbol ya parseado, el nodo que corresponde a `anchor`. Dos
  * formas de anclar, en este orden:
  *  1) Como IDENTIFICADOR exacto (p.ej. el tag `kCtrlTagScope` que se pasa
  *     como último argumento de `AttachControl`) — es lo más fiable porque un
@@ -124,16 +124,8 @@ function blockStatements(compound: TSNode, source: string): { node: TSNode; span
  *     busca ese texto tal cual en el archivo (p.ej. el propio
  *     `new IGDuckScopeControl(scopeRect)`) y se usa el nodo que hay en esa
  *     posición. Esto es lo que permite reordenar también elementos sin tag.
- * Devuelve el statement encontrado y todos sus "hermanos" (statements del
- * mismo bloque), en orden.
  */
-async function findStatementByAnchor(source: string, anchor: string) {
-  const lang = await loadCpp();
-  const parser = new Parser();
-  parser.setLanguage(lang);
-  const tree = parser.parse(source);
-  if (!tree) return null;
-
+function findAnchorNode(root: TSNode, source: string, anchor: string): TSNode | null {
   let anchorNode: TSNode | null = null;
   const walk = (n: TSNode) => {
     if (anchorNode) return;
@@ -147,29 +139,15 @@ async function findStatementByAnchor(source: string, anchor: string) {
       if (anchorNode) return;
     }
   };
-  walk(tree.rootNode);
+  walk(root);
 
   if (!anchorNode) {
     const idx = source.indexOf(anchor);
     if (idx !== -1) {
-      anchorNode = tree.rootNode.descendantForIndex(idx, idx + anchor.length);
+      anchorNode = root.descendantForIndex(idx, idx + anchor.length);
     }
   }
-  if (!anchorNode) return null;
-
-  // Sube hasta el statement top-level (hijo directo de un compound_statement).
-  let stmt: TSNode = anchorNode;
-  while (stmt.parent && stmt.parent.type !== 'compound_statement') {
-    stmt = stmt.parent;
-  }
-  const compound = stmt.parent;
-  if (!compound) return null;
-
-  const siblings = blockStatements(compound, source);
-  const targetIdx = siblings.findIndex((s) => s.node.equals(stmt));
-  if (targetIdx === -1) return null;
-
-  return { siblings, targetIdx };
+  return anchorNode;
 }
 
 interface Closure {
@@ -177,17 +155,70 @@ interface Closure {
   included: Set<number>;
 }
 
+interface AnchoredStatements {
+  siblings: { node: TSNode; span: StatementSpan }[];
+  targetIdxs: number[];
+}
+
+/**
+ * Ubica, dentro del mismo bloque `{ ... }`, el statement top-level de cada
+ * uno de `anchors`. Si alguno no se encuentra, o si no todos caen en el
+ * mismo bloque (un movimiento/borrado conjunto no tiene sentido entre
+ * funciones distintas), devuelve null.
+ */
+async function findAnchorStatements(source: string, anchors: string[]): Promise<AnchoredStatements | null> {
+  const lang = await loadCpp();
+  const parser = new Parser();
+  parser.setLanguage(lang);
+  const tree = parser.parse(source);
+  if (!tree) return null;
+
+  let siblings: { node: TSNode; span: StatementSpan }[] | null = null;
+  const targetIdxs: number[] = [];
+
+  for (const anchor of anchors) {
+    const anchorNode = findAnchorNode(tree.rootNode, source, anchor);
+    if (!anchorNode) return null;
+
+    // Sube hasta el statement top-level (hijo directo de un compound_statement).
+    let stmt: TSNode = anchorNode;
+    while (stmt.parent && stmt.parent.type !== 'compound_statement') {
+      stmt = stmt.parent;
+    }
+    const compound = stmt.parent;
+    if (!compound) return null;
+
+    const sibs = blockStatements(compound, source);
+    const idx = sibs.findIndex((s) => s.node.equals(stmt));
+    if (idx === -1) return null;
+
+    if (siblings === null) {
+      siblings = sibs;
+    } else if (siblings.length !== sibs.length || siblings[0]?.span.start !== sibs[0]?.span.start) {
+      // Los anchors están en bloques distintos — un movimiento/borrado
+      // conjunto no tiene sentido acá (no es el mismo lambda/función).
+      return null;
+    }
+    targetIdxs.push(idx);
+  }
+  if (!siblings) return null;
+  return { siblings, targetIdxs };
+}
+
 /**
  * Calcula el conjunto mínimo (conservador) de statements que hay que mover
- * junto con el que contiene `anchor` para no romper la compilación: el propio
- * statement, más cualquier statement ANTERIOR (en el mismo bloque) que
- * declare o mencione una variable que el objetivo — o algo ya incluido —
- * necesite.
+ * junto con los que contienen cada uno de `anchors` para no romper la
+ * compilación: los statements objetivo, más cualquier statement ANTERIOR (en
+ * el mismo bloque) que declare o mencione una variable que algún objetivo —
+ * o algo ya incluido — necesite. Solo tiene sentido para MOVER (el objetivo
+ * sigue existiendo después, así que sus propias dependencias hay que
+ * conservarlas) — para BORRAR se usa un análisis más simple, ver
+ * `removeElementFromSource`.
  */
-async function computeClosure(source: string, anchor: string): Promise<Closure | null> {
-  const found = await findStatementByAnchor(source, anchor);
+async function computeClosureForAnchors(source: string, anchors: string[]): Promise<Closure | null> {
+  const found = await findAnchorStatements(source, anchors);
   if (!found) return null;
-  const { siblings, targetIdx } = found;
+  const { siblings, targetIdxs } = found;
 
   // Universo de nombres que EN ALGÚN MOMENTO se declaran en este bloque
   // (variables locales de verdad, tipo `b`/`bounds`/`scopeRect`). Cualquier
@@ -199,16 +230,26 @@ async function computeClosure(source: string, anchor: string): Promise<Closure |
   const declarableUniverse = new Set<string>();
   for (const { node } of siblings) for (const n of declaredNames(node)) declarableUniverse.add(n);
 
-  const included = new Set<number>([targetIdx]);
+  const included = new Set<number>(targetIdxs);
   const needed = new Set<string>();
-  for (const id of freeIdentifiers(siblings[targetIdx].node)) {
-    if (declarableUniverse.has(id)) needed.add(id);
+  for (const idx of targetIdxs) {
+    for (const id of freeIdentifiers(siblings[idx].node)) {
+      if (declarableUniverse.has(id)) needed.add(id);
+    }
   }
-  // No perseguir nombres que el propio statement objetivo declara (poco común
-  // pero por si acaso) — no aportan nada buscando hacia atrás.
-  for (const n of declaredNames(siblings[targetIdx].node)) needed.delete(n);
+  // No perseguir nombres que los propios statements objetivo declaran (poco
+  // común pero por si acaso) — no aportan nada buscando hacia atrás.
+  for (const idx of targetIdxs) for (const n of declaredNames(siblings[idx].node)) needed.delete(n);
 
-  for (let i = targetIdx - 1; i >= 0; i--) {
+  const maxTarget = Math.max(...targetIdxs);
+  for (let i = maxTarget - 1; i >= 0; i--) {
+    if (included.has(i)) {
+      // Ya incluido (es otro de los anchors pedidos, u otro que ya se sumó):
+      // sus propios usos también hay que satisfacerlos buscando más atrás.
+      for (const id of freeIdentifiers(siblings[i].node)) if (declarableUniverse.has(id)) needed.add(id);
+      for (const id of declaredNames(siblings[i].node)) needed.delete(id);
+      continue;
+    }
     const { node } = siblings[i];
     const decl = declaredNames(node);
     const uses = freeIdentifiers(node);
@@ -253,11 +294,12 @@ function findUnsharableName(closure: Closure): string | null {
 /**
  * Calcula el conjunto mínimo (conservador) de statements que hay que mover
  * junto con el que contiene `anchor` para no romper la compilación (ver
- * `computeClosure`). Devuelve los rangos en el orden en que aparecen en el
- * archivo (listos para extraer y volver a pegar en otro lado tal cual).
+ * `computeClosureForAnchors`). Devuelve los rangos en el orden en que
+ * aparecen en el archivo (listos para extraer y volver a pegar en otro lado
+ * tal cual).
  */
 export async function dependencyClosure(source: string, anchor: string): Promise<StatementSpan[] | null> {
-  const closure = await computeClosure(source, anchor);
+  const closure = await computeClosureForAnchors(source, [anchor]);
   if (!closure) return null;
   return [...closure.included].sort((a, b) => a - b).map((i) => closure.siblings[i].span);
 }
@@ -278,22 +320,27 @@ export interface MoveResult {
 }
 
 /**
- * Mueve el elemento (identificado por `anchor`, p.ej. un tag `kCtrlTagScope`)
- * junto con todo lo que necesite (ver `dependencyClosure`) a quedar ANTES de
- * `// [GHOST:LAYOUT BEGIN]` o DESPUÉS de `// [GHOST:LAYOUT END]`, según
- * `direction`. El resto del archivo no se toca. Si el movimiento arrastraría
- * una variable que otro código (que se queda donde está) también necesita,
- * NO se mueve nada — se prefiere dejarlo como estaba a entregar un .cpp que
- * no compila.
+ * Mueve TODOS los elementos identificados por `anchors` (p.ej. varios tags
+ * de control) JUNTOS, con todo lo que necesiten entre todos (ver
+ * `computeClosureForAnchors`), a quedar ANTES de `// [GHOST:LAYOUT BEGIN]` o
+ * DESPUÉS de `// [GHOST:LAYOUT END]`, según `direction`. El resto del
+ * archivo no se toca. Moverlos juntos (en vez de uno por uno) es lo que
+ * permite mover, por ejemplo, el Scope Y el Kick Indicator cuando ambos
+ * comparten una misma variable (`b`) que nadie más usa: por separado cada
+ * uno se vería bloqueado porque el otro (que se quedaría donde está)
+ * también la necesita, pero moviéndolos a la vez ninguno se queda atrás. Si
+ * aun así arrastraría una variable que otro código (que sí se queda) también
+ * necesita, NO se mueve nada — se prefiere dejarlo como estaba a entregar un
+ * .cpp que no compila.
  */
-export async function moveElementInLayout(source: string, anchor: string, direction: MoveDirection): Promise<MoveResult> {
+export async function moveElementsInLayout(source: string, anchors: string[], direction: MoveDirection): Promise<MoveResult> {
   const beginMatch = source.match(RE.layoutBegin);
   const endMatch = source.match(RE.layoutEnd);
   if (!beginMatch || !endMatch || beginMatch.index === undefined || endMatch.index === undefined) {
     return { source, changed: false };
   }
 
-  const closure = await computeClosure(source, anchor);
+  const closure = await computeClosureForAnchors(source, anchors);
   if (!closure) return { source, changed: false };
 
   const unsharable = findUnsharableName(closure);
@@ -350,5 +397,67 @@ export async function moveElementInLayout(source: string, anchor: string, direct
     out = withoutBlock.slice(0, insertAt) + '\n' + block.trimEnd() + '\n' + withoutBlock.slice(insertAt);
   }
 
+  return { source: out, changed: true };
+}
+
+/** Mueve UN SOLO elemento — ver `moveElementsInLayout` para el caso general
+ *  (mover varios juntos, útil cuando comparten una variable). */
+export async function moveElementInLayout(source: string, anchor: string, direction: MoveDirection): Promise<MoveResult> {
+  return moveElementsInLayout(source, [anchor], direction);
+}
+
+export interface RemoveResult {
+  source: string;
+  /** false si el ancla no se encontró o si borrarlo no era seguro (ver `blockedReason`). */
+  changed: boolean;
+  /** Por qué NO se borró: una variable que también usa/declara otro código
+   *  que se quedaría (ver `findUnsharableName`). */
+  blockedReason?: string;
+}
+
+/**
+ * Borra del archivo el ÚNICO statement identificado por `anchor` — p.ej. el
+ * texto de un header que ya no hace falta porque se rediseñó en Ghost. A
+ * diferencia de mover, borrar NO arrastra nada hacia atrás: como el
+ * statement desaparece, sus propias dependencias (lo que él necesitaba) ya
+ * no le hacen falta a nadie por su culpa. El único riesgo es al revés: si
+ * ESTE statement declara una variable que OTRO código (que se queda) también
+ * usa o vuelve a declarar, borrarlo lo dejaría sin ella — en ese caso no se
+ * borra nada, igual que con el movimiento, y se devuelve el motivo.
+ */
+export async function removeElementFromSource(source: string, anchor: string): Promise<RemoveResult> {
+  const found = await findAnchorStatements(source, [anchor]);
+  if (!found) return { source, changed: false };
+  const { siblings, targetIdxs } = found;
+  const targetIdx = targetIdxs[0];
+
+  const declaredByTarget = declaredNames(siblings[targetIdx].node);
+  if (declaredByTarget.size > 0) {
+    for (let i = 0; i < siblings.length; i++) {
+      if (i === targetIdx) continue;
+      const { node } = siblings[i];
+      for (const n of freeIdentifiers(node)) {
+        if (declaredByTarget.has(n)) {
+          return {
+            source,
+            changed: false,
+            blockedReason: `"${n}" también la usa otro código que se quedaría; no se puede borrar sin romperlo.`,
+          };
+        }
+      }
+      for (const n of declaredNames(node)) {
+        if (declaredByTarget.has(n)) {
+          return {
+            source,
+            changed: false,
+            blockedReason: `"${n}" también la usa otro código que se quedaría; no se puede borrar sin romperlo.`,
+          };
+        }
+      }
+    }
+  }
+
+  const span = siblings[targetIdx].span;
+  const out = source.slice(0, span.start) + source.slice(span.end);
   return { source: out, changed: true };
 }
