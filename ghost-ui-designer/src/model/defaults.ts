@@ -368,44 +368,58 @@ export function defaultLed(id: string, name: string, paramId?: string, steps = 2
 }
 
 /**
- * Botón LED: un pulsador iluminado (como el power/bypass de un pedal real),
- * no solo el puntito de luz de `defaultLed`. Tiene un cuerpo pulsable propio
- * (más grande, con bisel/chaflán/sombra de contacto para que se vea que se
- * puede presionar) más el LED encastrado en el centro. Por defecto arranca en
- * 2 estados (on/off) ligado a un parámetro: al hacer clic en el plugin de
- * verdad, prende/apaga lo que sea que controle (bypass, un modo, etc.).
+ * Botón LED: un pulsador RECTANGULAR retroiluminado con su etiqueta de texto
+ * — como los botones "INPUT"/"REPRO" de un amp/pedal real — en vez del
+ * puntito de luz de `defaultLed`. Apagado se ve como una tecla clara normal;
+ * encendido, toda la cara se ilumina (no solo un LED chico). Por defecto
+ * arranca en 2 estados (on/off) ligado a un parámetro: al hacer clic en el
+ * plugin de verdad, prende/apaga lo que sea que controle (bypass, un modo…).
  */
-export function defaultLedButton(id: string, name: string, paramId?: string, steps = 2, color = '#ff3020'): Control {
+export function defaultLedButton(id: string, name: string, paramId?: string, steps = 2, color = '#ffb020'): Control {
   return {
     id,
     type: 'IBSwitchControl',
     name,
-    rect: { x: 20, y: 20, w: 60, h: 60 },
+    rect: { x: 20, y: 20, w: 64, h: 54 },
     paramId,
     props: { frames: steps, orientation: 'vertical', pad: 6 },
     layers: [
-      layer('Cuerpo', {
-        shape: 'ellipse',
-        inset: 0.04,
-        fill: '#2a2c31',
+      layer('Marco', {
+        shape: 'roundRect',
+        cornerRadius: 6,
+        inset: 0.03,
+        fill: '#26282d',
         effects: [
-          fx('dropShadow', { distance: 3, blur: 8, color: 'rgba(0,0,0,0.6)', useLight: true }),
-          fx('contactShadow', { size: 3, strength: 0.65 }),
-          fx('extrude', { height: 3 }),
-          fx('bevel', { size: 4 }),
+          fx('dropShadow', { distance: 2, blur: 6, color: 'rgba(0,0,0,0.55)', useLight: true }),
+          fx('contactShadow', { size: 2, strength: 0.6 }),
+          fx('bevel', { size: 3 }),
           fx('chamfer', { steps: 2, width: 2 }),
-          fx('rim', { size: 2 }),
         ],
       }),
-      layer('Lente', {
-        shape: 'ellipse',
-        inset: 0.32,
-        fill: '#2a0808',
+      layer('Cara', {
+        shape: 'roundRect',
+        cornerRadius: 4,
+        inset: 0.15,
+        fill: '#cfc9ba',
         effects: [
-          fx('recess', { depth: 0.6, lip: 1.5 }),
-          fx('emissive', { color, strength: 1, radius: 2.6, followValue: true }),
-          fx('rim', { size: 1.5 }),
+          fx('bevel', { size: 2 }),
+          fx('gradientOverlay', { type: 'linear', angle: 90, from: 'rgba(255,255,255,0.18)', to: 'rgba(0,0,0,0.12)' }),
+          fx('emissive', { color, strength: 1, radius: 1.8, followValue: true }),
         ],
+      }),
+      layer('Texto', {
+        kind: 'text',
+        fill: '#2b2b2e',
+        rectNorm: { x: 0, y: 0, w: 1, h: 1 },
+        text: {
+          content: name.toUpperCase(),
+          family: '"IBM Plex Sans", system-ui, sans-serif',
+          size: 11,
+          weight: 700,
+          letterSpacing: 0.5,
+          align: 'center',
+          finish: 'flat',
+        },
       }),
     ],
     effects: [],
