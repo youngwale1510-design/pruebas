@@ -153,6 +153,13 @@ function findAnchorNode(root: TSNode, source: string, anchor: string): TSNode | 
 interface Closure {
   siblings: { node: TSNode; span: StatementSpan }[];
   included: Set<number>;
+  /** Nombres que la cerradura necesitaba pero para los que NUNCA encontró una
+   *  declaración anterior en el mismo bloque — p.ej. porque esa declaración
+   *  ya se movió a otro lado en un paso previo del mismo export. Si esto no
+   *  está vacío, la cerradura está INCOMPLETA: moverla dejaría al propio
+   *  contenido movido usando una variable que no existe en su nueva
+   *  posición. Nunca hay que mover/borrar algo así. */
+  unresolved: Set<string>;
 }
 
 interface AnchoredStatements {
@@ -262,7 +269,12 @@ async function computeClosureForAnchors(source: string, anchors: string[]): Prom
     for (const id of decl) needed.delete(id);
   }
 
-  return { siblings, included };
+  // Lo que siga en `needed` a esta altura es una variable que la cerradura
+  // usa pero cuya declaración NUNCA apareció antes en el bloque (se buscó
+  // hasta el principio). Puede pasar si esa declaración ya se movió a otro
+  // lado en un paso anterior del mismo export — la cerradura quedaría
+  // incompleta y moverla/borrarla la dejaría rota en su nueva posición.
+  return { siblings, included, unresolved: needed };
 }
 
 /**
@@ -342,6 +354,15 @@ export async function moveElementsInLayout(source: string, anchors: string[], di
 
   const closure = await computeClosureForAnchors(source, anchors);
   if (!closure) return { source, changed: false };
+
+  if (closure.unresolved.size > 0) {
+    const [name] = closure.unresolved;
+    return {
+      source,
+      changed: false,
+      blockedReason: `no se encontró antes, en el mismo bloque, dónde se declara "${name}" (¿ya se movió en otro paso de este export?); moverlo así podría dejarlo roto.`,
+    };
+  }
 
   const unsharable = findUnsharableName(closure);
   if (unsharable) {

@@ -6,7 +6,7 @@ import type { SceneDocument } from '../src/model/scene';
 import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
 import { generateResourcesHeader, generateResourcesRc, syncResourcesRc } from '../src/codegen/iplug2/resources';
 import { readConfigSize, syncConfigSize, syncHeaderEnums } from '../src/codegen/iplug2/header';
-import { moveElementInLayout, moveElementsInLayout, removeElementFromSource } from '../src/codegen/iplug2/cppDeps';
+import { moveElementsInLayout, removeElementFromSource } from '../src/codegen/iplug2/cppDeps';
 import { IPC, type FilmstripPng } from './ipc-contract';
 
 /** Ventana padre para los diálogos (si no, en Windows pueden abrirse detrás). */
@@ -127,12 +127,15 @@ ipcMain.handle(
     // antes de escribir el archivo final:
     //  - primero se borran los que el usuario marcó para eliminar (una RefBox
     //    ya no deja huella en el .cpp una vez borrada);
-    //  - luego se mueven los que pidieron Antes/Después, agrupados por lado:
-    //    intentar moverlos JUNTOS (no uno por uno) es lo que permite mover,
-    //    p.ej., el Scope y el Kick Indicator cuando comparten una variable
-    //    que nadie más usa ya (porque lo demás se borró) — por separado cada
-    //    uno se vería bloqueado por el otro. Si el movimiento conjunto falla,
-    //    se reintenta cada uno por separado por si alguno sí es seguro solo.
+    //  - luego se mueven los que pidieron Antes/Después, agrupados por lado,
+    //    SIEMPRE juntos en una sola cirugía (nunca uno por uno): eso es lo
+    //    que permite mover, p.ej., el Scope y el Kick Indicator cuando
+    //    comparten una variable que nadie más usa ya. NUNCA se reintenta cada
+    //    uno por separado si el conjunto falla — hacerlo movería cada uno
+    //    sobre una versión del archivo ya alterada por el anterior, así que
+    //    el segundo movimiento puede no encontrar más una variable que el
+    //    primero ya reubicó y quedar roto sin que nada lo detecte. Mejor
+    //    dejarlos todos donde estaban y avisar por qué.
     let source = mergedSource;
     const moveWarnings: string[] = [];
 
@@ -152,14 +155,9 @@ ipcMain.handle(
       const joint = await moveElementsInLayout(source, anchors, direction);
       if (joint.changed) {
         source = joint.source;
-        continue;
-      }
-      if (!joint.blockedReason) continue; // ya estaba bien puesto, o algún ancla no se encontró
-
-      for (const box of group) {
-        const r = await moveElementInLayout(source, box.sourceTag!, direction);
-        if (r.changed) source = r.source;
-        else if (r.blockedReason) moveWarnings.push(`"${box.label}": ${r.blockedReason}`);
+      } else if (joint.blockedReason) {
+        const labels = group.map((b) => `"${b.label}"`).join(', ');
+        moveWarnings.push(`${labels}: ${joint.blockedReason}`);
       }
     }
     await writeFile(cppPath, source, 'utf8');

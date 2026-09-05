@@ -254,4 +254,39 @@ describe('cppDeps: borrar + mover juntos (quedarse con Scope y Kick, tirar el he
     // El orden relativo original (kick antes que scope) se mantiene.
     expect(joint.source.indexOf('kCtrlTagKickIndicator')).toBeLessThan(joint.source.indexOf('kCtrlTagScope'));
   });
+
+  it('BUG real: mover uno solo tras otro (nunca en un solo paso conjunto) puede dejar una cerradura incompleta sin avisar — se bloquea', async () => {
+    // Reproduce el bug real que rompió la compilación del usuario: si en vez
+    // de moverlos JUNTOS se mueve el Kick solo (arrastrando bounds/b/header
+    // porque los necesita) y DESPUÉS, sobre ese archivo YA modificado, se
+    // intenta mover el Scope solo, `b`/`bounds`/`header` ya no están ANTES
+    // del Scope en el archivo (se fueron con el Kick) — el Scope terminaría
+    // usando una `b` que no existe en su nueva posición. Debe bloquearse, no
+    // reventar en silencio. Se construye directamente el archivo "ya con el
+    // Kick movido" (bounds/b/header/kick reubicados DESPUÉS del target, no
+    // borrados) para probar el chequeo de `unresolved` en aislado.
+    const afterHypotheticalKickMove = `
+  mLayoutFunc = [&](IGraphics* pGraphics) {
+    b.ReduceFromTop(6.f);
+    IRECT scopeRect = b.ReduceFromTop(140.f);
+    pGraphics->AttachControl(mScope = new IGDuckScopeControl(scopeRect), kCtrlTagScope);
+
+    // [GHOST:LAYOUT BEGIN v=1]
+    pGraphics->AttachControl(new IVKnobControl(IRECT(10.f, 10.f, 60.f, 60.f), kParamThreshold));
+    // [GHOST:LAYOUT END]
+
+    const IRECT bounds = pGraphics->GetBounds().GetPadded(-10.f);
+    IRECT b = bounds;
+    IRECT header = b.ReduceFromTop(44.f);
+    pGraphics->AttachControl(mKickIndicator = new IGKickIndicatorControl(header.GetFromTop(26.f).GetFromRight(110.f).GetMidVPadded(11.f)), kCtrlTagKickIndicator);
+  };
+`;
+
+    const scopeAlone = await moveElementInLayout(afterHypotheticalKickMove, 'kCtrlTagScope', 'after');
+    expect(scopeAlone.changed).toBe(false);
+    expect(scopeAlone.blockedReason).toBeDefined();
+    expect(scopeAlone.blockedReason).toContain('"b"');
+    // Y el archivo queda intacto (no se movió nada a medias).
+    expect(scopeAlone.source).toBe(afterHypotheticalKickMove);
+  });
 });
