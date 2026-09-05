@@ -172,15 +172,19 @@ async function findStatementByAnchor(source: string, anchor: string) {
   return { siblings, targetIdx };
 }
 
+interface Closure {
+  siblings: { node: TSNode; span: StatementSpan }[];
+  included: Set<number>;
+}
+
 /**
  * Calcula el conjunto mínimo (conservador) de statements que hay que mover
  * junto con el que contiene `anchor` para no romper la compilación: el propio
  * statement, más cualquier statement ANTERIOR (en el mismo bloque) que
  * declare o mencione una variable que el objetivo — o algo ya incluido —
- * necesite. Devuelve los rangos en el orden en que aparecen en el archivo
- * (listos para extraer y volver a pegar en otro lado tal cual).
+ * necesite.
  */
-export async function dependencyClosure(source: string, anchor: string): Promise<StatementSpan[] | null> {
+async function computeClosure(source: string, anchor: string): Promise<Closure | null> {
   const found = await findStatementByAnchor(source, anchor);
   if (!found) return null;
   const { siblings, targetIdx } = found;
@@ -217,22 +221,70 @@ export async function dependencyClosure(source: string, anchor: string): Promise
     for (const id of decl) needed.delete(id);
   }
 
-  return [...included].sort((a, b) => a - b).map((i) => siblings[i].span);
+  return { siblings, included };
+}
+
+/**
+ * Si alguno de los statements que se moverían DECLARA una variable que otro
+ * statement del mismo bloque — antes, en medio o después, se mueva o no —
+ * también usa o vuelve a declarar, moverla la deja "huérfana" ahí: ese otro
+ * código dejaría de compilar (`'b': identificador no declarado`). Es
+ * justamente el caso real de GhostDuck: `b` se declara una vez y la van
+ * mutando/leyendo el header, el kick indicator, el scope Y el código de
+ * después — mover solo el statement del scope (que arrastra la declaración
+ * de `b` porque la necesita) deja sin `b` a todo lo que se queda donde está.
+ * Devuelve el primer nombre así de "compartido", o null si mover es seguro.
+ */
+function findUnsharableName(closure: Closure): string | null {
+  const { siblings, included } = closure;
+  const declaredByClosure = new Set<string>();
+  for (const i of included) for (const n of declaredNames(siblings[i].node)) declaredByClosure.add(n);
+  if (declaredByClosure.size === 0) return null;
+
+  for (let i = 0; i < siblings.length; i++) {
+    if (included.has(i)) continue;
+    const { node } = siblings[i];
+    for (const n of freeIdentifiers(node)) if (declaredByClosure.has(n)) return n;
+    for (const n of declaredNames(node)) if (declaredByClosure.has(n)) return n;
+  }
+  return null;
+}
+
+/**
+ * Calcula el conjunto mínimo (conservador) de statements que hay que mover
+ * junto con el que contiene `anchor` para no romper la compilación (ver
+ * `computeClosure`). Devuelve los rangos en el orden en que aparecen en el
+ * archivo (listos para extraer y volver a pegar en otro lado tal cual).
+ */
+export async function dependencyClosure(source: string, anchor: string): Promise<StatementSpan[] | null> {
+  const closure = await computeClosure(source, anchor);
+  if (!closure) return null;
+  return [...closure.included].sort((a, b) => a - b).map((i) => closure.siblings[i].span);
 }
 
 export type MoveDirection = 'before' | 'after';
 
 export interface MoveResult {
   source: string;
-  /** false si el ancla no se encontró, o si ya estaba del lado pedido (no se tocó nada). */
+  /** false si el ancla no se encontró, si ya estaba del lado pedido, o si el
+   *  movimiento no era seguro (ver `blockedReason`) — en todos esos casos no
+   *  se tocó nada. */
   changed: boolean;
+  /** Por qué NO se movió a pesar de haberse encontrado el ancla: una variable
+   *  que también usa/declara otro código que se queda donde está (ver
+   *  `findUnsharableName`). Ausente cuando `changed` es true o cuando
+   *  simplemente no hacía falta moverlo. */
+  blockedReason?: string;
 }
 
 /**
  * Mueve el elemento (identificado por `anchor`, p.ej. un tag `kCtrlTagScope`)
  * junto con todo lo que necesite (ver `dependencyClosure`) a quedar ANTES de
  * `// [GHOST:LAYOUT BEGIN]` o DESPUÉS de `// [GHOST:LAYOUT END]`, según
- * `direction`. El resto del archivo no se toca.
+ * `direction`. El resto del archivo no se toca. Si el movimiento arrastraría
+ * una variable que otro código (que se queda donde está) también necesita,
+ * NO se mueve nada — se prefiere dejarlo como estaba a entregar un .cpp que
+ * no compila.
  */
 export async function moveElementInLayout(source: string, anchor: string, direction: MoveDirection): Promise<MoveResult> {
   const beginMatch = source.match(RE.layoutBegin);
@@ -241,8 +293,20 @@ export async function moveElementInLayout(source: string, anchor: string, direct
     return { source, changed: false };
   }
 
-  const spans = await dependencyClosure(source, anchor);
-  if (!spans || spans.length === 0) return { source, changed: false };
+  const closure = await computeClosure(source, anchor);
+  if (!closure) return { source, changed: false };
+
+  const unsharable = findUnsharableName(closure);
+  if (unsharable) {
+    return {
+      source,
+      changed: false,
+      blockedReason: `"${unsharable}" también la usa otro código que se queda donde está; moverlo lo rompería.`,
+    };
+  }
+
+  const spans = [...closure.included].sort((a, b) => a - b).map((i) => closure.siblings[i].span);
+  if (spans.length === 0) return { source, changed: false };
 
   const firstStart = spans[0].start;
   const lastEnd = spans[spans.length - 1].end;

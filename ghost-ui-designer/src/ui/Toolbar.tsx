@@ -99,6 +99,14 @@ export function Toolbar() {
         'embebe los filmstrip nuevos y el plugin arranca sin ellos.',
       );
     }
+    if (res.moveWarnings.length > 0) {
+      lines.push(
+        '',
+        'Aviso: no se movieron estas cajas de referencia (se dejaron donde ya',
+        'estaban) porque hacerlo hubiera roto la compilación:',
+        ...res.moveWarnings.map((w) => `  - ${w}`),
+      );
+    }
     alert(lines.join('\n'));
   };
 

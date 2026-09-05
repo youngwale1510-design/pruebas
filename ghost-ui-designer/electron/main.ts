@@ -128,10 +128,12 @@ ipcMain.handle(
     // de C++ (arrastrando sus dependencias reales vía tree-sitter) antes de
     // escribir el archivo final.
     let source = mergedSource;
+    const moveWarnings: string[] = [];
     for (const box of scene.refBoxes ?? []) {
       if (!box.sourceTag || !box.order) continue;
       const r = await moveElementInLayout(source, box.sourceTag, box.order);
       if (r.changed) source = r.source;
+      else if (r.blockedReason) moveWarnings.push(`"${box.label}": ${r.blockedReason}`);
     }
     await writeFile(cppPath, source, 'utf8');
 
@@ -185,7 +187,7 @@ ipcMain.handle(
         await writeFile(path.join(resDir, a.file), Buffer.from(b64, 'base64'));
       }
     }
-    return { dir, merged, ...h, configFound, configChanged, rcFound, rcChanged };
+    return { dir, merged, ...h, configFound, configChanged, rcFound, rcChanged, moveWarnings };
   },
 );
 

@@ -48,6 +48,10 @@ export interface GhostApi {
     rcFound: boolean;
     /** true si se le añadieron líneas PNG nuevas (ver `syncResourcesRc`). */
     rcChanged: boolean;
+    /** Cajas de referencia con orden pedido (Antes/Después) que NO se
+     *  pudieron mover sin arriesgar romper la compilación (ver
+     *  `moveElementInLayout`'s `blockedReason`) — vacío si todo salió bien. */
+    moveWarnings: string[];
   } | null>;
   /** Abre una imagen del disco (textura o filmstrip) y la devuelve embebida como
    *  data URI + sus dimensiones. */
