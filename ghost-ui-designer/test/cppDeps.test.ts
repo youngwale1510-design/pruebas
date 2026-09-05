@@ -132,4 +132,18 @@ describe('cppDeps: moveElementInLayout (mover el Scope respecto a la zona de Gho
     const r = await moveElementInLayout(SRC, 'kCtrlTagScope', 'after');
     expect(r.changed).toBe(false);
   });
+
+  it('también mueve un elemento SIN tag, anclando por el texto literal del constructor', async () => {
+    // El texto del header ("GHOSTDUCK") no tiene tag de control — el ancla es
+    // el propio `new ITextControl(...)` tal cual aparece en el archivo, igual
+    // que hace ahora legacyParse cuando no encuentra un tagArg.
+    const anchor = 'new ITextControl(header.GetFromTop(26.f).GetFromLeft(300.f), "GHOSTDUCK", IText(22.f, COLOR_WHITE, "Roboto-Regular", EAlign::Near, EVAlign::Bottom))';
+    const r = await moveElementInLayout(SRC_WITH_MARKERS, anchor, 'after');
+    expect(r.changed).toBe(true);
+    const endIdx = r.source.indexOf('[GHOST:LAYOUT END');
+    expect(r.source.indexOf('GHOSTDUCK')).toBeGreaterThan(endIdx);
+    // El scope, sin pedirlo, se queda donde estaba (antes de la zona de Ghost).
+    const beginIdx = r.source.indexOf('[GHOST:LAYOUT BEGIN');
+    expect(r.source.indexOf('kCtrlTagScope')).toBeLessThan(beginIdx);
+  });
 });

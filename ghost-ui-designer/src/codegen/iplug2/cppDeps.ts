@@ -96,10 +96,18 @@ function blockStatements(compound: TSNode, source: string): { node: TSNode; span
 }
 
 /**
- * Busca, en todo `source`, el statement que contiene un `identifier` cuyo
- * texto sea exactamente `anchor` (p.ej. el tag `kCtrlTagScope` que se pasa
- * como último argumento de `AttachControl`). Devuelve ese statement y todos
- * sus "hermanos" (statements del mismo bloque), en orden.
+ * Busca, en todo `source`, el statement que corresponde a `anchor`. Dos
+ * formas de anclar, en este orden:
+ *  1) Como IDENTIFICADOR exacto (p.ej. el tag `kCtrlTagScope` que se pasa
+ *     como último argumento de `AttachControl`) — es lo más fiable porque un
+ *     identificador no puede aparecer "a medias" en otro lado.
+ *  2) Si no hay ningún identificador con ese texto (el control no tiene tag,
+ *     algo muy común en código escrito a mano), como FRAGMENTO LITERAL: se
+ *     busca ese texto tal cual en el archivo (p.ej. el propio
+ *     `new IGDuckScopeControl(scopeRect)`) y se usa el nodo que hay en esa
+ *     posición. Esto es lo que permite reordenar también elementos sin tag.
+ * Devuelve el statement encontrado y todos sus "hermanos" (statements del
+ * mismo bloque), en orden.
  */
 async function findStatementByAnchor(source: string, anchor: string) {
   const lang = await loadCpp();
@@ -122,6 +130,13 @@ async function findStatementByAnchor(source: string, anchor: string) {
     }
   };
   walk(tree.rootNode);
+
+  if (!anchorNode) {
+    const idx = source.indexOf(anchor);
+    if (idx !== -1) {
+      anchorNode = tree.rootNode.descendantForIndex(idx, idx + anchor.length);
+    }
+  }
   if (!anchorNode) return null;
 
   // Sube hasta el statement top-level (hijo directo de un compound_statement).

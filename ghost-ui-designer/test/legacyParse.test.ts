@@ -74,6 +74,15 @@ describe('lectura automática de layouts iPlug2 escritos a mano', () => {
     // El scope: 140px de alto, empieza tras el header (44) + los 2 ReduceFromTop(6) exactos.
     const scope = res.refBoxes.find((b) => /scope/i.test(b.label) || b.label === 'IGDuckScopeControl')!;
     expect(scope.rect.h).toBe(140);
+    // Tiene tag de verdad -> el ancla es el tag, no un fragmento literal.
+    expect(scope.sourceTag).toBe('kCtrlTagScope');
+
+    // El texto "GHOSTDUCK" no tiene tag (AttachControl sin segundo argumento):
+    // igual debe recibir un ancla (el propio constructor) para poder
+    // identificarlo/moverlo, aunque no sea tan robusta como un tag real.
+    const header = res.refBoxes.find((b) => b.label === 'GHOSTDUCK')!;
+    expect(header.sourceTag).toContain('new ITextControl(');
+    expect(header.sourceTag).toContain('GHOSTDUCK');
     // bounds = GetPadded(-10) sobre 400x300 -> x:10..390,y:10..290; header ocupa 44 -> scope arranca en y=10+44+6=60
     expect(scope.rect.y).toBe(60);
     expect(scope.rect.x).toBe(10);

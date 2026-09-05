@@ -81,6 +81,17 @@ function RefBoxNode({ box, selected }: { box: RefBox; selected: boolean }) {
           if (next && next.trim()) renameRefBox(box.id, next.trim());
         }}
       />
+      {box.sourceTag && (
+        <Text
+          text={`↳ ${box.sourceTag.length > 34 ? box.sourceTag.slice(0, 34) + '…' : box.sourceTag}`}
+          x={4}
+          y={17}
+          fontSize={9}
+          fontStyle="italic"
+          fill={REF_COLOR}
+          opacity={0.75}
+        />
+      )}
       {selected && (
         <>
           <Text

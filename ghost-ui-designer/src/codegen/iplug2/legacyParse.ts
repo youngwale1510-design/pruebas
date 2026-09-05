@@ -252,7 +252,16 @@ function handleAttachControl(
 
   const strArg = ctorArgs.slice(1).find((a) => a.trim().startsWith('"'));
   const label = strArg ? unquote(strArg) : tagArg ? humanizeTag(tagArg) : typeName;
-  refBoxes.push({ id: makeId('ref'), label: label.slice(0, 40), rect, sourceTag: tagArg });
+
+  // Ancla para poder reordenar esto luego (ver `cppDeps.ts`): si hay un tag de
+  // control (`kCtrlTagScope`) se usa ese, porque un identificador no puede
+  // confundirse con nada más. Si NO hay tag (muy común: `AttachControl(new
+  // Tipo(rect))` sin más), se usa el propio constructor tal cual aparece en
+  // el archivo (p.ej. `new IGDuckScopeControl(scopeRect)`) como fragmento
+  // literal — no es tan robusto como un tag, pero sigue permitiendo mover el
+  // elemento en vez de dejarlo sin ninguna forma de identificarlo.
+  const sourceTag = tagArg ?? ctorExpr.slice(newMatch.index, ctorClose + 1);
+  refBoxes.push({ id: makeId('ref'), label: label.slice(0, 40), rect, sourceTag });
 }
 
 /**
