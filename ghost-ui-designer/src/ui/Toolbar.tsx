@@ -88,6 +88,16 @@ export function Toolbar() {
         'del plugin se queda con el tamaño viejo y solo se ve una esquina del diseño.',
       );
     }
+    if (res.rcChanged) {
+      lines.push('', 'Se añadieron a resources/main.rc las líneas PNG que faltaban. Recompila.');
+    } else if (!res.rcFound) {
+      lines.push(
+        '',
+        'Aviso: no se encontró resources/main.rc junto al bundle exportado.',
+        'Pega a mano las líneas de <Plugin>_resources.rc.txt — si no, Windows no',
+        'embebe los filmstrip nuevos y el plugin arranca sin ellos.',
+      );
+    }
     alert(lines.join('\n'));
   };
 

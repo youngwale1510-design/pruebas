@@ -19,7 +19,7 @@ export function emptyScene(pluginName = 'MyPlugin'): SceneDocument {
     version: GHOSTUI_VERSION,
     meta: { pluginName, author: '' },
     canvas: { width: 400, height: 300, bg: '#1e1e22' },
-    light: { angleDeg: 120, intensity: 0.7 },
+    lights: [{ angleDeg: 120, intensity: 0.7 }],
     assets: { textures: [], filmstrips: [] },
     params: [],
     controls: [],

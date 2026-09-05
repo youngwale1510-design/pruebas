@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { SceneDocument } from '../src/model/scene';
 import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
-import { generateResourcesHeader, generateResourcesRc } from '../src/codegen/iplug2/resources';
+import { generateResourcesHeader, generateResourcesRc, syncResourcesRc } from '../src/codegen/iplug2/resources';
 import { readConfigSize, syncConfigSize, syncHeaderEnums } from '../src/codegen/iplug2/header';
 import { IPC, type FilmstripPng } from './ipc-contract';
 
@@ -150,6 +150,20 @@ ipcMain.handle(
 
     await writeFile(path.join(dir, `${name}_resources.rc.txt`), generateResourcesRc(scene), 'utf8');
 
+    // 2b) resources/main.rc: si existe, se le añaden las líneas PNG que falten
+    // (sin tocar ni reordenar lo que ya haya). Sin esto, Windows no embebe los
+    // filmstrip nuevos y el plugin arranca sin ellos.
+    const rcPath = path.join(dir, 'resources', 'main.rc');
+    let rcFound = false;
+    let rcChanged = false;
+    if (existsSync(rcPath)) {
+      rcFound = true;
+      const rcSrc = await readFile(rcPath, 'utf8');
+      const r = syncResourcesRc(rcSrc, scene);
+      rcChanged = r.changed;
+      if (r.changed) await writeFile(rcPath, r.source, 'utf8');
+    }
+
     // 3) PNGs de filmstrip (rasterizados en el renderer) -> resources/img (layout iPlug2).
     if (assets.length > 0) {
       const resDir = path.join(dir, 'resources', 'img');
@@ -159,7 +173,7 @@ ipcMain.handle(
         await writeFile(path.join(resDir, a.file), Buffer.from(b64, 'base64'));
       }
     }
-    return { dir, merged, ...h, configFound, configChanged };
+    return { dir, merged, ...h, configFound, configChanged, rcFound, rcChanged };
   },
 );
 

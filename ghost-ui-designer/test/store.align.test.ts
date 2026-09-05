@@ -17,7 +17,7 @@ describe('store: selección múltiple y alinear', () => {
       version: 1,
       meta: { pluginName: 'T', author: '' },
       canvas: { width: 400, height: 300, bg: '#111' },
-      light: { angleDeg: 120, intensity: 0.7 },
+      lights: [{ angleDeg: 120, intensity: 0.7 }],
       assets: { textures: [], filmstrips: [] },
       params: [],
       controls: [],

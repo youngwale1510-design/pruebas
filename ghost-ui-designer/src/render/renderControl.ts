@@ -2,10 +2,14 @@
 // valor. Es la ÚNICA función que produce píxeles, usada tanto por el editor como
 // por el rasterizador de filmstrips -> el editor se ve idéntico al plugin.
 
-import { Control, Layer, SceneDocument } from '../model/scene';
-import { EffectHints, PathFn, applyEffectsAbove, applyEffectsBelow } from './effects';
+import { Control, Layer, LightSource, SceneDocument, TextStyle } from '../model/scene';
+import { EffectHints, PathFn, applyEffectsAbove, applyEffectsBelow, drawRim } from './effects';
 import { LightVectors, resolveLight, rotateLight, rotationForValue } from './light';
+import { parseColor } from './color';
 import { ImageCache, drawImageCover } from './textures';
+
+/** Luz por defecto si la escena no trae ninguna (proyectos vacíos/corruptos). */
+const DEFAULT_LIGHT: LightSource = { angleDeg: 120, intensity: 0.7 };
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -151,11 +155,32 @@ function drawTicks(ctx: Ctx, w: number, h: number, layer: Layer) {
   ctx.restore();
 }
 
+/** Dibuja `content` letra por letra respetando `letterSpacing` (no todos los
+ *  navegadores lo aplican con `ctx.fillText` directo). `paint(ch, cx)` pinta
+ *  un carácter en el x ya resuelto (com dx/dy propios, si hacen falta). */
+function forEachChar(
+  ctx: Ctx,
+  content: string,
+  x: number,
+  align: TextStyle['align'],
+  spacing: number,
+  paint: (ch: string, cx: number) => void,
+) {
+  if (spacing === 0) { paint(content, x); return; }
+  const chars = [...content];
+  const widths = chars.map((c) => ctx.measureText(c).width);
+  const total = widths.reduce((a, b) => a + b, 0) + spacing * (chars.length - 1);
+  let cx = align === 'left' ? x : align === 'right' ? x - total : x - total / 2;
+  const prevAlign = ctx.textAlign;
+  ctx.textAlign = 'left';
+  chars.forEach((c, i) => { paint(c, cx); cx += widths[i] + spacing; });
+  ctx.textAlign = prevAlign;
+}
+
 /** Texto de una capa. El acabado grabado/realzado usa la luz global, así que
  *  las etiquetas se integran con el resto del panel. */
-function drawText(ctx: Ctx, w: number, h: number, layer: Layer, light: LightVectors) {
-  const t = layer.text;
-  if (!t || !t.content) return;
+function drawTextSolid(ctx: Ctx, w: number, h: number, layer: Layer, light: LightVectors) {
+  const t = layer.text!;
   const box = layerBox(w, h, layer);
   ctx.save();
   ctx.globalAlpha = layer.opacity;
@@ -164,19 +189,10 @@ function drawText(ctx: Ctx, w: number, h: number, layer: Layer, light: LightVect
   ctx.textAlign = t.align;
   const x = t.align === 'left' ? box.x : t.align === 'right' ? box.x + box.w : box.x + box.w / 2;
   const y = box.y + box.h / 2;
-  // letterSpacing no está en todos los navegadores; se emula si hace falta.
   const spacing = t.letterSpacing || 0;
   const put = (dx: number, dy: number, color: string) => {
     ctx.fillStyle = color;
-    if (spacing === 0) { ctx.fillText(t.content, x + dx, y + dy); return; }
-    const chars = [...t.content];
-    const widths = chars.map((c) => ctx.measureText(c).width);
-    const total = widths.reduce((a, b) => a + b, 0) + spacing * (chars.length - 1);
-    let cx = t.align === 'left' ? x : t.align === 'right' ? x - total : x - total / 2;
-    const prev = ctx.textAlign;
-    ctx.textAlign = 'left';
-    chars.forEach((c, i) => { ctx.fillText(c, cx + dx, y + dy); cx += widths[i] + spacing; });
-    ctx.textAlign = prev;
+    forEachChar(ctx, t.content, x, t.align, spacing, (ch, cx) => ctx.fillText(ch, cx + dx, y + dy));
   };
   const d = Math.max(1, t.size * 0.06);
   const inten = 0.35 + 0.45 * light.intensity;
@@ -192,10 +208,96 @@ function drawText(ctx: Ctx, w: number, h: number, layer: Layer, light: LightVect
   ctx.restore();
 }
 
-function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number, light: LightVectors, images?: ImageCache) {
+/** Pinta el alfa de las letras de `t` (color irrelevante, solo la forma) —
+ *  usado como máscara para recortar un relleno con `destination-in`. */
+function paintTextGlyphs(ctx: Ctx, box: Box, t: TextStyle) {
+  ctx.font = `${t.weight} ${t.size}px ${t.family}`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = t.align;
+  ctx.fillStyle = '#000';
+  const x = t.align === 'left' ? box.x : t.align === 'right' ? box.x + box.w : box.x + box.w / 2;
+  const y = box.y + box.h / 2;
+  forEachChar(ctx, t.content, x, t.align, t.letterSpacing || 0, (ch, cx) => ctx.fillText(ch, cx, y));
+}
+
+/** Texto "máscara": el relleno de la capa (color o textura) solo se ve DENTRO
+ *  de los trazos del texto — el resto de la capa queda transparente. Misma
+ *  técnica (`destination-in`) que ya se usa para recortar efectos al alfa
+ *  real de una imagen importada. */
+function drawTextMask(ctx: Ctx, w: number, h: number, layer: Layer, images?: ImageCache) {
+  const t = layer.text!;
+  const box = layerBox(w, h, layer);
+  const off = document.createElement('canvas');
+  off.width = Math.max(1, Math.round(w));
+  off.height = Math.max(1, Math.round(h));
+  const octx = off.getContext('2d')!;
+
+  const tex = layer.fillImage && images ? images[layer.fillImage] : undefined;
+  if (tex) {
+    if ((layer.fillImageMode ?? 'cover') === 'tile') {
+      const pat = octx.createPattern(tex, 'repeat');
+      if (pat) { octx.fillStyle = pat; octx.fillRect(box.x, box.y, box.w, box.h); }
+    } else {
+      drawImageCover(octx, tex, box);
+    }
+  } else {
+    octx.fillStyle = layer.fill ?? '#e8e9ec';
+    octx.fillRect(box.x, box.y, box.w, box.h);
+  }
+
+  // OJO: con letterSpacing hay VARIOS fillText (uno por carácter). Si se
+  // pintaran directo con `destination-in` activo, cada letra recortaría el
+  // resultado de la ANTERIOR (la intersección de letras que no se solapan es
+  // vacía) y no quedaría nada. Por eso la máscara se arma completa en un
+  // canvas aparte (composición normal) y se aplica de una sola vez.
+  const mask = document.createElement('canvas');
+  mask.width = off.width;
+  mask.height = off.height;
+  paintTextGlyphs(mask.getContext('2d')!, box, t);
+  octx.globalCompositeOperation = 'destination-in';
+  octx.drawImage(mask, 0, 0);
+  octx.globalCompositeOperation = 'source-over';
+
+  ctx.save();
+  ctx.globalAlpha = layer.opacity;
+  ctx.drawImage(off, 0, 0);
+  ctx.restore();
+}
+
+function drawText(ctx: Ctx, w: number, h: number, layer: Layer, light: LightVectors, images?: ImageCache) {
+  const t = layer.text;
+  if (!t || !t.content) return;
+  if (t.fillMode === 'mask') drawTextMask(ctx, w, h, layer, images);
+  else drawTextSolid(ctx, w, h, layer, light);
+}
+
+/** Pinta el reflejo de borde (rim) de una luz ADICIONAL (todo lo que no sea
+ *  `scene.lights[0]`): tintado con su color, sumado (`screen`) encima de lo
+ *  que ya se pintó. La luz principal sigue siendo la única que orienta
+ *  biseles/domos/sombras — esto es puramente un acento de color extra. */
+function applyExtraLights(ctx: Ctx, pathFn: PathFn, box: Box, extraLights: LightSource[], rotationDeg: number) {
+  for (const ls of extraLights) {
+    const gl = resolveLight(ls);
+    if (gl.intensity <= 0) continue;
+    const L = rotationDeg ? rotateLight(gl, -rotationDeg) : gl;
+    const color = parseColor(ls.color, [255, 255, 255]).join(',');
+    drawRim(ctx, pathFn, box, { id: 'auto-extra-light', type: 'rim', enabled: true, params: { size: 3, color } }, L);
+  }
+}
+
+function renderLayer(
+  ctx: Ctx,
+  w: number,
+  h: number,
+  layer: Layer,
+  value: number,
+  light: LightVectors,
+  images?: ImageCache,
+  extraLights: LightSource[] = [],
+) {
   if (!layer.visible) return;
   if (layer.shape === 'ticks') { drawTicks(ctx, w, h, layer); return; }
-  if (layer.kind === 'text') { drawText(ctx, w, h, layer, light); return; }
+  if (layer.kind === 'text') { drawText(ctx, w, h, layer, light, images); return; }
   const mode = layer.anim?.mode ?? 'none';
   const rotate = mode === 'rotate';
   const deg = rotate ? rotationForValue(value, layer.anim!.minDeg ?? -135, layer.anim!.maxDeg ?? 135) : 0;
@@ -270,6 +372,7 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
     const octx = off.getContext('2d')!;
     paintTex(octx);
     applyEffectsAbove(octx, pathFn, box, layer.effects, L, hints);
+    if (extraLights.length > 0) applyExtraLights(octx, pathFn, box, extraLights, deg);
     octx.globalCompositeOperation = 'destination-in';
     paintTex(octx);
     octx.globalCompositeOperation = 'source-over';
@@ -279,6 +382,7 @@ function renderLayer(ctx: Ctx, w: number, h: number, layer: Layer, value: number
     ctx.fillStyle = layer.fill ?? '#333333';
     ctx.fill();
     applyEffectsAbove(ctx, pathFn, box, layer.effects, L, hints);
+    if (extraLights.length > 0) applyExtraLights(ctx, pathFn, box, extraLights, deg);
   }
   ctx.restore();
 }
@@ -313,7 +417,9 @@ export function renderControlFrame(
 ) {
   const { w, h } = control.rect;
   const { pad } = frameSize(control);
-  const light = resolveLight(scene.light);
+  const lights = scene.lights && scene.lights.length > 0 ? scene.lights : [DEFAULT_LIGHT];
+  const light = resolveLight(lights[0]);
+  const extraLights = lights.slice(1);
   value = snapValue(control, value);
   // Todo se dibuja en coordenadas del rect; el margen solo desplaza el origen.
   ctx.save();
@@ -323,12 +429,12 @@ export function renderControlFrame(
   const bodyInset = Math.max(0, Math.min(0.4, Number(control.props.bodyInset ?? 0) || 0));
   const s = 1 - 2 * bodyInset;
   for (const layer of control.layers) {
-    if (layer.shape === 'ticks' || s >= 1) { renderLayer(ctx, w, h, layer, value, light, images); continue; }
+    if (layer.shape === 'ticks' || s >= 1) { renderLayer(ctx, w, h, layer, value, light, images, extraLights); continue; }
     ctx.save();
     ctx.translate(w / 2, h / 2);
     ctx.scale(s, s);
     ctx.translate(-w / 2, -h / 2);
-    renderLayer(ctx, w, h, layer, value, light, images);
+    renderLayer(ctx, w, h, layer, value, light, images, extraLights);
     ctx.restore();
   }
   ctx.restore();

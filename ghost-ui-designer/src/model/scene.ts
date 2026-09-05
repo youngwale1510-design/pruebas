@@ -80,6 +80,11 @@ export interface TextStyle {
   align: 'left' | 'center' | 'right';
   /** Acabado: plano, grabado (hundido) o realzado. Respeta la luz global. */
   finish: 'flat' | 'engraved' | 'raised';
+  /** 'solid' (por defecto, o si falta): el texto se pinta directo con
+   *  `layer.fill`, como hasta ahora. 'mask': las letras se usan como MÁSCARA —
+   *  `layer.fill` (o su textura, `layer.fillImage`) solo se ve DENTRO de los
+   *  trazos del texto; el resto de la capa queda transparente. */
+  fillMode?: 'solid' | 'mask';
 }
 
 /** Animación de la capa en función del valor del control (0..1). */
@@ -212,13 +217,23 @@ export interface LightSource {
   intensity: number; // 0..1
   elev?: number; // altura 0..1 (rasante..cenital); por defecto 0.5
   fill?: number; // luz de relleno 0..1: levanta el lado en sombra (evita negro puro)
+  /** Tinte de la luz (hex). Solo importa para luces adicionales (`lights[1..]`):
+   *  la primera ("principal") sigue siendo la que orienta biseles/domos/sombras
+   *  en blanco/gris; las demás se suman como un reflejo de borde (rim) tintado
+   *  de este color, encima de todos los controles. */
+  color?: string;
 }
 
 export interface SceneDocument {
   version: number;
   meta: { pluginName: string; author: string };
   canvas: { width: number; height: number; bg: string };
-  light: LightSource;
+  /** Luces globales: `lights[0]` (la "principal") orienta biseles/domos/sombras de
+   *  todos los controles, igual que antes; cualquier luz adicional se suma como
+   *  un reflejo de borde tintado (ver `LightSource.color`). Nunca vacío en
+   *  tiempo de ejecución (`renderControlFrame` usa un valor por defecto si lo
+   *  estuviera). */
+  lights: LightSource[];
   assets: { textures: TextureAsset[]; filmstrips: FilmstripAsset[] };
   params: ParamDef[];
   controls: Control[];

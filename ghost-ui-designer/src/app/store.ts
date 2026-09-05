@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Control, Effect, EffectType, Layer, RefBox, SceneDocument } from '../model/scene';
+import { Control, Effect, EffectType, Layer, LightSource, RefBox, SceneDocument } from '../model/scene';
 import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed, defaultBackground, defaultLabel, defaultImage } from '../model/defaults';
 import { AlignKind, Guides, MatchDim, alignRects, distributeRects, matchSizeRects, snapRect } from './align';
 import { MaterialId, applyMaterial } from '../model/materials';
@@ -67,7 +67,12 @@ interface AppState {
   updateControl: (id: string, patch: Partial<Control>) => void;
   moveControl: (id: string, x: number, y: number) => void;
   setKnob3d: (id: string, cfg: KnobConfig | undefined) => void;
-  setLight: (patch: Partial<SceneDocument['light']>) => void;
+  /** Cambia una luz global por su índice (0 = principal). */
+  setLight: (index: number, patch: Partial<LightSource>) => void;
+  /** Agrega una luz adicional (rim tintado); arranca en el lado opuesto a la principal. */
+  addLight: () => void;
+  /** Quita una luz por índice. La principal (0) nunca se puede quitar si es la única. */
+  removeLight: (index: number) => void;
   /** Cambia tamaño/color de fondo del lienzo del plugin (PLUG_WIDTH/HEIGHT). */
   setCanvas: (patch: Partial<SceneDocument['canvas']>) => void;
   updateLayer: (controlId: string, layerId: string, patch: Partial<Layer>) => void;
@@ -436,8 +441,29 @@ export const useStore = create<AppState>((set, get) => ({
       },
     })),
 
-  setLight: (patch) =>
-    set((s) => ({ scene: { ...s.scene, light: { ...s.scene.light, ...patch } } })),
+  setLight: (index, patch) =>
+    set((s) => ({
+      scene: {
+        ...s.scene,
+        lights: s.scene.lights.map((l, i) => (i === index ? { ...l, ...patch } : l)),
+      },
+    })),
+
+  addLight: () =>
+    set((s) => {
+      const main = s.scene.lights[0];
+      // Por defecto, del lado opuesto a la principal y tintada, para que se
+      // note como acento y no se confunda con la sombra/bisel de la principal.
+      const angleDeg = ((main?.angleDeg ?? 120) + 180) % 360;
+      const light: LightSource = { angleDeg, intensity: 0.6, elev: 0.5, color: '#57b6c9' };
+      return { scene: { ...s.scene, lights: [...s.scene.lights, light] } };
+    }),
+
+  removeLight: (index) =>
+    set((s) => {
+      if (s.scene.lights.length <= 1) return {};
+      return { scene: { ...s.scene, lights: s.scene.lights.filter((_, i) => i !== index) } };
+    }),
 
   setCanvas: (patch) =>
     set((s) => ({ scene: { ...s.scene, canvas: { ...s.scene.canvas, ...patch } } })),
@@ -501,7 +527,16 @@ export const useStore = create<AppState>((set, get) => ({
     applyingHistory = true;
     // Proyectos guardados antes de que existieran las cajas de referencia no
     // traen `refBoxes`; se normaliza a [] para no romper el resto del código.
-    set({ scene: { ...scene, refBoxes: scene.refBoxes ?? [] }, selectedId: null, selectedIds: [], selectedRefBoxId: null });
+    // Proyectos de antes de las luces múltiples traían `light` (singular): se
+    // migra a `lights: [light]` la primera vez que se abren.
+    const legacyLight = (scene as unknown as { light?: LightSource }).light;
+    const lights = scene.lights ?? (legacyLight ? [legacyLight] : [{ angleDeg: 120, intensity: 0.7 }]);
+    set({
+      scene: { ...scene, lights, refBoxes: scene.refBoxes ?? [] },
+      selectedId: null,
+      selectedIds: [],
+      selectedRefBoxId: null,
+    });
     applyingHistory = false;
     resetHistory();
   },

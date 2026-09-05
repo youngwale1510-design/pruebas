@@ -18,7 +18,7 @@ function toneShaperScene(): SceneDocument {
     version: GHOSTUI_VERSION,
     meta: { pluginName: 'ToneShaper', author: 'GhostAudio' },
     canvas: { width: 400, height: 300, bg: '#20232a' },
-    light: { angleDeg: 120, intensity: 0.7 },
+    lights: [{ angleDeg: 120, intensity: 0.7 }],
     assets: { textures: [], filmstrips: [] },
     params: [
       param('gain', 'Gain', 'double', -48, 12, 0),

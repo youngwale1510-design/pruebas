@@ -89,5 +89,70 @@ export function generateResourcesRc(scene: SceneDocument): string {
     '// Los PNG van en resources/img/ (ya está en las rutas del compilador de',
     '// recursos de iPlug2, ver common-win.props).',
     '',
+    '// NOTA: si tu resources/main.rc está junto al .cpp exportado, Ghost ya',
+    '// intenta añadir estas líneas él solo (ver syncResourcesRc) — este .txt es',
+    '// el respaldo para cuando no lo encuentra o para pegarlo a mano.',
+    '',
   ].join('\n');
+}
+
+export const RCMARK = {
+  begin: '// [GHOST:RESOURCES BEGIN]',
+  end: '// [GHOST:RESOURCES END]',
+};
+
+export interface RcSyncResult {
+  source: string;
+  changed: boolean;
+}
+
+/**
+ * Añade a resources/main.rc las líneas `NOMBRE_FN PNG NOMBRE_FN` que falten
+ * para los controles bitmap de la escena. Nunca quita ni reordena nada: solo
+ * suma. La primera vez crea un bloque marcado (`// [GHOST:RESOURCES ...]`)
+ * pegado justo después de la primera declaración `... TTF ...` que encuentre
+ * (el mismo lugar donde ya se pedía pegarlo a mano); si no hay ninguna, lo
+ * agrega al final del archivo. Si no hay ningún control bitmap en la escena
+ * (nada que declarar), no toca el archivo.
+ */
+export function syncResourcesRc(existingSource: string, scene: SceneDocument): RcSyncResult {
+  const wantedLines = collectBitmapResources(scene).map((r) => `${r.resId} PNG ${r.resId}`);
+
+  const beginIdx = existingSource.indexOf(RCMARK.begin);
+  const endIdx = beginIdx === -1 ? -1 : existingSource.indexOf(RCMARK.end, beginIdx);
+
+  let existingLines: string[];
+  let prefix: string;
+  let suffix: string;
+
+  if (beginIdx !== -1 && endIdx !== -1) {
+    existingLines = existingSource
+      .slice(beginIdx + RCMARK.begin.length, endIdx)
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    prefix = existingSource.slice(0, beginIdx).replace(/\n$/, '');
+    suffix = existingSource.slice(endIdx + RCMARK.end.length).replace(/^\n/, '');
+  } else {
+    existingLines = [];
+    const fontLine = existingSource.match(/^.*\bTTF\b.*$/m);
+    if (fontLine && fontLine.index !== undefined) {
+      const insertAt = fontLine.index + fontLine[0].length;
+      prefix = existingSource.slice(0, insertAt);
+      suffix = existingSource.slice(insertAt);
+    } else {
+      prefix = existingSource.replace(/\s*$/, '');
+      suffix = '';
+    }
+  }
+
+  const merged = [...existingLines];
+  for (const l of wantedLines) if (!merged.includes(l)) merged.push(l);
+
+  if (merged.length === 0) return { source: existingSource, changed: false }; // nada que declarar
+  const changed = beginIdx === -1 || merged.length !== existingLines.length;
+  if (!changed) return { source: existingSource, changed: false };
+
+  const body = `\n${RCMARK.begin}\n` + merged.join('\n') + `\n${RCMARK.end}\n`;
+  return { source: prefix + body + suffix, changed: true };
 }

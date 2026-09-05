@@ -65,7 +65,7 @@ export function ControlImage({ control, scene, value, selected, onSelect, onMove
     }
     return renderControlToCanvas(control, scene, value, textures);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stripUri, stripImg, frames, orientation, JSON.stringify(control.layers), w, h, control.props.pad, value, JSON.stringify(scene.light), textures]);
+  }, [stripUri, stripImg, frames, orientation, JSON.stringify(control.layers), w, h, control.props.pad, value, JSON.stringify(scene.lights), textures]);
 
   const onDragEnd = (e: KonvaEventObject<DragEvent>) =>
     onMove(Math.round(e.target.x() + pad), Math.round(e.target.y() + pad));

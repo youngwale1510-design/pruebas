@@ -169,12 +169,23 @@ export function LayersPanel() {
                         <option value="right">Derecha</option>
                       </select></label>
                   </div>
-                  <label className="k3-field"><span>Acabado</span>
-                    <select value={t.finish} onChange={(e) => setText({ finish: e.target.value as typeof t.finish })}>
-                      <option value="flat">Plano</option>
-                      <option value="engraved">Grabado (hundido)</option>
-                      <option value="raised">Realzado</option>
+                  <label className="k3-field"><span>Relleno</span>
+                    <select value={t.fillMode ?? 'solid'} onChange={(e) => setText({ fillMode: e.target.value as typeof t.fillMode })}>
+                      <option value="solid">Sólido (color plano, con acabado)</option>
+                      <option value="mask">Máscara (el color/textura de arriba se ve SOLO dentro de las letras)</option>
                     </select></label>
+                  {(t.fillMode ?? 'solid') === 'solid' ? (
+                    <label className="k3-field"><span>Acabado</span>
+                      <select value={t.finish} onChange={(e) => setText({ finish: e.target.value as typeof t.finish })}>
+                        <option value="flat">Plano</option>
+                        <option value="engraved">Grabado (hundido)</option>
+                        <option value="raised">Realzado</option>
+                      </select></label>
+                  ) : (
+                    <p className="hint" style={{ margin: '4px 0 0' }}>
+                      Sin acabado (grabado/realzado no aplica a texto máscara). Usa el color o la textura de arriba.
+                    </p>
+                  )}
                 </>
               );
             })()}
@@ -340,7 +351,7 @@ export function LayersPanel() {
             <div style={{ marginTop: 8 }}>
               <div className="k3-field"><span>Reflejos / luces</span></div>
               {speculars.map((e, i) => {
-                const angle = typeof e.params.angleDeg === 'number' ? e.params.angleDeg : scene.light.angleDeg;
+                const angle = typeof e.params.angleDeg === 'number' ? e.params.angleDeg : scene.lights[0].angleDeg;
                 const size = typeof e.params.size === 'number' ? e.params.size : 0.45;
                 const aspect = typeof e.params.aspect === 'number' ? e.params.aspect : 1;
                 return (
@@ -362,7 +373,7 @@ export function LayersPanel() {
                 );
               })}
               <button className="btn" style={{ marginTop: 4 }}
-                onClick={() => addEffect(control.id, l.id, 'specular', { size: 0.45, aspect: 1, angleDeg: (scene.light.angleDeg + 40) % 360 })}>
+                onClick={() => addEffect(control.id, l.id, 'specular', { size: 0.45, aspect: 1, angleDeg: (scene.lights[0].angleDeg + 40) % 360 })}>
                 + Añadir reflejo
               </button>
             </div>

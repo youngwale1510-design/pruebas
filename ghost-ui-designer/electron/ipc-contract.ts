@@ -44,6 +44,10 @@ export interface GhostApi {
     headerChanged: boolean;
     configFound: boolean;
     configChanged: boolean;
+    /** true si se encontró resources/main.rc junto al bundle exportado. */
+    rcFound: boolean;
+    /** true si se le añadieron líneas PNG nuevas (ver `syncResourcesRc`). */
+    rcChanged: boolean;
   } | null>;
   /** Abre una imagen del disco (textura o filmstrip) y la devuelve embebida como
    *  data URI + sus dimensiones. */
