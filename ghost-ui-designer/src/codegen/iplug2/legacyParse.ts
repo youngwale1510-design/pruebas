@@ -270,6 +270,20 @@ function evalNumeric(expr: string, vars: Record<string, RectV>, numVars: NumVars
       if (rem.startsWith('-')) neg = !neg;
       rem = rem.slice(1).trim();
     }
+    // Subexpresión entre paréntesis, p.ej. `(650.f - headerHeight) / 4.f`.
+    // Sin esto, cualquier constante `constexpr float` calculada así (muy
+    // común para derivar tamaños a partir de otras constantes) evaluaba a 0
+    // en silencio — y con eso, cualquier reducción que la usara "no reducía
+    // nada", dejando todo apilado en el mismo lugar.
+    if (rem.startsWith('(')) {
+      const closeIdx = matchClose(rem, 0);
+      if (closeIdx !== -1) {
+        const inner = rem.slice(1, closeIdx);
+        const val = evalNumeric(inner, vars, numVars, canvas);
+        rem = rem.slice(closeIdx + 1).trim();
+        return neg ? -val : val;
+      }
+    }
     const { value, rest } = evalValue(rem, vars, numVars, canvas);
     rem = rest.trim();
     const n = asNum(value);

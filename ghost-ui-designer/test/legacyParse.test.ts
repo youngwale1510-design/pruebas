@@ -230,3 +230,46 @@ function sceneWithCompositeKnob() {
   scene.controls.push(knob);
   return scene;
 }
+
+// Bug real encontrado en MBC4: `constexpr float stripHeight = (650.f -
+// headerHeight) / 4.f;` — una constante calculada entre PARÉNTESIS. Sin
+// soporte para paréntesis en el evaluador aritmético, esto evaluaba a 0 en
+// silencio, y con `bandArea = bandArea.GetReducedFromTop(stripHeight)`
+// reduciendo por 0, las 4 "bandas" quedaban todas apiladas en la misma
+// posición en vez de una debajo de la otra.
+const PARENS_LAYOUT = `
+  mLayoutFunc = [&] (IGraphics* pGraphics) {
+    constexpr float headerHeight = 200.f;
+    constexpr float stripHeight = (650.f - headerHeight) / 4.f;
+
+    const IRECT full = pGraphics->GetBounds();
+    IRECT bandArea = full.GetReducedFromTop (headerHeight);
+
+    {
+      IRECT row = bandArea.GetFromTop (stripHeight);
+      bandArea = bandArea.GetReducedFromTop (stripHeight);
+      pGraphics->AttachControl (new IBKnobControl (row.MW() - 39.f, row.MH() - 39.f, knobBmp, BandParam (0, kOffGain)));
+    }
+    {
+      IRECT row = bandArea.GetFromTop (stripHeight);
+      bandArea = bandArea.GetReducedFromTop (stripHeight);
+      pGraphics->AttachControl (new IBKnobControl (row.MW() - 39.f, row.MH() - 39.f, knobBmp, BandParam (1, kOffGain)));
+    }
+
+// [GHOST:LAYOUT BEGIN v=1]
+// [GHOST:LAYOUT END]
+  };
+`;
+
+describe('aritmética con paréntesis en constantes (constexpr float X = (A - B) / C;)', () => {
+  it('resuelve la constante de verdad, no a 0 — cada banda queda en una posición distinta', () => {
+    const res = readSceneFromSource(PARENS_LAYOUT, 900, 650);
+    expect(res.controls).toHaveLength(2);
+    const band0 = res.controls.find((c) => c.paramExpr === 'BandParam (0, kOffGain)')!;
+    const band1 = res.controls.find((c) => c.paramExpr === 'BandParam (1, kOffGain)')!;
+    expect(band0.rect.y).not.toBe(band1.rect.y);
+    // headerHeight=200, stripHeight=(650-200)/4=112.5 -> banda 1 empieza ~112.5px
+    // más abajo (± redondeo a entero de las coordenadas del rect).
+    expect(Math.abs(band1.rect.y - band0.rect.y - 112.5)).toBeLessThanOrEqual(1);
+  });
+});
