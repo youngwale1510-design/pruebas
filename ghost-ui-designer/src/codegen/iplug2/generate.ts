@@ -30,7 +30,7 @@ function irect(c: Control): string {
 
 function attachLine(c: Control): string {
   const rect = irect(c);
-  const tag = c.paramId ? paramTag(c.paramId) : 'kNoParameter';
+  const tag = c.paramExpr ?? (c.paramId ? paramTag(c.paramId) : 'kNoParameter');
   const label = JSON.stringify(c.name);
   switch (c.type) {
     case 'IVKnobControl':

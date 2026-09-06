@@ -60,6 +60,31 @@ function humanizeTag(tag: string): string {
   return t || tag;
 }
 
+interface CompositeParam { paramId: string; paramExpr: string; label: string }
+
+/**
+ * Algunos plugins direccionan un parámetro con una FUNCIÓN en vez de un tag
+ * suelto — típico de layouts "por banda/canal" ya desenrollados a mano:
+ * `BandParam(0, kOffGain)` en vez de `kGain`. A diferencia de un tag simple
+ * (`paramIdFromTag`), acá no hay forma de derivar un id legible del texto sin
+ * más contexto — así que se sintetiza uno estable a partir del índice y del
+ * offset, y se GUARDA LA EXPRESIÓN TAL CUAL (`paramExpr`) para que, si el
+ * usuario la edita en Ghost y vuelve a exportar, se reemita exactamente
+ * igual (`BandParam(0, kOffGain)`), no un tag inventado que no existiría en
+ * el .h del usuario.
+ */
+function matchCompositeParam(expr: string): CompositeParam | null {
+  const m = expr.trim().match(/^([A-Za-z_]\w*)\s*\(\s*(\d+)\s*,\s*(k[A-Za-z]\w*)\s*\)$/);
+  if (!m) return null;
+  const [, fn, idxStr, offsetTag] = m;
+  const offsetName = offsetTag.replace(/^kOff/, '').replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+  return {
+    paramId: `${fn.toLowerCase()}_${idxStr}_${offsetName.toLowerCase().replace(/\s+/g, '')}`,
+    paramExpr: expr.trim(),
+    label: `Band ${Number(idxStr) + 1} ${offsetName}`,
+  };
+}
+
 /** Encuentra el paréntesis/corchete/llave que cierra el que abre en `openIdx`,
  *  ignorando lo que haya dentro de cadenas "...". */
 function matchClose(s: string, openIdx: number): number {
@@ -368,17 +393,21 @@ function handleAttachControl(
   // para los controles "vector", (x, y, bitmap, param) para los "bitmap".
   const paramIdx = XY_BITMAP_TYPES.has(typeName) ? 3 : 1;
   const labelIdx = paramIdx + 1;
-  const paramArg = ctorArgs[paramIdx] && /^k[A-Za-z]\w*$/.test(ctorArgs[paramIdx].trim()) ? ctorArgs[paramIdx].trim() : undefined;
+  const rawParamArg = ctorArgs[paramIdx]?.trim();
+  const bareParamArg = rawParamArg && /^k[A-Za-z]\w*$/.test(rawParamArg) ? rawParamArg : undefined;
+  // Sin tag suelto: puede ser un parámetro "compuesto" (`BandParam(0, kOffGain)`).
+  const composite = !bareParamArg && rawParamArg ? matchCompositeParam(rawParamArg) : null;
 
-  if ((KNOB_TYPES.has(typeName) || SWITCH_TYPES.has(typeName)) && paramArg) {
-    const paramId = paramIdFromTag(paramArg);
-    const label = ctorArgs[labelIdx] ? unquote(ctorArgs[labelIdx]) : paramId;
+  if ((KNOB_TYPES.has(typeName) || SWITCH_TYPES.has(typeName)) && (bareParamArg || composite)) {
+    const paramId = composite ? composite.paramId : paramIdFromTag(bareParamArg!);
+    const label = ctorArgs[labelIdx] ? unquote(ctorArgs[labelIdx]) : composite ? composite.label : paramId;
     controls.push({
       id: makeId(KNOB_TYPES.has(typeName) ? 'knob' : 'sw'),
       type: typeName as Control['type'],
       name: label || paramId,
       rect,
       paramId,
+      ...(composite ? { paramExpr: composite.paramExpr } : {}),
       props: {},
       layers: [],
       effects: [],

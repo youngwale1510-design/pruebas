@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { readSceneFromSource } from '../src/codegen/roundtrip';
+import { readSceneFromSource, writeSceneToSource } from '../src/codegen/roundtrip';
+import { emptyScene, defaultKnob } from '../src/model/defaults';
 
 // Layout marcado pero VACÍO: el header, el indicador de kick y el scope viven
 // fuera de la región gestionada, escritos a mano con aritmética de IRECT.
@@ -182,3 +183,50 @@ describe('lectura de layouts con reasignación funcional (estilo MBC4, no GhostD
     expect(res.refBoxes).toHaveLength(0);
   });
 });
+
+// Plugins con parámetros "por banda" (desenrollados a mano) direccionan el
+// parámetro real con una llamada, no un tag suelto: `BandParam(0, kOffGain)`.
+const COMPOSITE_PARAM_LAYOUT = `
+  mLayoutFunc = [&] (IGraphics* pGraphics) {
+    const IBitmap knobBmp = pGraphics->LoadBitmap (KNOBBIG_FN, 128);
+    pGraphics->AttachControl (new IBKnobControl (40.f, 12.f, knobBmp, BandParam (0, kOffGain)));
+    pGraphics->AttachControl (new IBKnobControl (140.f, 12.f, knobBmp, BandParam (1, kOffThresh)));
+
+// [GHOST:LAYOUT BEGIN v=1]
+// [GHOST:LAYOUT END]
+  };
+`;
+
+describe('lectura de parámetros "compuestos" (BandParam(N, kOffX), no un tag suelto)', () => {
+  it('se detecta como control editable real (no una caja de referencia)', () => {
+    const res = readSceneFromSource(COMPOSITE_PARAM_LAYOUT, 900, 650);
+    expect(res.controls).toHaveLength(2);
+    expect(res.refBoxes).toHaveLength(0);
+  });
+
+  it('guarda la expresión ORIGINAL en paramExpr para reemitirla igual al exportar', () => {
+    const res = readSceneFromSource(COMPOSITE_PARAM_LAYOUT, 900, 650);
+    const gain = res.controls.find((c) => c.rect.x === 40)!;
+    const thresh = res.controls.find((c) => c.rect.x === 140)!;
+    expect(gain.paramExpr).toBe('BandParam (0, kOffGain)');
+    expect(thresh.paramExpr).toBe('BandParam (1, kOffThresh)');
+    // paramId es un id ESTABLE sintético (no el tag real) — distinto por control.
+    expect(gain.paramId).not.toBe(thresh.paramId);
+  });
+
+  it('al reexportar, reemite la expresión compuesta tal cual — no un tag inventado', () => {
+    const { source } = writeSceneToSource(sceneWithCompositeKnob(), null);
+    expect(source).toContain('BandParam(2, kOffKnee)');
+    expect(source).not.toMatch(/kBandparam/i);
+  });
+});
+
+function sceneWithCompositeKnob() {
+  const scene = emptyScene('CompositeTest');
+  const knob = defaultKnob('knob_band2knee', 'Band 3 Knee', 'band2knee');
+  knob.type = 'IBKnobControl';
+  knob.paramExpr = 'BandParam(2, kOffKnee)';
+  knob.rect = { x: 10, y: 10, w: 78, h: 78 };
+  scene.controls.push(knob);
+  return scene;
+}

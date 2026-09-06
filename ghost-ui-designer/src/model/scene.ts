@@ -165,6 +165,13 @@ export interface Control {
   rect: Rect;
   /** id del parámetro vinculado (ver ParamDef). undefined = kNoParameter. */
   paramId?: string;
+  /** Si el parámetro real no es un tag suelto (`kGain`) sino una expresión de
+   *  C++ — común en layouts con parámetros "compuestos" por banda/canal,
+   *  p.ej. `BandParam(0, kOffGain)` — se guarda tal cual acá, y el codegen la
+   *  reemite literal en vez de derivar un tag desde `paramId`. `paramId`
+   *  sigue siendo el id ESTABLE interno de Ghost (marcador/UI); esto es
+   *  solo lo que se escribe como argumento real en el AttachControl. */
+  paramExpr?: string;
   /** Propiedades del control (bitmap/filmstrip asociado, estilo, nº de frames…). */
   props: Record<string, number | string | boolean>;
   layers: Layer[];
