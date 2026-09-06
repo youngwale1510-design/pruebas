@@ -113,3 +113,72 @@ describe('lectura automática de layouts iPlug2 escritos a mano', () => {
     expect(res.refBoxes).toEqual([]);
   });
 });
+
+// Extracto real de MBC4.cpp: otro "dialecto" de aritmética de IRECT que
+// GhostDuck no usaba — reasignación funcional (`x = x.GetReducedFromLeft(...)`
+// en vez de mutar con `x.ReduceFromLeft(...)`), constantes `constexpr float`,
+// expresiones con multiplicación, y knobs "bitmap" posicionados con (x, y)
+// sueltos en vez de un IRECT entero.
+const MBC4_LAYOUT = `
+  mLayoutFunc = [&] (IGraphics* pGraphics) {
+    const IBitmap knobBmp = pGraphics->LoadBitmap (KNOBBIG_FN, 128);
+
+    constexpr float headerHeight = 200.f;
+    constexpr float sidePanel    = 190.f;
+
+    const IRECT full = pGraphics->GetBounds();
+    IRECT header = full.GetFromTop (headerHeight).GetPadded (-34.f, -12.f, -34.f, -12.f);
+
+    IRECT left = header.GetFromLeft (sidePanel - 24.f);
+    header = header.GetReducedFromLeft (sidePanel - 24.f);
+
+    IRECT knobRow = left.GetFromTop (86.f);
+    left = left.GetReducedFromTop (86.f);
+    IRECT inCell = knobRow.GetFromLeft (knobRow.W() * 0.5f);
+    IRECT outCell = knobRow.GetReducedFromLeft (knobRow.W() * 0.5f);
+
+    pGraphics->AttachControl (new IBKnobControl (inCell.MW() - 39.f, inCell.MH() - 43.f, knobBmp, kInGain));
+    pGraphics->AttachControl (new IBKnobControl (outCell.MW() - 39.f, outCell.MH() - 43.f, knobBmp, kOutGain));
+
+// [GHOST:LAYOUT BEGIN v=1]
+// [GHOST:LAYOUT END]
+  };
+`;
+
+describe('lectura de layouts con reasignación funcional (estilo MBC4, no GhostDuck)', () => {
+  it('sigue `x = x.GetReducedFromLeft(...)` (reasignación) igual que `x.ReduceFromLeft(...)` (mutación)', () => {
+    const res = readSceneFromSource(MBC4_LAYOUT, 900, 650);
+    expect(res.found).toBe(true);
+
+    const byParam = Object.fromEntries(res.controls.map((c) => [c.paramId, c]));
+    expect(byParam['inGain']).toBeDefined();
+    expect(byParam['outGain']).toBeDefined();
+  });
+
+  it('resuelve constantes constexpr y aritmética con multiplicación (knobRow.W() * 0.5f)', () => {
+    const res = readSceneFromSource(MBC4_LAYOUT, 900, 650);
+    const byParam = Object.fromEntries(res.controls.map((c) => [c.paramId, c]));
+
+    // full = GetBounds() (0,0,900,650); header = full.GetFromTop(200).GetPadded(-34,-12,-34,-12)
+    //      -> L=34,T=12,R=866,B=188 (ancho=832); left = header.GetFromLeft(190-24=166) -> L=34,R=200
+    // left = left.GetReducedFromLeft(166) NO afecta a knobRow (ya se leyó antes de reasignar).
+    // knobRow = left.GetFromTop(86) -> el mismo x/w que `left` (34..200, ancho 166).
+    // inCell = knobRow.GetFromLeft(166 * 0.5 = 83) -> L=34..117 (ancho 83).
+    // inGain: x = inCell.MW()-39 = (34+117)/2-39 = 75.5-39 = 36.5 ~ 37; y = inCell.MH()-43 = (12+98)/2-43 ~ 12.
+    expect(byParam['inGain'].rect.x).toBe(37);
+    expect(byParam['inGain'].rect.y).toBe(12);
+    // Tamaño recuperado EXACTO del propio patrón (39*2=78, 43*2=86), no un default a ciegas.
+    expect(byParam['inGain'].rect.w).toBe(78);
+    expect(byParam['inGain'].rect.h).toBe(86);
+
+    // outCell = knobRow.GetReducedFromLeft(83) -> L=117..200 (empieza justo donde termina inCell).
+    expect(byParam['outGain'].rect.x).toBeGreaterThan(byParam['inGain'].rect.x);
+  });
+
+  it('IBKnobControl con firma (x, y, bitmap, param): se detecta como control real, no como referencia', () => {
+    const res = readSceneFromSource(MBC4_LAYOUT, 900, 650);
+    expect(res.controls).toHaveLength(2);
+    expect(res.controls.every((c) => c.type === 'IBKnobControl')).toBe(true);
+    expect(res.refBoxes).toHaveLength(0);
+  });
+});

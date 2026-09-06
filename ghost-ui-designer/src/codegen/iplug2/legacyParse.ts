@@ -30,13 +30,17 @@ interface RectV { L: number; T: number; R: number; B: number }
 const KNOB_TYPES = new Set(['IVKnobControl', 'IBKnobControl']);
 const SWITCH_TYPES = new Set(['IVToggleControl', 'IVButtonControl', 'IBSwitchControl']);
 
+// Los controles "bitmap" de iPlug2 (IBKnobControl/IBSwitchControl) tienen un
+// constructor con FIRMA DISTINTA a la de sus primos "vector": en vez de un
+// solo IRECT reciben `(x, y, bitmap, paramIdx)` — dos floats sueltos. Sin
+// distinguir esto, `ctorArgs[0]` (que sería "x", un número) se intentaba leer
+// como si fuera todo un rect, y como no calzaba con nada se devolvía el
+// lienzo completo — por eso los knobs de MBC4 (que usan justo esta firma)
+// salían todos en la esquina superior izquierda.
+const XY_BITMAP_TYPES = new Set(['IBKnobControl', 'IBSwitchControl']);
+
 function toRect(r: RectV) {
   return { x: Math.round(r.L), y: Math.round(r.T), w: Math.round(r.R - r.L), h: Math.round(r.B - r.T) };
-}
-
-function parseNum(s: string): number {
-  const m = s.trim().match(/-?\d+(\.\d+)?/);
-  return m ? parseFloat(m[0]) : NaN;
 }
 
 function unquote(s: string): string {
@@ -112,6 +116,15 @@ function applyPure(r: RectV, method: string, args: number[]): RectV {
     case 'GetFromBottom': return { L: r.L, T: Math.max(r.B - args[0], r.T), R: r.R, B: r.B };
     case 'GetFromLeft': return { L: r.L, T: r.T, R: Math.min(r.L + args[0], r.R), B: r.B };
     case 'GetFromRight': return { L: Math.max(r.R - args[0], r.L), T: r.T, R: r.R, B: r.B };
+    // GetReducedFromX (a diferencia de ReduceFromX) NO muta nada: devuelve lo
+    // que QUEDARÍA después de quitar la franja, sin tocar el rect original.
+    // Es la mitad "de solo lectura" del mismo par que ReduceFromX — el estilo
+    // `x = x.GetReducedFromLeft(n)` (reasignación funcional) logra el mismo
+    // efecto que `x.ReduceFromLeft(n)` (mutación in-place) pero por fuera.
+    case 'GetReducedFromTop': return { L: r.L, T: Math.min(r.T + args[0], r.B), R: r.R, B: r.B };
+    case 'GetReducedFromBottom': return { L: r.L, T: r.T, R: r.R, B: Math.max(r.B - args[0], r.T) };
+    case 'GetReducedFromLeft': return { L: Math.min(r.L + args[0], r.R), T: r.T, R: r.R, B: r.B };
+    case 'GetReducedFromRight': return { L: r.L, T: r.T, R: Math.max(r.R - args[0], r.L), B: r.B };
     case 'GetMidVPadded': { const midY = (r.T + r.B) / 2; return { L: r.L, T: midY - args[0], R: r.R, B: midY + args[0] }; }
     case 'GetMidHPadded': { const midX = (r.L + r.R) / 2; return { L: midX - args[0], T: r.T, R: midX + args[0], B: r.B }; }
     case 'SubRectVertical': { const [n, i] = args; const step = (r.B - r.T) / n; return { L: r.L, T: r.T + i * step, R: r.R, B: r.T + (i + 1) * step }; }
@@ -143,41 +156,131 @@ function applyReduce(r: RectV, method: string, args: number[]): { rect: RectV; r
   }
 }
 
-/** Evalúa una expresión de lectura (nunca muta variables): identificador
- *  conocido o `pGraphics->GetBounds()`, seguido de una cadena de `.Metodo(args)`. */
-function evalExpr(expr: string, vars: Record<string, RectV>, canvas: RectV): RectV {
-  const s = expr.trim();
-  let base: RectV;
-  let rest: string;
+type NumVars = Record<string, number>;
+
+type Value = { kind: 'rect'; v: RectV } | { kind: 'num'; v: number };
+
+/** Nombres de los métodos de IRECT que devuelven un NÚMERO (ancho/alto/centro)
+ *  en vez de un sub-rect — terminan la cadena de encadenados en algo escalar,
+ *  típicamente usado dentro de una cuenta como `inCell.MW() - 39.f`. */
+function scalarRectMethod(r: RectV, method: string): number | null {
+  switch (method) {
+    case 'W': return r.R - r.L;
+    case 'H': return r.B - r.T;
+    case 'MW': return (r.L + r.R) / 2;
+    case 'MH': return (r.T + r.B) / 2;
+    default: return null;
+  }
+}
+
+/**
+ * Evalúa un valor (rect O número) al principio de `s`: un identificador
+ * conocido (rect o número), `pGraphics->GetBounds()`, o un literal numérico,
+ * seguido de una cadena de `.Metodo(args)` — cada método puede devolver otro
+ * rect (GetFromX, GetPadded...) o, si es W/H/MW/MH, un número que termina la
+ * cadena. Devuelve también `rest`: lo que quedó sin consumir, para que quien
+ * llama pueda seguir leyendo operadores aritméticos (+, -, *, /) detrás.
+ */
+function evalValue(s: string, vars: Record<string, RectV>, numVars: NumVars, canvas: RectV): { value: Value; rest: string } {
+  s = s.trim();
 
   const boundsRe = /^(?:[A-Za-z_]\w*\s*->\s*)?GetBounds\s*\(\s*\)/;
   const bm = s.match(boundsRe);
+  let value: Value;
+  let rest: string;
+
   if (bm) {
-    base = canvas;
+    value = { kind: 'rect', v: canvas };
     rest = s.slice(bm[0].length);
   } else {
+    const numLit = s.match(/^\d+(\.\d*)?f?/);
     const im = s.match(/^[A-Za-z_]\w*/);
     if (im && vars[im[0]] !== undefined) {
-      base = vars[im[0]];
+      value = { kind: 'rect', v: vars[im[0]] };
       rest = s.slice(im[0].length);
+    } else if (im && numVars[im[0]] !== undefined) {
+      value = { kind: 'num', v: numVars[im[0]] };
+      rest = s.slice(im[0].length);
+    } else if (numLit) {
+      value = { kind: 'num', v: parseFloat(numLit[0]) };
+      rest = s.slice(numLit[0].length);
     } else {
-      return canvas; // no reconocido: mejor el lienzo completo que romper la importación
+      // No reconocido: mejor el lienzo completo (o 0) que romper la importación.
+      return { value: { kind: 'rect', v: canvas }, rest: '' };
     }
   }
 
   rest = rest.trim();
-  while (rest.startsWith('.')) {
+  while (value.kind === 'rect' && rest.startsWith('.')) {
     const mm = rest.match(/^\.([A-Za-z_]\w*)\s*\(/);
     if (!mm) break;
     const openIdx = mm[0].length - 1;
     const closeIdx = matchClose(rest, openIdx);
     if (closeIdx === -1) break;
     const argsText = rest.slice(openIdx + 1, closeIdx);
-    const args = splitTopLevel(argsText).map(parseNum).filter((n) => !Number.isNaN(n));
-    base = applyPure(base, mm[1], args);
+    const args = splitTopLevel(argsText)
+      .filter((a) => a.trim().length > 0)
+      .map((a) => evalNumeric(a, vars, numVars, canvas));
+    const scalar = scalarRectMethod(value.v, mm[1]);
+    value = scalar !== null ? { kind: 'num', v: scalar } : { kind: 'rect', v: applyPure(value.v, mm[1], args) };
     rest = rest.slice(closeIdx + 1).trim();
   }
-  return base;
+  return { value, rest };
+}
+
+/** Evalúa una expresión ARITMÉTICA (+, -, *, /) de valores numéricos, donde
+ *  cada término puede ser un literal, una constante (`constexpr float X`) o
+ *  un encadenado que TERMINA en un método escalar de IRECT (W/H/MW/MH) —
+ *  p.ej. `knobRow.W() * 0.5f` o `inCell.MW() - 39.f`. Si el término es en
+ *  realidad un rect (nadie lo redujo a número), se descarta como 0: no tiene
+ *  sentido sumar/restar un rect entero. */
+function evalNumeric(expr: string, vars: Record<string, RectV>, numVars: NumVars, canvas: RectV): number {
+  let rem = expr.trim();
+
+  const asNum = (v: Value): number => (v.kind === 'num' ? v.v : 0);
+
+  function parseFactor(): number {
+    let neg = false;
+    while (rem.startsWith('-') || rem.startsWith('+')) {
+      if (rem.startsWith('-')) neg = !neg;
+      rem = rem.slice(1).trim();
+    }
+    const { value, rest } = evalValue(rem, vars, numVars, canvas);
+    rem = rest.trim();
+    const n = asNum(value);
+    return neg ? -n : n;
+  }
+  function parseTerm(): number {
+    let v = parseFactor();
+    while (rem.startsWith('*') || rem.startsWith('/')) {
+      const op = rem[0];
+      rem = rem.slice(1).trim();
+      const rhs = parseFactor();
+      v = op === '*' ? v * rhs : v / rhs;
+    }
+    return v;
+  }
+  function parseExpr(): number {
+    let v = parseTerm();
+    while (rem.startsWith('+') || rem.startsWith('-')) {
+      const op = rem[0];
+      rem = rem.slice(1).trim();
+      const rhs = parseTerm();
+      v = op === '+' ? v + rhs : v - rhs;
+    }
+    return v;
+  }
+
+  const result = parseExpr();
+  return Number.isFinite(result) ? result : 0;
+}
+
+/** Evalúa una expresión de lectura (nunca muta variables) que se espera
+ *  resuelva a un RECT: identificador conocido o `pGraphics->GetBounds()`,
+ *  seguido de una cadena de `.Metodo(args)`. */
+function evalExpr(expr: string, vars: Record<string, RectV>, numVars: NumVars, canvas: RectV): RectV {
+  const { value } = evalValue(expr, vars, numVars, canvas);
+  return value.kind === 'rect' ? value.v : canvas;
 }
 
 const BARE_REDUCE_RE = /^([A-Za-z_]\w*)\.(ReduceFrom(?:Top|Bottom|Left|Right))\s*\(([^()]*)\)\s*$/;
@@ -190,24 +293,43 @@ const BARE_REDUCE_RE = /^([A-Za-z_]\w*)\.(ReduceFrom(?:Top|Bottom|Left|Right))\s
  * lo demás (encadenados de GetFromX, SubRectVertical, GetGridCell, etc., que
  * sí son de solo lectura).
  */
-function evalDeclRHS(rhs: string, vars: Record<string, RectV>, canvas: RectV): RectV {
+function evalDeclRHS(rhs: string, vars: Record<string, RectV>, numVars: NumVars, canvas: RectV): RectV {
   const m = rhs.trim().match(BARE_REDUCE_RE);
   if (m) {
     const [, name, method, argsText] = m;
     const cur = vars[name];
     if (cur) {
-      const args = splitTopLevel(argsText).map(parseNum).filter((n) => !Number.isNaN(n));
+      const args = splitTopLevel(argsText)
+        .filter((a) => a.trim().length > 0)
+        .map((a) => evalNumeric(a, vars, numVars, canvas));
       const { rect, removed } = applyReduce(cur, method, args);
       vars[name] = rect;
       return removed;
     }
   }
-  return evalExpr(rhs, vars, canvas);
+  return evalExpr(rhs, vars, numVars, canvas);
+}
+
+/**
+ * Los constructores `IBKnobControl(x, y, bitmap, param)`/`IBSwitchControl(...)`
+ * casi siempre posicionan el control centrado en un punto, restándole la
+ * mitad de su propio tamaño: `celda.MW() - 39.f` (mitad de un knob de 78px).
+ * Si detecta ese patrón en x y/o y, recupera el tamaño EXACTO (39*2=78) en
+ * vez de adivinar — y solo cae a un tamaño por defecto razonable si no.
+ */
+function inferXYControlSize(xExpr: string, yExpr: string): { w: number; h: number } {
+  const DEFAULT = 80;
+  const mx = xExpr.match(/\.M[WH]\s*\(\s*\)\s*-\s*(\d+(?:\.\d+)?)/);
+  const my = yExpr.match(/\.M[WH]\s*\(\s*\)\s*-\s*(\d+(?:\.\d+)?)/);
+  const w = mx ? Math.round(parseFloat(mx[1]) * 2) : DEFAULT;
+  const h = my ? Math.round(parseFloat(my[1]) * 2) : DEFAULT;
+  return { w, h };
 }
 
 function handleAttachControl(
   inner: string,
   vars: Record<string, RectV>,
+  numVars: NumVars,
   canvas: RectV,
   controls: Control[],
   refBoxes: RefBox[],
@@ -228,15 +350,29 @@ function handleAttachControl(
   const ctorArgs = splitTopLevel(ctorExpr.slice(ctorOpen + 1, ctorClose));
   if (ctorArgs.length === 0) return;
 
-  const rect = toRect(evalExpr(ctorArgs[0], vars, canvas));
+  // IBKnobControl/IBSwitchControl reciben (x, y, bitmap, param) — dos floats
+  // sueltos, no un IRECT — a diferencia de sus primos "vector"
+  // (IVKnobControl/IVToggleControl/...) que sí reciben un rect entero.
+  const rect = XY_BITMAP_TYPES.has(typeName) && ctorArgs.length >= 2
+    ? (() => {
+        const x = evalNumeric(ctorArgs[0], vars, numVars, canvas);
+        const y = evalNumeric(ctorArgs[1], vars, numVars, canvas);
+        const { w, h } = inferXYControlSize(ctorArgs[0], ctorArgs[1]);
+        return { x: Math.round(x), y: Math.round(y), w, h };
+      })()
+    : toRect(evalExpr(ctorArgs[0], vars, numVars, canvas));
   if (rect.w <= 0 || rect.h <= 0) return;
 
   const tagArg = topArgs[1] && /^[A-Za-z_]\w*$/.test(topArgs[1].trim()) ? topArgs[1].trim() : undefined;
-  const paramArg = ctorArgs[1] && /^k[A-Za-z]\w*$/.test(ctorArgs[1].trim()) ? ctorArgs[1].trim() : undefined;
+  // El parámetro cae en un índice distinto según la firma: (rect, param, ...)
+  // para los controles "vector", (x, y, bitmap, param) para los "bitmap".
+  const paramIdx = XY_BITMAP_TYPES.has(typeName) ? 3 : 1;
+  const labelIdx = paramIdx + 1;
+  const paramArg = ctorArgs[paramIdx] && /^k[A-Za-z]\w*$/.test(ctorArgs[paramIdx].trim()) ? ctorArgs[paramIdx].trim() : undefined;
 
   if ((KNOB_TYPES.has(typeName) || SWITCH_TYPES.has(typeName)) && paramArg) {
     const paramId = paramIdFromTag(paramArg);
-    const label = ctorArgs[2] ? unquote(ctorArgs[2]) : paramId;
+    const label = ctorArgs[labelIdx] ? unquote(ctorArgs[labelIdx]) : paramId;
     controls.push({
       id: makeId(KNOB_TYPES.has(typeName) ? 'knob' : 'sw'),
       type: typeName as Control['type'],
@@ -274,10 +410,21 @@ export function scanLegacyLayout(source: string, plugW: number, plugH: number): 
   try {
     const canvas: RectV = { L: 0, T: 0, R: plugW, B: plugH };
     const vars: Record<string, RectV> = {};
+    const numVars: NumVars = {};
     const controls: Control[] = [];
     const refBoxes: RefBox[] = [];
 
-    const re = /(?:(?:const\s+)?IRECT\s+(\w+)\s*=\s*)|(?:(\w+)\.(ReduceFrom(?:Top|Bottom|Left|Right))\s*\()|(?:AttachControl\s*\()/g;
+    // Reconoce, en este orden de prioridad en cada posición:
+    //  1) `IRECT nombre = ...;`            declaración de rect
+    //  2) `(const)? float nombre = ...;`   constante numérica (constexpr o no)
+    //  3) `nombre.ReduceFromX(...)`        mutación in-place (estilo GhostDuck)
+    //  4) `nombre = ...;`                  REASIGNACIÓN funcional (estilo MBC4:
+    //     `header = header.GetReducedFromLeft(...)`) — solo cuenta si `nombre`
+    //     ya es un rect conocido; si no, se ignora sin más (podría ser
+    //     cualquier otra cosa, un contador de for, un miembro...).
+    //  5) `AttachControl(`                 el control en sí.
+    const re =
+      /(?:(?:const\s+)?IRECT\s+(\w+)\s*=\s*)|(?:(?:constexpr\s+|const\s+)?float\s+(\w+)\s*=\s*)|(?:(\w+)\.(ReduceFrom(?:Top|Bottom|Left|Right))\s*\()|(?:(\w+)\s*=\s*(?!=))|(?:AttachControl\s*\()/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(source)) !== null) {
       if (m[1]) {
@@ -285,22 +432,44 @@ export function scanLegacyLayout(source: string, plugW: number, plugH: number): 
         const rhsStart = re.lastIndex;
         const semiIdx = source.indexOf(';', rhsStart);
         if (semiIdx === -1) break;
-        vars[name] = evalDeclRHS(source.slice(rhsStart, semiIdx), vars, canvas);
+        vars[name] = evalDeclRHS(source.slice(rhsStart, semiIdx), vars, numVars, canvas);
         re.lastIndex = semiIdx + 1;
       } else if (m[2]) {
         const name = m[2];
-        const method = m[3];
+        const rhsStart = re.lastIndex;
+        const semiIdx = source.indexOf(';', rhsStart);
+        if (semiIdx === -1) break;
+        numVars[name] = evalNumeric(source.slice(rhsStart, semiIdx), vars, numVars, canvas);
+        re.lastIndex = semiIdx + 1;
+      } else if (m[3]) {
+        const name = m[3];
+        const method = m[4];
         const openIdx = re.lastIndex - 1;
         const closeIdx = matchClose(source, openIdx);
         if (closeIdx === -1) break;
-        const args = splitTopLevel(source.slice(openIdx + 1, closeIdx)).map(parseNum).filter((n) => !Number.isNaN(n));
+        const args = splitTopLevel(source.slice(openIdx + 1, closeIdx))
+          .filter((a) => a.trim().length > 0)
+          .map((a) => evalNumeric(a, vars, numVars, canvas));
         if (vars[name]) vars[name] = applyReduce(vars[name], method, args).rect;
         re.lastIndex = closeIdx + 1;
+      } else if (m[5]) {
+        // Reasignación (`nombre = ...;`): solo importa si `nombre` YA es un
+        // rect conocido — si no, puede ser cualquier cosa (`int band = 0` de
+        // un for, un miembro, etc.) y se deja pasar sin tocar `lastIndex` a
+        // mano (el regex ya avanzó solo).
+        const name = m[5];
+        if (vars[name] !== undefined) {
+          const rhsStart = re.lastIndex;
+          const semiIdx = source.indexOf(';', rhsStart);
+          if (semiIdx === -1) break;
+          vars[name] = evalExpr(source.slice(rhsStart, semiIdx), vars, numVars, canvas);
+          re.lastIndex = semiIdx + 1;
+        }
       } else {
         const openIdx = re.lastIndex - 1;
         const closeIdx = matchClose(source, openIdx);
         if (closeIdx === -1) break;
-        handleAttachControl(source.slice(openIdx + 1, closeIdx), vars, canvas, controls, refBoxes);
+        handleAttachControl(source.slice(openIdx + 1, closeIdx), vars, numVars, canvas, controls, refBoxes);
         re.lastIndex = closeIdx + 1;
       }
     }
