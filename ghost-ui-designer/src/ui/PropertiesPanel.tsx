@@ -20,6 +20,7 @@ export function PropertiesPanel() {
   const sendToBack = useStore((s) => s.sendToBack);
   const bringForward = useStore((s) => s.bringForward);
   const sendBackward = useStore((s) => s.sendBackward);
+  const removeControl = useStore((s) => s.removeControl);
 
   const control = scene.controls.find((c) => c.id === selectedId);
   if (!control) return <div className="panel">Selecciona un control</div>;
@@ -93,6 +94,19 @@ export function PropertiesPanel() {
         </div>
         <span className="hint">Si un control queda tapado por otro (ej. un fondo), tráelo al frente aquí.</span>
       </label>
+
+      <button
+        className="btn"
+        style={{ color: '#e0665a', borderColor: '#e0665a' }}
+        onClick={() => {
+          if (window.confirm(`¿Borrar "${control.name}" por completo? (Ctrl+Z para deshacer)`)) {
+            removeControl(control.id);
+          }
+        }}
+        title="Borra el control entero (todas sus capas y efectos), no una capa suelta."
+      >
+        🗑 Eliminar control
+      </button>
 
       {control.type === 'IBSwitchControl' && (
         <label>

@@ -211,9 +211,14 @@ export function Stage() {
     if (c) setLiveRect({ x, y, w: c.rect.w, h: c.rect.h });
   };
 
+  const selectedRefBox = (scene.refBoxes ?? []).find((b) => b.id === selectedRefBoxId) ?? null;
+
   // El HUD muestra la posición/tamaño en vivo mientras arrastras; si no hay
-  // arrastre en curso, muestra los valores actuales del control seleccionado.
-  const hud = liveRect ?? (selectedControl ? selectedControl.rect : null);
+  // arrastre en curso, muestra los valores actuales del control (o, si no hay
+  // control seleccionado, de la caja de referencia) seleccionado — así se ve
+  // el tamaño en px tanto al seleccionar una caja como después de moverla o
+  // redimensionarla a mano.
+  const hud = liveRect ?? (selectedControl ? selectedControl.rect : selectedRefBox ? selectedRefBox.rect : null);
   const hudPct = (v: number, total: number) => (total > 0 ? Math.round((v / total) * 1000) / 10 : 0);
 
   return (

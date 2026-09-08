@@ -73,6 +73,11 @@ interface AppState {
   /** Cambia el nº de pasos de un switch (frames del filmstrip + rango del parámetro). */
   setSteps: (controlId: string, steps: number) => void;
   updateControl: (id: string, patch: Partial<Control>) => void;
+  /** Borra el control ENTERO (no una capa suelta) de la escena. Si estaba
+   *  seleccionado, limpia la selección. */
+  removeControl: (id: string) => void;
+  /** Borra todos los controles actualmente seleccionados (`selectedIds`). */
+  removeSelectedControls: () => void;
   moveControl: (id: string, x: number, y: number) => void;
   /** Orden de dibujo (qué queda delante/detrás de qué): el que está más al
    *  final de `scene.controls` se dibuja último, o sea, queda ENCIMA. */
@@ -471,6 +476,24 @@ export const useStore = create<AppState>((set, get) => ({
         ),
       },
     })),
+
+  removeControl: (id) =>
+    set((s) => ({
+      scene: { ...s.scene, controls: s.scene.controls.filter((c) => c.id !== id) },
+      selectedId: s.selectedId === id ? null : s.selectedId,
+      selectedIds: s.selectedIds.filter((x) => x !== id),
+    })),
+
+  removeSelectedControls: () =>
+    set((s) => {
+      if (s.selectedIds.length === 0) return {};
+      const toRemove = new Set(s.selectedIds);
+      return {
+        scene: { ...s.scene, controls: s.scene.controls.filter((c) => !toRemove.has(c.id)) },
+        selectedId: null,
+        selectedIds: [],
+      };
+    }),
 
   moveControl: (id, x, y) =>
     set((s) => ({

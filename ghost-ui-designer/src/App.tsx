@@ -27,14 +27,27 @@ export function App() {
   // deshacer nativo del navegador dentro de un campo de texto.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      const mod = e.ctrlKey || e.metaKey;
-      if (!mod || e.key.toLowerCase() !== 'z' && e.key.toLowerCase() !== 'y') return;
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      e.preventDefault();
-      const { undo, redo } = useStore.getState();
-      if (e.key.toLowerCase() === 'y' || e.shiftKey) redo();
-      else undo();
+
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && (e.key.toLowerCase() === 'z' || e.key.toLowerCase() === 'y')) {
+        e.preventDefault();
+        const { undo, redo } = useStore.getState();
+        if (e.key.toLowerCase() === 'y' || e.shiftKey) redo();
+        else undo();
+        return;
+      }
+
+      // Supr/Backspace borra el/los control(es) seleccionados ENTEROS (no
+      // una capa suelta) — antes no había forma de sacar un control completo
+      // de la escena, solo capa por capa desde el panel de capas.
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const { selectedIds, removeSelectedControls } = useStore.getState();
+        if (selectedIds.length === 0) return;
+        e.preventDefault();
+        removeSelectedControls();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
