@@ -97,3 +97,57 @@ describe('store: cajas de referencia', () => {
     expect(useStore.getState().scene.refBoxes).toEqual([]);
   });
 });
+
+describe('store: selección de control y de caja de referencia son mutuamente excluyentes', () => {
+  beforeEach(() => {
+    useStore.getState().setScene({
+      version: 1,
+      meta: { pluginName: 'T', author: '' },
+      canvas: { width: 400, height: 300, bg: '#111' },
+      lights: [{ angleDeg: 120, intensity: 0.7 }],
+      assets: { textures: [], filmstrips: [] },
+      params: [],
+      controls: [
+        { id: 'knob1', type: 'IVKnobControl', name: 'Knob', rect: { x: 0, y: 0, w: 20, h: 20 }, props: {}, layers: [], effects: [] },
+      ],
+      refBoxes: [],
+    });
+  });
+
+  it('bug real: seleccionar una caja de referencia con un control YA seleccionado limpia esa selección', () => {
+    // Este es justo el caso que rompía el HUD de tamaño: si quedaba un
+    // control "pegado" en selectedId, el HUD seguía mostrando SUS medidas
+    // en vez de las de la caja recién clickeada (como si esta no tuviera
+    // tamaño).
+    useStore.getState().select('knob1');
+    expect(useStore.getState().selectedId).toBe('knob1');
+
+    useStore.getState().addRefBox();
+    const boxId = useStore.getState().scene.refBoxes![0].id;
+    useStore.getState().selectRefBox(boxId);
+
+    expect(useStore.getState().selectedRefBoxId).toBe(boxId);
+    expect(useStore.getState().selectedId).toBeNull();
+    expect(useStore.getState().selectedIds).toEqual([]);
+  });
+
+  it('al revés: seleccionar un control limpia la selección de caja de referencia', () => {
+    useStore.getState().addRefBox();
+    const boxId = useStore.getState().scene.refBoxes![0].id;
+    useStore.getState().selectRefBox(boxId);
+    expect(useStore.getState().selectedRefBoxId).toBe(boxId);
+
+    useStore.getState().select('knob1');
+    expect(useStore.getState().selectedId).toBe('knob1');
+    expect(useStore.getState().selectedRefBoxId).toBeNull();
+  });
+
+  it('selectMany (marquee) también limpia la selección de caja de referencia', () => {
+    useStore.getState().addRefBox();
+    const boxId = useStore.getState().scene.refBoxes![0].id;
+    useStore.getState().selectRefBox(boxId);
+
+    useStore.getState().selectMany(['knob1'], false);
+    expect(useStore.getState().selectedRefBoxId).toBeNull();
+  });
+});

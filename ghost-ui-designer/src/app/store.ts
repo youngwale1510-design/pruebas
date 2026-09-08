@@ -149,22 +149,30 @@ export const useStore = create<AppState>((set, get) => ({
   advanced: false,
   setAdvanced: (v: boolean) => set({ advanced: v }),
 
-  select: (id) => set({ selectedId: id, selectedIds: id ? [id] : [] }),
+  // Seleccionar un control y seleccionar una caja de referencia son estados
+  // MUTUAMENTE EXCLUYENTES (un control real y una caja de referencia nunca
+  // se editan a la vez) — por eso cada acción de selección de control limpia
+  // `selectedRefBoxId`, y `selectRefBox` limpia la selección de controles.
+  // Sin esto, si había un control seleccionado antes, quedaba "pegado" en
+  // `selectedId` y el HUD de tamaño (X/Y/W/H) seguía mostrando SUS medidas
+  // en vez de las de la caja de referencia recién clickeada — como si esta
+  // última no tuviera tamaño.
+  select: (id) => set({ selectedId: id, selectedIds: id ? [id] : [], selectedRefBoxId: null }),
 
   toggleSelect: (id) =>
     set((s) => {
       const on = s.selectedIds.includes(id);
       const ids = on ? s.selectedIds.filter((x) => x !== id) : [...s.selectedIds, id];
-      return { selectedIds: ids, selectedId: ids.length ? ids[ids.length - 1] : null };
+      return { selectedIds: ids, selectedId: ids.length ? ids[ids.length - 1] : null, selectedRefBoxId: null };
     }),
 
   selectMany: (ids, additive) =>
     set((s) => {
       const merged = additive ? [...s.selectedIds, ...ids.filter((id) => !s.selectedIds.includes(id))] : ids;
-      return { selectedIds: merged, selectedId: merged.length ? merged[merged.length - 1] : null };
+      return { selectedIds: merged, selectedId: merged.length ? merged[merged.length - 1] : null, selectedRefBoxId: null };
     }),
 
-  selectRefBox: (id) => set({ selectedRefBoxId: id }),
+  selectRefBox: (id) => set({ selectedRefBoxId: id, selectedId: null, selectedIds: [] }),
 
   addRefBox: () =>
     set((s) => {
