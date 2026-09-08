@@ -60,13 +60,18 @@ export interface ColorAdjust {
 
 export type LayerShape = 'ellipse' | 'rect' | 'roundRect' | 'scalloped' | 'polygon' | 'wedge' | 'ticks';
 
-/** Anillo de marcas exteriores (escala del knob): puntos o líneas alrededor. */
+/** Anillo de marcas exteriores (escala del knob): puntos, líneas o LEDs. */
 export interface TicksConfig {
   count: number;      // nº de marcas
-  style: 'dot' | 'line';
+  /** dot/line: estáticas. led: se van encendiendo según el valor (barra de
+   *  nivel). glow: solo la marca más cercana al valor actual se enciende
+   *  (con halo), como un indicador "iluminado". */
+  style: 'dot' | 'line' | 'led' | 'glow';
   radius: number;     // fracción del radio (0..1) donde se colocan
   spanDeg: number;    // arco total que cubren (p.ej. 270)
   size: number;       // tamaño del punto / largo de la línea (px)
+  /** color encendido para 'led'/'glow'; si falta, se usa `layer.fill`. */
+  litColor?: string;
 }
 
 /** Texto de una capa (etiquetas, marcas ON/OFF, nombre del plugin…). */

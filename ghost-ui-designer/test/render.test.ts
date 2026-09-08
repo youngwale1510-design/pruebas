@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resolveLight, rotationForValue, shadowOffset } from '../src/render/light';
-import { frameSize, layerBox, leverGeometry, snapValue, travelOffset } from '../src/render/renderControl';
+import { frameSize, layerBox, leverGeometry, litTickStates, snapValue, travelOffset } from '../src/render/renderControl';
 import {
   filmstripLayout,
   frameOrigin,
@@ -47,6 +47,25 @@ describe('geometría de capa', () => {
       opacity: 1, effects: [], inset: 0.1,
     });
     expect(box).toEqual({ x: 10, y: 10, w: 180, h: 80 });
+  });
+});
+
+describe('anillo de marcas: estilos LED / iluminado', () => {
+  it("'led' enciende todas las marcas hasta el valor actual (barra de nivel)", () => {
+    expect(litTickStates(5, 0, 'led')).toEqual([true, false, false, false, false]);
+    expect(litTickStates(5, 0.5, 'led')).toEqual([true, true, true, false, false]);
+    expect(litTickStates(5, 1, 'led')).toEqual([true, true, true, true, true]);
+  });
+
+  it("'glow' enciende SOLO la marca más cercana al valor actual", () => {
+    expect(litTickStates(5, 0, 'glow')).toEqual([true, false, false, false, false]);
+    expect(litTickStates(5, 0.5, 'glow')).toEqual([false, false, true, false, false]);
+    expect(litTickStates(5, 1, 'glow')).toEqual([false, false, false, false, true]);
+  });
+
+  it("'dot' y 'line' no tienen noción de encendido", () => {
+    expect(litTickStates(4, 0.7, 'dot')).toEqual([false, false, false, false]);
+    expect(litTickStates(4, 0.7, 'line')).toEqual([false, false, false, false]);
   });
 });
 

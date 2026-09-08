@@ -2,7 +2,7 @@
 // valor. Es la ÚNICA función que produce píxeles, usada tanto por el editor como
 // por el rasterizador de filmstrips -> el editor se ve idéntico al plugin.
 
-import { Control, Layer, LightSource, SceneDocument, TextStyle } from '../model/scene';
+import { Control, Layer, LightSource, SceneDocument, TextStyle, TicksConfig } from '../model/scene';
 import { EffectHints, PathFn, applyEffectsAbove, applyEffectsBelow, drawRim } from './effects';
 import { LightVectors, resolveLight, rotateLight, rotationForValue } from './light';
 import { parseColor } from './color';
@@ -120,37 +120,82 @@ function tracePath(ctx: Ctx, box: Box, layer: Layer) {
   }
 }
 
-/** Anillo de marcas exteriores (escala del knob). Estáticas por defecto. */
-function drawTicks(ctx: Ctx, w: number, h: number, layer: Layer) {
+/** Alfa de una marca 'led'/'glow' que está apagada (atenuada respecto al color
+ *  encendido, pero sin necesitar mezclar colores a mano). */
+const TICK_DIM_ALPHA = 0.22;
+
+/** Qué marcas quedan encendidas para `value` (0..1) y `count` marcas.
+ *  'led': todas las que quedan a la izquierda del valor (barra de nivel).
+ *  'glow': solo la más cercana al valor actual. Cualquier otro estilo no
+ *  tiene noción de encendido (siempre `false`). Función pura. */
+export function litTickStates(count: number, value: number, style: TicksConfig['style']): boolean[] {
+  const n = Math.max(2, Math.round(count));
+  if (style === 'led') {
+    return Array.from({ length: n }, (_, i) => (n <= 1 ? 0 : i / (n - 1)) <= value + 1e-6);
+  }
+  if (style === 'glow') {
+    const nearest = Math.round(value * (n - 1));
+    return Array.from({ length: n }, (_, i) => i === nearest);
+  }
+  return Array.from({ length: n }, () => false);
+}
+
+/** Anillo de marcas exteriores (escala del knob). 'dot'/'line' son estáticas;
+ *  'led' se rellena progresivamente hasta `value`; 'glow' enciende solo la
+ *  marca más cercana a `value` (con halo), como un indicador que "se ilumina". */
+function drawTicks(ctx: Ctx, w: number, h: number, layer: Layer, value: number) {
   const t = layer.ticks;
   if (!t) return;
   const cx = w / 2, cy = h / 2;
   const R = (Math.min(w, h) / 2) * (t.radius ?? 0.92);
   const count = Math.max(2, Math.round(t.count ?? 11));
   const spanRad = ((t.spanDeg ?? 270) * Math.PI) / 180;
+  const style = t.style ?? 'dot';
   const color = layer.fill ?? '#c9c9d0';
   const size = t.size ?? 3;
+  const litColor = t.litColor ?? color;
+  const lit = litTickStates(count, value, style);
   ctx.save();
-  ctx.globalAlpha = layer.opacity;
-  ctx.fillStyle = color;
-  ctx.strokeStyle = color;
   ctx.lineCap = 'round';
   for (let i = 0; i < count; i++) {
     const frac = count <= 1 ? 0 : i / (count - 1);
     // centradas arriba, hueco abajo (como un knob real)
     const ang = -Math.PI / 2 - spanRad / 2 + spanRad * frac;
     const cos = Math.cos(ang), sin = Math.sin(ang);
-    if ((t.style ?? 'dot') === 'line') {
+    if (style === 'line') {
+      ctx.globalAlpha = layer.opacity;
+      ctx.strokeStyle = color;
       ctx.lineWidth = Math.max(1, size * 0.5);
       ctx.beginPath();
       ctx.moveTo(cx + cos * R, cy + sin * R);
       ctx.lineTo(cx + cos * (R - size * 1.6), cy + sin * (R - size * 1.6));
       ctx.stroke();
-    } else {
+      continue;
+    }
+    if (style === 'led' || style === 'glow') {
+      const on = lit[i];
       ctx.beginPath();
       ctx.arc(cx + cos * R, cy + sin * R, size, 0, Math.PI * 2);
+      if (on) {
+        ctx.globalAlpha = layer.opacity;
+        ctx.shadowColor = litColor;
+        ctx.shadowBlur = size * (style === 'glow' ? 3 : 1.8);
+        ctx.fillStyle = litColor;
+      } else {
+        ctx.globalAlpha = layer.opacity * TICK_DIM_ALPHA;
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = color;
+      }
       ctx.fill();
+      ctx.shadowBlur = 0;
+      continue;
     }
+    // 'dot'
+    ctx.globalAlpha = layer.opacity;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(cx + cos * R, cy + sin * R, size, 0, Math.PI * 2);
+    ctx.fill();
   }
   ctx.restore();
 }
@@ -296,7 +341,7 @@ function renderLayer(
   extraLights: LightSource[] = [],
 ) {
   if (!layer.visible) return;
-  if (layer.shape === 'ticks') { drawTicks(ctx, w, h, layer); return; }
+  if (layer.shape === 'ticks') { drawTicks(ctx, w, h, layer, value); return; }
   if (layer.kind === 'text') { drawText(ctx, w, h, layer, light, images); return; }
   const mode = layer.anim?.mode ?? 'none';
   const rotate = mode === 'rotate';

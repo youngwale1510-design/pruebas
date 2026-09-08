@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../app/store';
-import { EffectType, Layer, LayerShape } from '../model/scene';
+import { EffectType, Layer, LayerShape, TicksConfig } from '../model/scene';
 import { makeId } from '../model/defaults';
 import { MATERIALS, MaterialId } from '../model/materials';
 import { ensureFontLoaded, PRESET_FONTS } from '../render/fonts';
@@ -120,7 +120,7 @@ export function LayersPanel() {
       <h3>Capas y efectos</h3>
       {control.layers.map((l: Layer) => {
         const speculars = l.effects.filter((e) => e.type === 'specular');
-        const t = l.ticks ?? { count: 11, style: 'dot' as const, radius: 0.92, spanDeg: 270, size: 3 };
+        const t = l.ticks ?? { count: 11, style: 'dot' as TicksConfig['style'], radius: 0.92, spanDeg: 270, size: 3 };
         const setTicks = (patch: Partial<typeof t>) =>
           updateLayer(control.id, l.id, { ticks: { ...t, ...patch } });
         const isOpen = !collapsed[l.id];
@@ -256,10 +256,17 @@ export function LayersPanel() {
                   <input type="range" min={2} max={48} step={1} value={t.count}
                     onChange={(e) => setTicks({ count: Number(e.target.value) })} /></label>
                 <label className="k3-field"><span>Estilo</span>
-                  <select value={t.style} onChange={(e) => setTicks({ style: e.target.value as 'dot' | 'line' })}>
+                  <select value={t.style} onChange={(e) => setTicks({ style: e.target.value as TicksConfig['style'] })}>
                     <option value="dot">Puntos</option>
                     <option value="line">Líneas</option>
+                    <option value="led">LED (se rellena con el valor)</option>
+                    <option value="glow">Iluminado (solo la marca del valor actual)</option>
                   </select></label>
+                {(t.style === 'led' || t.style === 'glow') && (
+                  <label className="k3-field"><span>Color encendido</span>
+                    <input type="color" value={t.litColor ?? '#ff6a3d'}
+                      onChange={(e) => setTicks({ litColor: e.target.value })} /></label>
+                )}
                 <label className="k3-field"><span>Radio <b>{Math.round(t.radius * 100)}%</b></span>
                   <input type="range" min={0.5} max={1} step={0.01} value={t.radius}
                     onChange={(e) => setTicks({ radius: Number(e.target.value) })} /></label>
