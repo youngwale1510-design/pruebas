@@ -252,17 +252,20 @@ export function LayersPanel() {
             )}
             {l.shape === 'ticks' && (
               <>
+                {t.style !== 'arc' && (
                 <label className="k3-field"><span>Nº de marcas <b>{t.count}</b></span>
                   <input type="range" min={2} max={48} step={1} value={t.count}
                     onChange={(e) => setTicks({ count: Number(e.target.value) })} /></label>
+                )}
                 <label className="k3-field"><span>Estilo</span>
                   <select value={t.style} onChange={(e) => setTicks({ style: e.target.value as TicksConfig['style'] })}>
                     <option value="dot">Puntos</option>
                     <option value="line">Líneas</option>
                     <option value="led">LED (se rellena con el valor)</option>
                     <option value="glow">Iluminado (solo la marca del valor actual)</option>
+                    <option value="arc">Arco (línea continua que se rellena)</option>
                   </select></label>
-                {(t.style === 'led' || t.style === 'glow') && (
+                {(t.style === 'led' || t.style === 'glow' || t.style === 'arc') && (
                   <label className="k3-field"><span>Color encendido</span>
                     <input type="color" value={t.litColor ?? '#ff6a3d'}
                       onChange={(e) => setTicks({ litColor: e.target.value })} /></label>

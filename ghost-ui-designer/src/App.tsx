@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { Stage } from './canvas/Stage';
 import { PropertiesPanel } from './ui/PropertiesPanel';
 import { LayersPanel } from './ui/LayersPanel';
-import { Knob3DPanel } from './ui/Knob3DPanel';
 import { LightPanel } from './ui/LightPanel';
 import { CanvasPanel } from './ui/CanvasPanel';
 import { AlignPanel } from './ui/AlignPanel';
@@ -76,7 +75,6 @@ export function App() {
           <LightPanel />
           <PropertiesPanel />
           <LayersPanel />
-          <Knob3DPanel />
         </aside>
       </div>
     </div>

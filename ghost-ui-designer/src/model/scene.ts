@@ -2,8 +2,6 @@
 // Este tipo es EXACTAMENTE lo que se serializa al archivo de proyecto .ghostui
 // y también lo que se embebe (por control) en los marcadores del .cpp.
 
-import { KnobConfig } from './knobConfig';
-
 export const GHOSTUI_VERSION = 1 as const;
 
 export type BlendMode =
@@ -60,17 +58,19 @@ export interface ColorAdjust {
 
 export type LayerShape = 'ellipse' | 'rect' | 'roundRect' | 'scalloped' | 'polygon' | 'wedge' | 'ticks';
 
-/** Anillo de marcas exteriores (escala del knob): puntos, líneas o LEDs. */
+/** Anillo de marcas exteriores (escala del knob): puntos, líneas, LEDs o arco. */
 export interface TicksConfig {
-  count: number;      // nº de marcas
+  count: number;      // nº de marcas (sin efecto en 'arc')
   /** dot/line: estáticas. led: se van encendiendo según el valor (barra de
-   *  nivel). glow: solo la marca más cercana al valor actual se enciende
-   *  (con halo), como un indicador "iluminado". */
-  style: 'dot' | 'line' | 'led' | 'glow';
+   *  nivel, marca por marca). glow: solo la marca más cercana al valor
+   *  actual se enciende (con halo), como un indicador "iluminado". arc: un
+   *  anillo continuo que se va rellenando con el valor (look moderno de
+   *  plugin, en vez de LEDs discretos). */
+  style: 'dot' | 'line' | 'led' | 'glow' | 'arc';
   radius: number;     // fracción del radio (0..1) donde se colocan
   spanDeg: number;    // arco total que cubren (p.ej. 270)
-  size: number;       // tamaño del punto / largo de la línea (px)
-  /** color encendido para 'led'/'glow'; si falta, se usa `layer.fill`. */
+  size: number;       // tamaño del punto/línea (px); en 'arc', grosor del trazo
+  /** color encendido para 'led'/'glow'/'arc'; si falta, se usa `layer.fill`. */
   litColor?: string;
 }
 
@@ -181,9 +181,6 @@ export interface Control {
   props: Record<string, number | string | boolean>;
   layers: Layer[];
   effects: Effect[];
-  /** Configuración del knob 3D (opción B con horneado 3D→filmstrip). Si está
-   *  presente, el export hornea el filmstrip con el pipeline 3D. */
-  knob3d?: KnobConfig;
 }
 
 export interface ParamDef {

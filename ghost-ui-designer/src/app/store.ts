@@ -4,7 +4,6 @@ import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defa
 import { AlignKind, Guides, MatchDim, alignRects, distributeRects, matchSizeRects, snapRect } from './align';
 import { MaterialId, applyMaterial } from '../model/materials';
 import { ParamDef } from '../model/scene';
-import { KnobConfig, defaultKnobConfig } from '../model/knobConfig';
 
 interface AppState {
   scene: SceneDocument;
@@ -85,7 +84,6 @@ interface AppState {
   sendToBack: (id: string) => void;
   bringForward: (id: string) => void;
   sendBackward: (id: string) => void;
-  setKnob3d: (id: string, cfg: KnobConfig | undefined) => void;
   /** Cambia una luz global por su índice (0 = principal). */
   setLight: (index: number, patch: Partial<LightSource>) => void;
   /** Agrega una luz adicional (rim tintado); arranca en el lado opuesto a la principal. */
@@ -551,16 +549,6 @@ export const useStore = create<AppState>((set, get) => ({
       return { scene: { ...s.scene, controls } };
     }),
 
-  setKnob3d: (id, cfg) =>
-    set((s) => ({
-      scene: {
-        ...s.scene,
-        controls: s.scene.controls.map((c) =>
-          c.id === id ? { ...c, knob3d: cfg, type: cfg ? 'IBKnobControl' : c.type } : c,
-        ),
-      },
-    })),
-
   setLight: (index, patch) =>
     set((s) => ({
       scene: {
@@ -750,5 +738,3 @@ useStore.subscribe((state, prevState) => {
   history.future = [];
   syncHistoryFlags();
 });
-
-export { defaultKnobConfig };

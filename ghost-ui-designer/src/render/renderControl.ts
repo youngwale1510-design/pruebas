@@ -142,18 +142,45 @@ export function litTickStates(count: number, value: number, style: TicksConfig['
 
 /** Anillo de marcas exteriores (escala del knob). 'dot'/'line' son estáticas;
  *  'led' se rellena progresivamente hasta `value`; 'glow' enciende solo la
- *  marca más cercana a `value` (con halo), como un indicador que "se ilumina". */
+ *  marca más cercana a `value` (con halo), como un indicador que "se ilumina";
+ *  'arc' es un trazo continuo (no por marcas) que se va rellenando con `value`. */
 function drawTicks(ctx: Ctx, w: number, h: number, layer: Layer, value: number) {
   const t = layer.ticks;
   if (!t) return;
   const cx = w / 2, cy = h / 2;
   const R = (Math.min(w, h) / 2) * (t.radius ?? 0.92);
-  const count = Math.max(2, Math.round(t.count ?? 11));
   const spanRad = ((t.spanDeg ?? 270) * Math.PI) / 180;
   const style = t.style ?? 'dot';
   const color = layer.fill ?? '#c9c9d0';
   const size = t.size ?? 3;
   const litColor = t.litColor ?? color;
+
+  if (style === 'arc') {
+    const startAng = -Math.PI / 2 - spanRad / 2;
+    const lineWidth = Math.max(1.5, size * 1.3);
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.globalAlpha = layer.opacity * TICK_DIM_ALPHA;
+    ctx.beginPath();
+    ctx.arc(cx, cy, R, startAng, startAng + spanRad);
+    ctx.stroke();
+    if (value > 0) {
+      ctx.strokeStyle = litColor;
+      ctx.shadowColor = litColor;
+      ctx.shadowBlur = lineWidth;
+      ctx.globalAlpha = layer.opacity;
+      ctx.beginPath();
+      ctx.arc(cx, cy, R, startAng, startAng + spanRad * value);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+    return;
+  }
+
+  const count = Math.max(2, Math.round(t.count ?? 11));
   const lit = litTickStates(count, value, style);
   ctx.save();
   ctx.lineCap = 'round';

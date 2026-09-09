@@ -39,7 +39,6 @@
     "@types/node": "^22.10.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@types/three": "^0.160.0",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^33.2.0",
     "electron-builder": "^26.15.3",
@@ -53,7 +52,6 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-konva": "^18.2.10",
-    "three": "^0.160.0",
     "tree-sitter-cpp": "^0.23.4",
     "web-tree-sitter": "^0.25.6",
     "zustand": "^5.0.2"
