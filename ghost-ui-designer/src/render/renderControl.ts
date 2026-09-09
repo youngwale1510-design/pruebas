@@ -88,7 +88,7 @@ function tracePath(ctx: Ctx, box: Box, layer: Layer) {
     ctx.closePath();
   } else if (shape === 'scalloped') {
     const cx = box.x + box.w / 2, cy = box.y + box.h / 2, rx = box.w / 2, ry = box.h / 2;
-    const lobes = layer.lobes ?? 12, depth = 0.05, steps = 200;
+    const lobes = layer.lobes ?? 12, depth = layer.scallopDepth ?? 0.05, steps = 200;
     for (let i = 0; i <= steps; i++) {
       const t = (i / steps) * Math.PI * 2;
       const rr = 1 - depth * (0.5 + 0.5 * Math.cos(lobes * t));

@@ -137,6 +137,9 @@ export interface Layer {
   cornerRadius?: number;
   /** nº de lóbulos para 'scalloped'. */
   lobes?: number;
+  /** profundidad de cada estría para 'scalloped', como fracción del radio
+   *  (0..0.5); por defecto 0.05 (sutil). Más alto = surcos más marcados. */
+  scallopDepth?: number;
   /** nº de lados para 'polygon'. */
   sides?: number;
   /** configuración de marcas para shape 'ticks'. */

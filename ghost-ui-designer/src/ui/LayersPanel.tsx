@@ -237,11 +237,18 @@ export function LayersPanel() {
             )}
 
             {l.shape === 'scalloped' && (
-              <label className="k3-field">
-                <span>Nº de estrías <b>{l.lobes ?? 12}</b></span>
-                <input type="range" min={6} max={48} step={1} value={l.lobes ?? 12}
-                  onChange={(e) => updateLayer(control.id, l.id, { lobes: Number(e.target.value) })} />
-              </label>
+              <>
+                <label className="k3-field">
+                  <span>Nº de estrías <b>{l.lobes ?? 12}</b></span>
+                  <input type="range" min={6} max={48} step={1} value={l.lobes ?? 12}
+                    onChange={(e) => updateLayer(control.id, l.id, { lobes: Number(e.target.value) })} />
+                </label>
+                <label className="k3-field">
+                  <span>Profundidad de estría <b>{Math.round((l.scallopDepth ?? 0.05) * 100)}%</b></span>
+                  <input type="range" min={0.01} max={0.3} step={0.01} value={l.scallopDepth ?? 0.05}
+                    onChange={(e) => updateLayer(control.id, l.id, { scallopDepth: Number(e.target.value) })} />
+                </label>
+              </>
             )}
             {l.shape === 'polygon' && (
               <label className="k3-field">
