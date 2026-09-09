@@ -6,6 +6,7 @@ export function Toolbar() {
   const scene = useStore((s) => s.scene);
   const selectedId = useStore((s) => s.selectedId);
   const addKnob = useStore((s) => s.addKnob);
+  const addKnobPreset = useStore((s) => s.addKnobPreset);
   const addSwitch = useStore((s) => s.addSwitch);
   const addBackground = useStore((s) => s.addBackground);
   const addLabel = useStore((s) => s.addLabel);
@@ -142,6 +143,16 @@ export function Toolbar() {
       <button disabled={!canRedo} onClick={redo} title="Rehacer (Ctrl+Shift+Z / Ctrl+Y)">↷ Rehacer</button>
       <span className="toolbar-sep" />
       <button onClick={addKnob}>+ Knob</button>
+      <select
+        value=""
+        title="Variantes de knob físico listas para usar (después ajustá color/tamaño en Capas)"
+        onChange={(e) => { if (e.target.value) addKnobPreset(e.target.value as 'fluted' | 'chicken' | 'arc'); e.target.value = ''; }}
+      >
+        <option value="" disabled>+ Knob (estilo…)</option>
+        <option value="fluted">Estriado + flecha</option>
+        <option value="chicken">Chicken-head de color</option>
+        <option value="arc">Moderno (anillo de arco)</option>
+      </select>
       <button onClick={() => addSwitch('slide')}>+ Switch</button>
       <button onClick={() => addSwitch('toggle')}>+ Palanca</button>
       <button onClick={() => addSwitch('led')}>+ LED</button>

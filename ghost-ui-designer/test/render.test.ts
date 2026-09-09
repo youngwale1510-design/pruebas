@@ -13,7 +13,10 @@ import {
   controlFrames,
   generateResourcesHeader,
 } from '../src/codegen/iplug2/resources';
-import { emptyScene, defaultKnob, defaultKnobLayers, defaultSlideSwitch, defaultToggleSwitch } from '../src/model/defaults';
+import {
+  emptyScene, defaultKnob, defaultKnobLayers, defaultKnobFluted, defaultKnobChickenHead,
+  defaultKnobModernArc, defaultSlideSwitch, defaultToggleSwitch,
+} from '../src/model/defaults';
 
 describe('luz global', () => {
   it('vector de luz y offset de sombra', () => {
@@ -47,6 +50,27 @@ describe('geometría de capa', () => {
       opacity: 1, effects: [], inset: 0.1,
     });
     expect(box).toEqual({ x: 10, y: 10, w: 180, h: 80 });
+  });
+});
+
+describe('presets de knob "físico" en 2D (estriado, chicken-head, arco)', () => {
+  it("'fluted' tiene cuerpo estriado y puntero en forma de flecha ('wedge')", () => {
+    const c = defaultKnobFluted('k', 'K');
+    expect(c.layers.find((l) => l.name === 'Cuerpo')?.shape).toBe('scalloped');
+    expect(c.layers.find((l) => l.name === 'Puntero')?.shape).toBe('wedge');
+  });
+
+  it("'chicken' usa el color de cuerpo dado y un puntero 'wedge' más grande", () => {
+    const c = defaultKnobChickenHead('k', 'K', undefined, '#7a3dff');
+    expect(c.layers.find((l) => l.name === 'Cuerpo')?.fill).toBe('#7a3dff');
+    expect(c.layers.find((l) => l.name === 'Puntero')?.shape).toBe('wedge');
+  });
+
+  it("'arc' trae una capa de ticks en estilo 'arc' con el color de acento dado", () => {
+    const c = defaultKnobModernArc('k', 'K', undefined, '#00e0ff');
+    const ring = c.layers.find((l) => l.name === 'Anillo');
+    expect(ring?.ticks?.style).toBe('arc');
+    expect(ring?.ticks?.litColor).toBe('#00e0ff');
   });
 });
 

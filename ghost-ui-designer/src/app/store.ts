@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Control, Effect, EffectType, FontAsset, Layer, LightSource, RefBox, SceneDocument } from '../model/scene';
-import { emptyScene, makeId, defaultKnob, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed, defaultLedButton, defaultBackground, defaultLabel, defaultBadgeLabel, defaultImage } from '../model/defaults';
+import { emptyScene, makeId, defaultKnob, defaultKnobFluted, defaultKnobChickenHead, defaultKnobModernArc, defaultParam, defaultSlideSwitch, defaultToggleSwitch, defaultLed, defaultLedButton, defaultBackground, defaultLabel, defaultBadgeLabel, defaultImage } from '../model/defaults';
 import { AlignKind, Guides, MatchDim, alignRects, distributeRects, matchSizeRects, snapRect } from './align';
 import { MaterialId, applyMaterial } from '../model/materials';
 import { ParamDef } from '../model/scene';
@@ -49,6 +49,10 @@ interface AppState {
   /** Imagen libre (logo, sello…): movible y redimensionable, no ligada al lienzo. */
   addImage: () => void;
   addKnob: () => void;
+  /** Variantes de knob "físico" listas para usar (estriado+flecha, chicken-head
+   *  de color, o moderno con anillo de arco) — mismo resultado que "+ Knob"
+   *  pero con otra pila de capas de partida. */
+  addKnobPreset: (style: 'fluted' | 'chicken' | 'arc') => void;
   /** Añade un switch (deslizante o de palanca) con N pasos y su parámetro enum. */
   addSwitch: (kind: 'slide' | 'toggle' | 'led' | 'ledButton', steps?: number) => void;
   /** Fondo del plugin (una sola vez, al fondo de la pila). */
@@ -333,6 +337,25 @@ export const useStore = create<AppState>((set, get) => ({
       const n = s.scene.controls.length + 1;
       const pid = `param${n}`;
       const knob = defaultKnob(makeId('knob'), `Knob ${n}`, pid);
+      knob.rect.x = 20 + ((n - 1) % 4) * 100;
+      knob.rect.y = 20 + Math.floor((n - 1) / 4) * 130;
+      return {
+        scene: {
+          ...s.scene,
+          params: [...s.scene.params, defaultParam(pid, `Param ${n}`)],
+          controls: [...s.scene.controls, knob],
+        },
+        selectedId: knob.id,
+        selectedIds: [knob.id],
+      };
+    }),
+
+  addKnobPreset: (style) =>
+    set((s) => {
+      const n = s.scene.controls.length + 1;
+      const pid = `param${n}`;
+      const factory = style === 'fluted' ? defaultKnobFluted : style === 'chicken' ? defaultKnobChickenHead : defaultKnobModernArc;
+      const knob = factory(makeId('knob'), `Knob ${n}`, pid);
       knob.rect.x = 20 + ((n - 1) % 4) * 100;
       knob.rect.y = 20 + Math.floor((n - 1) / 4) * 130;
       return {

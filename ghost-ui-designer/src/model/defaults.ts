@@ -488,3 +488,129 @@ export function defaultKnob(id: string, name: string, paramId?: string): Control
     effects: [],
   };
 }
+
+/** Cuerpo estriado (más redondo ENTRE cada estría, no un diente afilado) con
+ *  puntero triangular tipo flecha/paleta (cromado por defecto) — el knob de
+ *  pedal clásico, en plástico o metal oscuro. Para el color del cuerpo o del
+ *  puntero, cambiá el "Color de relleno" de cada capa en el panel de capas. */
+export function defaultKnobFluted(id: string, name: string, paramId?: string): Control {
+  return {
+    id,
+    type: 'IBKnobControl',
+    name,
+    rect: { x: 20, y: 20, w: 96, h: 96 },
+    paramId,
+    props: { frames: 61, orientation: 'vertical', pad: 8 },
+    layers: [
+      layer('Cuerpo', {
+        shape: 'scalloped',
+        lobes: 10,
+        fill: '#141416',
+        anim: { mode: 'rotate', minDeg: -140, maxDeg: 140 },
+        effects: [
+          fx('dropShadow', { distance: 6, blur: 14, color: 'rgba(0,0,0,0.6)', useLight: true }),
+          fx('contactShadow', { size: 3, strength: 0.7 }),
+          fx('chamfer', { steps: 2, width: 3 }),
+          fx('bevel', { size: 5 }),
+          fx('specular', { size: 0.4, aspect: 1.6 }),
+          fx('gradientOverlay', { type: 'radial', from: 'rgba(255,255,255,0.05)', to: 'rgba(0,0,0,0.4)' }),
+          fx('rim', { size: 2.5 }),
+        ],
+      }),
+      layer('Puntero', {
+        shape: 'wedge',
+        rectNorm: { x: 0.32, y: 0.05, w: 0.36, h: 0.5 },
+        fill: '#eef1f5',
+        anim: { mode: 'rotate', minDeg: -140, maxDeg: 140 },
+        effects: [
+          fx('bevel', { size: 2 }),
+          fx('specular', { size: 0.5, aspect: 1.3, strength: 1.1 }),
+          fx('chrome', { strength: 0.5 }),
+        ],
+      }),
+    ],
+    effects: [],
+  };
+}
+
+/** Cuerpo redondo de plástico brillante (color a elección) con un puntero
+ *  grande tipo "chicken-head" — el knob de pedal clásico en color, con la
+ *  paleta más grande que el simple indicador de línea. */
+export function defaultKnobChickenHead(id: string, name: string, paramId?: string, bodyColor = '#e85fa0'): Control {
+  return {
+    id,
+    type: 'IBKnobControl',
+    name,
+    rect: { x: 20, y: 20, w: 96, h: 96 },
+    paramId,
+    props: { frames: 61, orientation: 'vertical', pad: 8 },
+    layers: [
+      layer('Cuerpo', {
+        shape: 'ellipse',
+        fill: bodyColor,
+        anim: { mode: 'rotate', minDeg: -150, maxDeg: 150 },
+        effects: [
+          fx('dropShadow', { distance: 6, blur: 14, color: 'rgba(0,0,0,0.55)', useLight: true }),
+          fx('contactShadow', { size: 3, strength: 0.7 }),
+          fx('bevel', { size: 6 }),
+          fx('specular', { size: 0.45, aspect: 1.8, strength: 1.3 }),
+          fx('sheen', { width: 0.3, strength: 0.25 }),
+          fx('rim', { size: 2.5 }),
+        ],
+      }),
+      layer('Puntero', {
+        shape: 'wedge',
+        rectNorm: { x: 0.26, y: 0.02, w: 0.48, h: 0.62 },
+        fill: '#141416',
+        anim: { mode: 'rotate', minDeg: -150, maxDeg: 150 },
+        effects: [
+          fx('bevel', { size: 2 }),
+          fx('specular', { size: 0.35, aspect: 1.4 }),
+        ],
+      }),
+    ],
+    effects: [],
+  };
+}
+
+/** Knob plano y moderno (look de plugin, sin metal/plástico "físico") con un
+ *  anillo tipo arco que se va rellenando con el valor alrededor — como en
+ *  los plugins BlackSalt/UAD/Canvas Audio con ring de nivel. */
+export function defaultKnobModernArc(id: string, name: string, paramId?: string, accentColor = '#ff6a3d'): Control {
+  return {
+    id,
+    type: 'IBKnobControl',
+    name,
+    rect: { x: 20, y: 20, w: 96, h: 96 },
+    paramId,
+    props: { frames: 61, orientation: 'vertical', pad: 8 },
+    layers: [
+      layer('Anillo', {
+        shape: 'ticks',
+        fill: '#3a3d46',
+        ticks: { count: 11, style: 'arc', radius: 0.98, spanDeg: 270, size: 3, litColor: accentColor },
+        effects: [],
+      }),
+      layer('Cuerpo', {
+        shape: 'ellipse',
+        inset: 0.14,
+        fill: '#202226',
+        anim: { mode: 'rotate', minDeg: -135, maxDeg: 135 },
+        effects: [
+          fx('dropShadow', { distance: 3, blur: 8, color: 'rgba(0,0,0,0.5)', useLight: true }),
+          fx('bevel', { size: 3 }),
+          fx('gradientOverlay', { type: 'radial', from: 'rgba(255,255,255,0.05)', to: 'rgba(0,0,0,0.4)' }),
+        ],
+      }),
+      layer('Puntero', {
+        shape: 'roundRect',
+        cornerRadius: 2,
+        rectNorm: { x: 0.48, y: 0.16, w: 0.04, h: 0.22 },
+        fill: accentColor,
+        anim: { mode: 'rotate', minDeg: -135, maxDeg: 135 },
+        effects: [],
+      }),
+    ],
+    effects: [],
+  };
+}
