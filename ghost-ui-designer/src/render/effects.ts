@@ -374,6 +374,7 @@ export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: Li
   const dist = num(e, 'dist', 0.55);
   const strength = num(e, 'strength', 1);
   const color = parseColor(str(e, 'color', '#ffffff')).join(',');
+  const blur = num(e, 'blur', 0);
   const angle = Math.atan2(light.dy, light.dx);
   const a0 = strength * (0.75 + 0.25 * inten);
   const a1 = strength * (0.35 + 0.2 * inten);
@@ -381,6 +382,7 @@ export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: Li
   ctx.save();
   pathFn(ctx);
   ctx.clip();
+  if (blur > 0) ctx.filter = `blur(${blur}px)`;
   ctx.globalCompositeOperation = 'screen';
 
   if (kind === 'arc') {
@@ -390,8 +392,12 @@ export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: Li
     // "arco brillante" de drawRim, pero como reflejo independiente
     // (posición/tamaño/fuerza propios, no atado al contorno completo).
     const spanRad = (num(e, 'spanDeg', 70) * Math.PI) / 180;
-    const radius = r * dist;
+    // "Distancia al centro" fija el borde EXTERIOR del arco; el grosor solo
+    // avanza hacia adentro (el trazo se centra en radius - width/2, así su
+    // borde de afuera queda siempre en `radius` sin importar el grosor).
+    const outerRadius = r * dist;
     const width = Math.max(1, r * size);
+    const radius = outerRadius - width / 2;
     const centerAngle = angle + Math.PI; // mismo lado que hx,hy de blob/streak
     const a0Ang = centerAngle - spanRad / 2, a1Ang = centerAngle + spanRad / 2;
     const sx = cx + Math.cos(a0Ang) * radius, sy = cy + Math.sin(a0Ang) * radius;

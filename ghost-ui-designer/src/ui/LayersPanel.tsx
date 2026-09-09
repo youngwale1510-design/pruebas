@@ -415,6 +415,7 @@ export function LayersPanel() {
                 const aspect = typeof e.params.aspect === 'number' ? e.params.aspect : 1;
                 const spanDeg = typeof e.params.spanDeg === 'number' ? e.params.spanDeg : 70;
                 const color = typeof e.params.color === 'string' ? e.params.color : '#ffffff';
+                const blur = typeof e.params.blur === 'number' ? e.params.blur : 0;
                 return (
                   <div key={e.id} style={{ borderTop: '1px solid var(--line-soft)', paddingTop: 6, marginTop: 6 }}>
                     <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
@@ -451,6 +452,9 @@ export function LayersPanel() {
                         <input type="range" min={1} max={5} step={0.1} value={aspect}
                           onChange={(ev) => updateEffect(control.id, l.id, e.id, { aspect: Number(ev.target.value) })} /></label>
                     )}
+                    <label className="k3-field"><span>Desenfoque <b>{blur}px</b></span>
+                      <input type="range" min={0} max={12} step={0.5} value={blur}
+                        onChange={(ev) => updateEffect(control.id, l.id, e.id, { blur: Number(ev.target.value) })} /></label>
                   </div>
                 );
               })}
