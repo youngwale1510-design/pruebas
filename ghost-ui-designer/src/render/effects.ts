@@ -47,6 +47,24 @@ function effLight(e: Effect, light: LightVectors): LightVectors {
   return light;
 }
 
+/**
+ * Silueta de `paint` (una capa con textura, que se clipea a sí misma a su
+ * propia forma) prerenderizada en un canvas aparte del tamaño de `box`. Sirve
+ * para dibujar SOMBRAS a partir de ella: si en cambio se llamara a `paint`
+ * directamente con la sombra ya activada en `ctx`, el `ctx.clip()` que hace
+ * `paint` para recortarse a su forma recorta TAMBIÉN la sombra que cae fuera
+ * de esa forma (que es todo el punto de una sombra), dejándola invisible.
+ */
+function paintSilhouette(paint: PathFn, box: Box): HTMLCanvasElement {
+  const off = document.createElement('canvas');
+  off.width = Math.max(1, Math.round(box.w));
+  off.height = Math.max(1, Math.round(box.h));
+  const octx = off.getContext('2d')!;
+  octx.translate(-box.x, -box.y);
+  paint(octx);
+  return off;
+}
+
 /** Sombra proyectada por debajo del relleno de la capa. */
 export function drawDropShadow(
   ctx: Ctx,
@@ -54,6 +72,7 @@ export function drawDropShadow(
   e: Effect,
   light: LightVectors,
   paint?: PathFn,
+  box?: Box,
 ) {
   const dist = num(e, 'distance', 4) * (light.lenK ?? 1);
   const useLight = bool(e, 'useLight', true);
@@ -66,8 +85,11 @@ export function drawDropShadow(
   ctx.shadowOffsetY = dy;
   ctx.fillStyle = 'rgba(0,0,0,1)';
   // Con una imagen importada (`paint`), la sombra sale de su transparencia
-  // REAL en vez de la forma vectorial que solo delimita el control.
-  if (paint) paint(ctx);
+  // REAL en vez de la forma vectorial que solo delimita el control — pero
+  // prerenderizada aparte (ver `paintSilhouette`), para que el clip de la
+  // textura no se coma la sombra que cae fuera de su propia forma.
+  if (paint && box) ctx.drawImage(paintSilhouette(paint, box), box.x, box.y);
+  else if (paint) paint(ctx);
   else { pathFn(ctx); ctx.fill(); }
   ctx.restore();
 }
@@ -210,12 +232,15 @@ export function drawNoise(
 }
 
 /** Resplandor exterior. */
-export function drawGlow(ctx: Ctx, pathFn: PathFn, e: Effect, paint?: PathFn) {
+export function drawGlow(ctx: Ctx, pathFn: PathFn, e: Effect, paint?: PathFn, box?: Box) {
   ctx.save();
   ctx.shadowColor = str(e, 'color', 'rgba(120,180,255,0.7)');
   ctx.shadowBlur = num(e, 'blur', 12);
   ctx.fillStyle = 'rgba(0,0,0,0.001)';
-  if (paint) paint(ctx);
+  // Ídem drawDropShadow: con textura, la silueta se prerenderiza aparte para
+  // que su propio clip no se coma el halo que cae fuera de la forma.
+  if (paint && box) ctx.drawImage(paintSilhouette(paint, box), box.x, box.y);
+  else if (paint) paint(ctx);
   else { pathFn(ctx); ctx.fill(); }
   ctx.restore();
 }
@@ -496,11 +521,16 @@ export function drawExtrude(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: Lig
 }
 
 /** Oclusión de contacto: sombra corta y densa alrededor + sesgo a favor de la luz. */
-export function drawContactShadow(ctx: Ctx, pathFn: PathFn, e: Effect, gl: LightVectors, paint?: PathFn) {
+export function drawContactShadow(ctx: Ctx, pathFn: PathFn, e: Effect, gl: LightVectors, paint?: PathFn, box?: Box) {
   const light = effLight(e, gl);
   const size = num(e, 'size', 3);
   const strength = num(e, 'strength', 0.8);
-  const draw = paint ?? ((c: Ctx) => { pathFn(c); c.fill(); });
+  // Igual que en drawDropShadow: si hay textura, se dibuja su silueta
+  // prerenderizada aparte, para no perder la sombra por el clip propio del
+  // recorte a la forma.
+  const draw = paint && box
+    ? (c: Ctx) => c.drawImage(paintSilhouette(paint, box), box.x, box.y)
+    : paint ?? ((c: Ctx) => { pathFn(c); c.fill(); });
   ctx.save();
   ctx.globalCompositeOperation = 'multiply';
   // 1) ambiente: todo alrededor
@@ -824,9 +854,9 @@ export function applyEffectsBelow(
   };
   // Orden: bloom/glow (más lejos) -> sombra larga -> contacto -> pared (encima de las sombras).
   run('emissive', (e) => drawEmissiveBloom(ctx, b, e, hints.value));
-  run('glow', (e) => drawGlow(ctx, pathFn, e, paint));
-  run('dropShadow', (e) => drawDropShadow(ctx, pathFn, e, light, paint));
-  run('contactShadow', (e) => drawContactShadow(ctx, pathFn, e, light, paint));
+  run('glow', (e) => drawGlow(ctx, pathFn, e, paint, bounds));
+  run('dropShadow', (e) => drawDropShadow(ctx, pathFn, e, light, paint, bounds));
+  run('contactShadow', (e) => drawContactShadow(ctx, pathFn, e, light, paint, bounds));
   run('extrude', (e) => drawExtrude(ctx, pathFn, b, e, light, hints.fill));
 }
 
