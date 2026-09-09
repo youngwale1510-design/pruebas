@@ -60,7 +60,11 @@ const EFFECT_PARAMS: Partial<Record<EffectType, ParamSpec[]>> = {
     { key: 'depth', label: 'Profundidad', min: 0.05, max: 0.4, step: 0.01, def: 0.16 },
     { key: 'strength', label: 'Fuerza', min: 0, max: 1, step: 0.05, def: 0.5 },
   ],
-  rim: [{ key: 'size', label: 'Tamaño', min: 0.5, max: 8, step: 0.5, def: 3 }],
+  rim: [
+    { key: 'size', label: 'Tamaño', min: 0.5, max: 8, step: 0.5, def: 3 },
+    { key: 'strength', label: 'Fuerza', min: 0, max: 4, step: 0.1, def: 1 },
+    { key: 'color', label: 'Color', color: true, def: '#ffffff' },
+  ],
   sheen: [
     { key: 'strength', label: 'Fuerza', min: 0, max: 1, step: 0.05, def: 0.35 },
     { key: 'width', label: 'Ancho', min: 0.05, max: 0.6, step: 0.01, def: 0.35 },

@@ -429,20 +429,27 @@ export function drawRim(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVe
   const inten = light.intensity;
   const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
   const width = num(e, 'size', 3);
-  const color = str(e, 'color', '255,255,255');
+  // Acepta '#rrggbb' (el color picker del panel) o el viejo 'r,g,b' suelto.
+  const raw = str(e, 'color', '255,255,255');
+  const rgb = raw[0] === '#' ? parseColor(raw) : (raw.split(',').map(Number) as [number, number, number]);
+  const color = rgb.join(',');
+  // Multiplica toda la opacidad: a 1 se ve como antes; más alto = reflejo
+  // pegado al contorno EXACTO de la forma (círculo, estriado, polígono,
+  // cuña...) mucho más marcado, tipo streak — sin dejar de seguir el borde.
+  const strength = num(e, 'strength', 1);
   ctx.save();
   pathFn(ctx);
   ctx.clip();
   ctx.globalCompositeOperation = 'screen';
   // 1) Fresnel tenue en todo el perímetro.
   ctx.lineWidth = width * 2;
-  ctx.strokeStyle = `rgba(${color},${0.05 + 0.06 * inten})`;
+  ctx.strokeStyle = `rgba(${color},${Math.min(1, (0.05 + 0.06 * inten) * strength)})`;
   pathFn(ctx);
   ctx.stroke();
   // 2) Arco brillante del lado de la luz.
   const nx = cx - light.dx * r, ny = cy - light.dy * r, fx = cx + light.dx * r, fy = cy + light.dy * r;
   const g = ctx.createLinearGradient(nx, ny, fx, fy);
-  g.addColorStop(0, `rgba(${color},${0.35 + 0.4 * inten})`);
+  g.addColorStop(0, `rgba(${color},${Math.min(1, (0.35 + 0.4 * inten) * strength)})`);
   g.addColorStop(0.45, `rgba(${color},0)`);
   g.addColorStop(1, `rgba(${color},0)`);
   ctx.lineWidth = width * 2.2;
