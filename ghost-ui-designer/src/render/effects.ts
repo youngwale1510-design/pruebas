@@ -35,12 +35,25 @@ function bool(e: Effect, k: string, d: boolean): boolean {
   return typeof v === 'boolean' ? v : d;
 }
 
-/** Luz efectiva del efecto: usa su propio `angleDeg`/`lightIntensity` si los tiene
- *  (para tener varias luces/reflejos por capa), o la luz global por defecto. */
-function effLight(e: Effect, light: LightVectors): LightVectors {
+/**
+ * Luz efectiva del efecto: usa su propio `angleDeg`/`lightIntensity` si los
+ * tiene (para tener varias luces/reflejos por capa), o la luz global (`light`,
+ * ya recibida contra-rotada por el llamador) en caso contrario.
+ *
+ * `deg` es cuánto está rotada la capa en este frame (0 si no gira). El ángulo
+ * que se elige en el panel se piensa en pantalla/mundo (fijo), no pegado a la
+ * pieza — así que hay que restarle `deg` para que, tras aplicar la rotación
+ * de la capa, el efecto vuelva a caer exactamente en ese ángulo de pantalla
+ * (el mismo truco que ya se usaba para la luz global). Si el efecto tiene
+ * `followRotation: true`, se salta esa compensación a propósito: el ángulo
+ * pasa a ser relativo a la PIEZA y gira solidario con ella.
+ */
+function effLight(e: Effect, light: LightVectors, deg = 0): LightVectors {
   const a = e.params['angleDeg'];
   if (typeof a === 'number') {
-    const rad = (a * Math.PI) / 180;
+    const followRotation = bool(e, 'followRotation', false);
+    const localDeg = followRotation ? a : a - deg;
+    const rad = (localDeg * Math.PI) / 180;
     const inten = typeof e.params['lightIntensity'] === 'number' ? (e.params['lightIntensity'] as number) : light.intensity;
     return { ...light, dx: Math.cos(rad), dy: Math.sin(rad), intensity: inten };
   }
@@ -363,9 +376,12 @@ export function drawDish(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightV
  *  - dist:   0..1, distancia del reflejo desde el centro hacia la luz
  *  - strength: 0..1, intensidad del brillo
  *  - color:  '#rrggbb', blanco por defecto
+ *  - followRotation: false (por defecto) = el reflejo queda FIJO en pantalla
+ *    aunque la capa gire con el valor del control (como una luz de verdad,
+ *    que no gira con el objeto). true = el reflejo gira solidario con la capa.
  */
-export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
-  const light = effLight(e, gl);
+export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors, deg = 0) {
+  const light = effLight(e, gl, deg);
   const inten = light.intensity;
   const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
   const kind = str(e, 'kind', 'blob');
@@ -953,6 +969,10 @@ export function applyEffectsAbove(
   effects: Effect[],
   light: LightVectors,
   hints: EffectHints = {},
+  /** Cuánto está rotada la capa en este frame (0 si no gira) — solo lo usa
+   *  'specular' hoy, para que su ángulo (si tiene uno propio) se piense en
+   *  pantalla y no gire pegado a la pieza, salvo que pida `followRotation`. */
+  deg = 0,
 ) {
   // Orden importa: material -> reflejo/torneado -> luz direccional -> bisel -> hueco -> ruido.
   const run = (type: EffectType, fn: (e: Effect) => void) => {
@@ -969,7 +989,7 @@ export function applyEffectsAbove(
   run('dish', (e) => drawDish(ctx, pathFn, bounds, e, light));
   run('cylinder', (e) => drawCylinder(ctx, pathFn, bounds, e, light, hints));
   run('sheen', (e) => drawSheen(ctx, pathFn, bounds, e, light));
-  run('specular', (e) => drawSpecular(ctx, pathFn, bounds, e, light));
+  run('specular', (e) => drawSpecular(ctx, pathFn, bounds, e, light, deg));
   run('emissive', (e) => drawEmissiveCore(ctx, pathFn, bounds, e, light, hints.value));
   run('bevel', (e) => drawBevel(ctx, pathFn, bounds, e, light));
   run('chamfer', (e) => drawChamfer(ctx, pathFn, bounds, e, light));

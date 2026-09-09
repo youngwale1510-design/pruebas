@@ -443,7 +443,7 @@ function renderLayer(
     off.height = Math.max(1, Math.round(h));
     const octx = off.getContext('2d')!;
     paintTex(octx);
-    applyEffectsAbove(octx, pathFn, box, layer.effects, L, hints);
+    applyEffectsAbove(octx, pathFn, box, layer.effects, L, hints, deg);
     if (extraLights.length > 0) applyExtraLights(octx, pathFn, box, extraLights, deg);
     octx.globalCompositeOperation = 'destination-in';
     paintTex(octx);
@@ -453,7 +453,7 @@ function renderLayer(
     pathFn(ctx);
     ctx.fillStyle = layer.fill ?? '#333333';
     ctx.fill();
-    applyEffectsAbove(ctx, pathFn, box, layer.effects, L, hints);
+    applyEffectsAbove(ctx, pathFn, box, layer.effects, L, hints, deg);
     if (extraLights.length > 0) applyExtraLights(ctx, pathFn, box, extraLights, deg);
   }
   ctx.restore();

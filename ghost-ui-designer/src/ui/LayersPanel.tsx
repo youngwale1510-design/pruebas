@@ -416,12 +416,18 @@ export function LayersPanel() {
                 const spanDeg = typeof e.params.spanDeg === 'number' ? e.params.spanDeg : 70;
                 const color = typeof e.params.color === 'string' ? e.params.color : '#ffffff';
                 const blur = typeof e.params.blur === 'number' ? e.params.blur : 0;
+                const followRotation = e.params.followRotation === true;
                 return (
                   <div key={e.id} style={{ borderTop: '1px solid var(--line-soft)', paddingTop: 6, marginTop: 6 }}>
                     <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: 11, color: 'var(--muted)' }}>Reflejo {i + 1}</span>
                       <button className="btn" onClick={() => removeEffect(control.id, l.id, e.id)} title="Quitar">✕</button>
                     </div>
+                    <label className="chk" title="Por defecto el reflejo queda fijo en pantalla aunque el control gire (como una luz real). Marcalo para que gire pegado a la pieza.">
+                      <input type="checkbox" checked={followRotation}
+                        onChange={(ev) => updateEffect(control.id, l.id, e.id, { followRotation: ev.target.checked })} />
+                      <span>Gira con el control</span>
+                    </label>
                     <label className="k3-field"><span>Forma</span>
                       <select value={kind} onChange={(ev) => updateEffect(control.id, l.id, e.id, { kind: ev.target.value })}>
                         <option value="blob">Redondo/óvalo</option>
