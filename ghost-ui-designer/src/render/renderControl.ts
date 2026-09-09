@@ -414,15 +414,8 @@ function renderLayer(
       }
     : undefined;
 
-  // Sombra proyectada / glow en espacio FIJO (no giran con la pieza).
   ctx.save();
   ctx.globalAlpha = layer.opacity;
-  applyEffectsBelow(ctx, pathFn, layer.effects, light, box, hints, paintTex);
-  ctx.restore();
-
-  ctx.save();
-  ctx.globalAlpha = layer.opacity;
-  ctx.globalCompositeOperation = COMPOSITE[layer.blendMode] ?? 'source-over';
   // La forma gira; la luz se contrarrota para quedar FIJA en el mundo.
   // Sentido: valor creciente = horario pasando por ARRIBA (como un knob real):
   // value 0 → indicador a las 7, value 1 → a las 5. En canvas (Y hacia abajo)
@@ -433,6 +426,17 @@ function renderLayer(
     ctx.rotate((deg * Math.PI) / 180);
     ctx.translate(-w / 2, -h / 2);
   }
+  // Sombra proyectada / glow: en el mismo espacio (ya rotado) que el resto de
+  // la capa, para que su silueta SIEMPRE coincida con la de la pieza. Si se
+  // calculara sin rotar (como antes) mientras la pieza sí gira, en formas
+  // asimétricas (p.ej. estriadas) los "dientes" del relleno opaco de la
+  // sombra —fijo— asoman por detrás de los dientes ya rotados de la pieza,
+  // dando un contorno "derretido"/duplicado. La dirección de la sombra sigue
+  // fija en el mundo porque usa `L` (la luz ya contra-rotada), igual que el
+  // bisel/domo.
+  applyEffectsBelow(ctx, pathFn, layer.effects, L, box, hints, paintTex);
+
+  ctx.globalCompositeOperation = COMPOSITE[layer.blendMode] ?? 'source-over';
   if (tex && paintTex) {
     // El relleno y los efectos "de encima" (bisel, cromo, moleteado…) se
     // pintan en un lienzo aparte y se recortan por la transparencia REAL del
