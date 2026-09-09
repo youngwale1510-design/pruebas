@@ -352,21 +352,28 @@ export function drawDish(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightV
 }
 
 /**
- * Reflejo/brillo hacia la luz, con tamaño y forma configurables:
- *  - size:   fracción del radio (qué tan grande es el reflejo)
- *  - aspect: 1 = redondo; >1 = alargado (streak) a lo largo del eje de la luz
+ * Reflejo/brillo hacia la luz, con tamaño, forma y color configurables:
+ *  - kind:   'blob' (redondo/óvalo difuso, por defecto), 'streak' (franja
+ *            fina de bordes duros, tipo brillo de metal/cromo) o 'arc'
+ *            (creciente curvo pegado al lado de la luz, tipo el brillo
+ *            característico de una esfera de vidrio/metal)
+ *  - size:   fracción del radio (qué tan grande es el reflejo; en 'arc', su grosor)
+ *  - aspect: 1 = redondo; >1 = alargado a lo largo del eje de la luz (no aplica a 'arc')
+ *  - spanDeg: solo 'arc' — cuánto arco cubre el creciente (grados)
  *  - dist:   0..1, distancia del reflejo desde el centro hacia la luz
  *  - strength: 0..1, intensidad del brillo
+ *  - color:  '#rrggbb', blanco por defecto
  */
 export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: LightVectors) {
   const light = effLight(e, gl);
   const inten = light.intensity;
   const cx = b.x + b.w / 2, cy = b.y + b.h / 2, r = Math.max(b.w, b.h) / 2;
+  const kind = str(e, 'kind', 'blob');
   const size = num(e, 'size', 0.5);
   const aspect = Math.max(1, num(e, 'aspect', 1));
   const dist = num(e, 'dist', 0.55);
   const strength = num(e, 'strength', 1);
-  const hx = cx - light.dx * r * dist, hy = cy - light.dy * r * dist;
+  const color = parseColor(str(e, 'color', '#ffffff')).join(',');
   const angle = Math.atan2(light.dy, light.dx);
   const a0 = strength * (0.75 + 0.25 * inten);
   const a1 = strength * (0.35 + 0.2 * inten);
@@ -375,19 +382,84 @@ export function drawSpecular(ctx: Ctx, pathFn: PathFn, b: Box, e: Effect, gl: Li
   pathFn(ctx);
   ctx.clip();
   ctx.globalCompositeOperation = 'screen';
-  // Se dibuja en un espacio local escalado para lograr el reflejo alargado.
+
+  if (kind === 'arc') {
+    // Creciente curvo: un arco de círculo centrado en la MISMA figura (no
+    // en el punto desplazado hacia la luz de blob/streak), del lado de la
+    // luz, con las puntas apagadas con un degradado — misma técnica que el
+    // "arco brillante" de drawRim, pero como reflejo independiente
+    // (posición/tamaño/fuerza propios, no atado al contorno completo).
+    const spanRad = (num(e, 'spanDeg', 70) * Math.PI) / 180;
+    const radius = r * dist;
+    const width = Math.max(1, r * size);
+    const centerAngle = angle + Math.PI; // mismo lado que hx,hy de blob/streak
+    const a0Ang = centerAngle - spanRad / 2, a1Ang = centerAngle + spanRad / 2;
+    const sx = cx + Math.cos(a0Ang) * radius, sy = cy + Math.sin(a0Ang) * radius;
+    const ex = cx + Math.cos(a1Ang) * radius, ey = cy + Math.sin(a1Ang) * radius;
+    const g = ctx.createLinearGradient(sx, sy, ex, ey);
+    g.addColorStop(0, `rgba(${color},0)`);
+    g.addColorStop(0.5, `rgba(${color},${a0})`);
+    g.addColorStop(1, `rgba(${color},0)`);
+    ctx.lineCap = 'round';
+    ctx.lineWidth = width;
+    ctx.strokeStyle = g;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, a0Ang, a1Ang);
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  const hx = cx - light.dx * r * dist, hy = cy - light.dy * r * dist;
+  // Se dibuja en un espacio local escalado/rotado para alinear con la luz.
   ctx.translate(hx, hy);
   ctx.rotate(angle);
-  ctx.scale(aspect, 1);
-  const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * size);
-  g.addColorStop(0, `rgba(255,255,255,${a0})`);
-  g.addColorStop(0.18, `rgba(255,255,255,${a1})`);
-  g.addColorStop(0.55, 'rgba(255,255,255,0.04)');
-  g.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(0, 0, r * size, 0, Math.PI * 2);
-  ctx.fill();
+
+  if (kind === 'streak') {
+    // Franja de bordes duros: capsula angosta, brillo parejo en el centro
+    // (no un degradado radial que se apaga hacia afuera) y las dos puntas
+    // recortadas con un degradado — así se lee como un filo de luz, no una
+    // mancha difusa.
+    const len = Math.max(1, r * size * aspect);
+    const width = Math.max(0.5, r * size * 0.16);
+    const capsule = (c: Ctx) => {
+      c.beginPath();
+      c.moveTo(-len, -width);
+      c.lineTo(len, -width);
+      c.arc(len, 0, width, -Math.PI / 2, Math.PI / 2);
+      c.lineTo(-len, width);
+      c.arc(-len, 0, width, Math.PI / 2, -Math.PI / 2);
+      c.closePath();
+    };
+    capsule(ctx);
+    ctx.clip();
+    const gy = ctx.createLinearGradient(0, -width, 0, width);
+    gy.addColorStop(0, `rgba(${color},0)`);
+    gy.addColorStop(0.5, `rgba(${color},${a0})`);
+    gy.addColorStop(1, `rgba(${color},0)`);
+    ctx.fillStyle = gy;
+    ctx.fillRect(-len - width, -width, len * 2 + width * 2, width * 2);
+    // Apaga las puntas (si no, la franja corta en seco en los extremos).
+    const gx = ctx.createLinearGradient(-len, 0, len, 0);
+    gx.addColorStop(0, 'rgba(0,0,0,1)');
+    gx.addColorStop(0.15, 'rgba(0,0,0,0)');
+    gx.addColorStop(0.85, 'rgba(0,0,0,0)');
+    gx.addColorStop(1, 'rgba(0,0,0,1)');
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = gx;
+    ctx.fillRect(-len - width, -width, len * 2 + width * 2, width * 2);
+  } else {
+    ctx.scale(aspect, 1);
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, r * size);
+    g.addColorStop(0, `rgba(${color},${a0})`);
+    g.addColorStop(0.18, `rgba(${color},${a1})`);
+    g.addColorStop(0.55, `rgba(${color},0.04)`);
+    g.addColorStop(1, `rgba(${color},0)`);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * size, 0, Math.PI * 2);
+    ctx.fill();
+  }
   ctx.restore();
 }
 

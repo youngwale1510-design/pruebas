@@ -409,24 +409,48 @@ export function LayersPanel() {
             <div style={{ marginTop: 8 }}>
               <div className="k3-field"><span>Reflejos / luces</span></div>
               {speculars.map((e, i) => {
+                const kind = typeof e.params.kind === 'string' ? e.params.kind : 'blob';
                 const angle = typeof e.params.angleDeg === 'number' ? e.params.angleDeg : scene.lights[0].angleDeg;
                 const size = typeof e.params.size === 'number' ? e.params.size : 0.45;
                 const aspect = typeof e.params.aspect === 'number' ? e.params.aspect : 1;
+                const spanDeg = typeof e.params.spanDeg === 'number' ? e.params.spanDeg : 70;
+                const color = typeof e.params.color === 'string' ? e.params.color : '#ffffff';
                 return (
                   <div key={e.id} style={{ borderTop: '1px solid var(--line-soft)', paddingTop: 6, marginTop: 6 }}>
                     <div className="row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
                       <span style={{ fontSize: 11, color: 'var(--muted)' }}>Reflejo {i + 1}</span>
                       <button className="btn" onClick={() => removeEffect(control.id, l.id, e.id)} title="Quitar">✕</button>
                     </div>
+                    <label className="k3-field"><span>Forma</span>
+                      <select value={kind} onChange={(ev) => updateEffect(control.id, l.id, e.id, { kind: ev.target.value })}>
+                        <option value="blob">Redondo/óvalo</option>
+                        <option value="streak">Franja (bordes duros)</option>
+                        <option value="arc">Arco/creciente</option>
+                      </select></label>
+                    <div className="row" style={{ alignItems: 'center', gap: 8 }}>
+                      <input type="color" value={color}
+                        onChange={(ev) => updateEffect(control.id, l.id, e.id, { color: ev.target.value })}
+                        title="Color del reflejo" />
+                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>Color</span>
+                    </div>
                     <label className="k3-field"><span>Ángulo <b>{Math.round(angle)}°</b></span>
                       <input type="range" min={0} max={359} value={angle}
                         onChange={(ev) => updateEffect(control.id, l.id, e.id, { angleDeg: Number(ev.target.value) })} /></label>
-                    <label className="k3-field"><span>Tamaño <b>{size.toFixed(2)}</b></span>
-                      <input type="range" min={0.1} max={1.2} step={0.02} value={size}
+                    <label className="k3-field"><span>Distancia al centro <b>{Math.round((typeof e.params.dist === 'number' ? e.params.dist : 0.55) * 100)}%</b></span>
+                      <input type="range" min={0} max={1} step={0.02} value={typeof e.params.dist === 'number' ? e.params.dist : 0.55}
+                        onChange={(ev) => updateEffect(control.id, l.id, e.id, { dist: Number(ev.target.value) })} /></label>
+                    <label className="k3-field"><span>{kind === 'arc' ? 'Grosor' : 'Tamaño'} <b>{size.toFixed(2)}</b></span>
+                      <input type="range" min={0.05} max={1.2} step={0.02} value={size}
                         onChange={(ev) => updateEffect(control.id, l.id, e.id, { size: Number(ev.target.value) })} /></label>
-                    <label className="k3-field"><span>Forma (alargado) <b>{aspect.toFixed(1)}×</b></span>
-                      <input type="range" min={1} max={5} step={0.1} value={aspect}
-                        onChange={(ev) => updateEffect(control.id, l.id, e.id, { aspect: Number(ev.target.value) })} /></label>
+                    {kind === 'arc' ? (
+                      <label className="k3-field"><span>Ancho del arco <b>{Math.round(spanDeg)}°</b></span>
+                        <input type="range" min={10} max={180} step={1} value={spanDeg}
+                          onChange={(ev) => updateEffect(control.id, l.id, e.id, { spanDeg: Number(ev.target.value) })} /></label>
+                    ) : (
+                      <label className="k3-field"><span>Alargado <b>{aspect.toFixed(1)}×</b></span>
+                        <input type="range" min={1} max={5} step={0.1} value={aspect}
+                          onChange={(ev) => updateEffect(control.id, l.id, e.id, { aspect: Number(ev.target.value) })} /></label>
+                    )}
                   </div>
                 );
               })}
