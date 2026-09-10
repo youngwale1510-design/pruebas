@@ -273,3 +273,44 @@ describe('aritmética con paréntesis en constantes (constexpr float X = (A - B)
     expect(Math.abs(band1.rect.y - band0.rect.y - 112.5)).toBeLessThanOrEqual(1);
   });
 });
+
+// Layout "aplanado" a mano (estilo Fatness.cpp): cada control trae su propio
+// IRECT(L, T, R, B) con números/aritmética sueltos, en vez de derivarlo de
+// GetBounds() o de una variable ya declarada. Antes esto no resolvía NADA
+// (ni siquiera controles con tipos nativos) y todo caía al lienzo completo.
+const FLAT_IRECT_LAYOUT = `
+  mLayoutFunc = [&](IGraphics* pGraphics) {
+    const IText nameText(10.f, COLOR_WHITE);
+    // Rect inline, directo en el argumento del constructor.
+    pGraphics->AttachControl(new IVKnobControl(IRECT(60, 189, 148, 277), kParamInput, true), kNoTag);
+    // Rect declarado aparte (con '='), con aritmética simple.
+    const IRECT fxR = IRECT(258 - 55, 118 - 8, 258 + 55, 356);
+    pGraphics->AttachControl(new IVToggleControl(fxR, kParamEffect), kCtrlTagFx);
+    // Tipo que Ghost no reconoce (clase propia): igual debe quedar con la
+    // geometría bien resuelta, como caja de referencia (no al lienzo completo).
+    pGraphics->AttachControl(new FatnessKnob(IRECT(73, 527, 135, 589), kParamEffectLo, false), kCtrlTagLo);
+  };
+`;
+
+describe('layout "aplanado" a mano: cada control con su propio IRECT(L, T, R, B) suelto', () => {
+  it('IRECT literal inline en el propio AttachControl se resuelve (no al lienzo completo)', () => {
+    const res = readSceneFromSource(FLAT_IRECT_LAYOUT, 642, 701);
+    const inputKnob = res.controls.find((c) => c.paramId === 'paramInput')!;
+    expect(inputKnob).toBeDefined();
+    expect(inputKnob.rect).toEqual({ x: 60, y: 189, w: 88, h: 88 });
+  });
+
+  it('IRECT literal con aritmética, declarado con "=", también se resuelve', () => {
+    const res = readSceneFromSource(FLAT_IRECT_LAYOUT, 642, 701);
+    const fx = res.controls.find((c) => c.paramId === 'paramEffect')!;
+    expect(fx).toBeDefined();
+    expect(fx.rect).toEqual({ x: 203, y: 110, w: 110, h: 246 });
+  });
+
+  it('un tipo no reconocido (clase propia) con IRECT literal queda como caja de referencia bien ubicada', () => {
+    const res = readSceneFromSource(FLAT_IRECT_LAYOUT, 642, 701);
+    const box = res.refBoxes.find((b) => b.sourceTag === 'kCtrlTagLo')!;
+    expect(box).toBeDefined();
+    expect(box.rect).toEqual({ x: 73, y: 527, w: 62, h: 62 });
+  });
+});

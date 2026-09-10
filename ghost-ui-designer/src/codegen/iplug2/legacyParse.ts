@@ -211,12 +211,30 @@ function evalValue(s: string, vars: Record<string, RectV>, numVars: NumVars, can
 
   const boundsRe = /^(?:[A-Za-z_]\w*\s*->\s*)?GetBounds\s*\(\s*\)/;
   const bm = s.match(boundsRe);
+  // `IRECT(L, T, R, B)` construido directo con números/aritmética — típico de
+  // un layout ya "aplanado" a mano (o por otra IA), donde cada control trae
+  // su propio rect suelto en el momento en vez de derivarlo de GetBounds() o
+  // de una variable ya declarada. Sin esto, ni siquiera un IRECT con cuatro
+  // literales quedaba resuelto — cualquier control así se iba entero al
+  // lienzo completo (el mismo bug que afectaba a las cajas de referencia).
+  const irectM = s.match(/^IRECT\s*\(/);
   let value: Value;
   let rest: string;
 
   if (bm) {
     value = { kind: 'rect', v: canvas };
     rest = s.slice(bm[0].length);
+  } else if (irectM) {
+    const openIdx = irectM[0].length - 1;
+    const closeIdx = matchClose(s, openIdx);
+    const args = closeIdx === -1 ? [] : splitTopLevel(s.slice(openIdx + 1, closeIdx)).filter((a) => a.trim().length > 0);
+    if (closeIdx !== -1 && args.length >= 4) {
+      const nums = args.slice(0, 4).map((a) => evalNumeric(a, vars, numVars, canvas));
+      value = { kind: 'rect', v: { L: nums[0], T: nums[1], R: nums[2], B: nums[3] } };
+      rest = s.slice(closeIdx + 1);
+    } else {
+      return { value: { kind: 'rect', v: canvas }, rest: '' };
+    }
   } else {
     const numLit = s.match(/^\d+(\.\d*)?f?/);
     const im = s.match(/^[A-Za-z_]\w*/);
