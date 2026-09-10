@@ -56,7 +56,26 @@ export interface ColorAdjust {
   contrast: number; // -100..100
 }
 
-export type LayerShape = 'ellipse' | 'rect' | 'roundRect' | 'scalloped' | 'polygon' | 'wedge' | 'ticks';
+export type LayerShape = 'ellipse' | 'rect' | 'roundRect' | 'scalloped' | 'polygon' | 'wedge' | 'ticks' | 'curveBar';
+
+/** Barra curva (fader "arqueado"/banana): una franja que va de un extremo al
+ *  otro de la capa siguiendo una curva suave, con relleno progresivo según
+ *  el valor — el mismo rol que el trazo recto de un fader, pero curvo. */
+export interface CurveBarConfig {
+  /** Eje principal (de dónde a dónde recorre el valor 0→1). */
+  axis: 'vertical' | 'horizontal';
+  /** Cuánto se arquea, como fracción de la dimensión transversal (-1..1).
+   *  0 = recta; positivo/negativo cambian el lado hacia el que se curva. */
+  bow: number;
+  /** Grosor del trazo (px). */
+  width: number;
+  /** Color de la porción ya recorrida (0..value); si falta, usa `layer.fill`. */
+  litColor?: string;
+  /** Dibuja un mango/perilla en la posición del valor actual, encima del trazo. */
+  handle: boolean;
+  /** Radio del mango (px), si `handle` está activo. */
+  handleSize: number;
+}
 
 /** Anillo de marcas exteriores (escala del knob): puntos, líneas, LEDs o arco. */
 export interface TicksConfig {
@@ -144,6 +163,8 @@ export interface Layer {
   sides?: number;
   /** configuración de marcas para shape 'ticks'. */
   ticks?: TicksConfig;
+  /** configuración para shape 'curveBar' (fader curvo/arqueado). */
+  curveBar?: CurveBarConfig;
   /** contenido y estilo si la capa es de texto (kind 'text'). */
   text?: TextStyle;
   anim?: LayerAnim;

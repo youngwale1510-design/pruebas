@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolveLight, rotationForValue, shadowOffset } from '../src/render/light';
-import { frameSize, layerBox, leverGeometry, litTickStates, snapValue, travelOffset } from '../src/render/renderControl';
+import { curveBarPoints, frameSize, layerBox, leverGeometry, litTickStates, quadBezierPoint, snapValue, travelOffset } from '../src/render/renderControl';
+import { CurveBarConfig } from '../src/model/scene';
 import {
   filmstripLayout,
   frameOrigin,
@@ -71,6 +72,38 @@ describe('presets de knob "físico" en 2D (estriado, chicken-head, arco)', () =>
     const ring = c.layers.find((l) => l.name === 'Anillo');
     expect(ring?.ticks?.style).toBe('arc');
     expect(ring?.ticks?.litColor).toBe('#00e0ff');
+  });
+});
+
+describe('barra curva (fader arqueado)', () => {
+  const cfg = (patch: Partial<CurveBarConfig> = {}): CurveBarConfig => ({
+    axis: 'vertical', bow: 0.4, width: 8, litColor: '#ff6a3d', handle: true, handleSize: 8, ...patch,
+  });
+
+  it('quadBezierPoint: t=0 y t=1 son los extremos; t=0.5 es el punto medio de una recta', () => {
+    const p0 = { x: 0, y: 10 }, p1 = { x: 5, y: 5 }, p2 = { x: 0, y: 0 };
+    expect(quadBezierPoint(p0, p1, p2, 0)).toEqual(p0);
+    expect(quadBezierPoint(p0, p1, p2, 1)).toEqual(p2);
+  });
+
+  it('curveBarPoints vertical: abajo (value 0) a arriba (value 1), arqueada al costado', () => {
+    const { p0, p1, p2 } = curveBarPoints(100, 200, cfg({ axis: 'vertical', bow: 0.5 }));
+    expect(p0).toEqual({ x: 50, y: 200 }); // abajo
+    expect(p2).toEqual({ x: 50, y: 0 });   // arriba
+    expect(p1.x).toBeGreaterThan(50);      // arqueada hacia la derecha (bow positivo)
+  });
+
+  it('curveBarPoints horizontal: izquierda a derecha, arqueada hacia arriba/abajo', () => {
+    const { p0, p1, p2 } = curveBarPoints(200, 100, cfg({ axis: 'horizontal', bow: -0.5 }));
+    expect(p0).toEqual({ x: 0, y: 50 });
+    expect(p2).toEqual({ x: 200, y: 50 });
+    expect(p1.y).toBeLessThan(50); // bow negativo -> hacia arriba
+  });
+
+  it('bow=0 da una barra recta (el punto de control cae en la línea entre los extremos)', () => {
+    const { p0, p1, p2 } = curveBarPoints(100, 200, cfg({ axis: 'vertical', bow: 0 }));
+    expect(p1.x).toBe(p0.x);
+    expect(p1.x).toBe(p2.x);
   });
 });
 

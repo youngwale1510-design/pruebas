@@ -2,7 +2,7 @@
 // valor. Es la ÚNICA función que produce píxeles, usada tanto por el editor como
 // por el rasterizador de filmstrips -> el editor se ve idéntico al plugin.
 
-import { Control, Layer, LightSource, SceneDocument, TextStyle, TicksConfig } from '../model/scene';
+import { Control, CurveBarConfig, Layer, LightSource, SceneDocument, TextStyle, TicksConfig } from '../model/scene';
 import { EffectHints, PathFn, applyEffectsAbove, applyEffectsBelow, drawRim } from './effects';
 import { LightVectors, resolveLight, rotateLight, rotationForValue } from './light';
 import { parseColor } from './color';
@@ -227,6 +227,86 @@ function drawTicks(ctx: Ctx, w: number, h: number, layer: Layer, value: number) 
   ctx.restore();
 }
 
+export interface Vec2 { x: number; y: number; }
+
+/** Punto en la curva cuadrática de Bézier P0→P1→P2 para t en [0,1]. Pura. */
+export function quadBezierPoint(p0: Vec2, p1: Vec2, p2: Vec2, t: number): Vec2 {
+  const u = 1 - t;
+  return {
+    x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
+    y: u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y,
+  };
+}
+
+/** Los 3 puntos (inicio=value 0, control, fin=value 1) de una barra curva
+ *  dentro de una caja w×h, según su eje y cuánto se arquea (`bow`, -1..1,
+ *  fracción de la dimensión transversal). Función pura. */
+export function curveBarPoints(w: number, h: number, cfg: CurveBarConfig): { p0: Vec2; p1: Vec2; p2: Vec2 } {
+  const bow = Math.max(-1, Math.min(1, cfg.bow ?? 0));
+  if (cfg.axis === 'horizontal') {
+    return {
+      p0: { x: 0, y: h / 2 },
+      p1: { x: w / 2, y: h / 2 + bow * (h / 2) },
+      p2: { x: w, y: h / 2 },
+    };
+  }
+  // vertical: abajo = value 0, arriba = value 1 (como un fader real).
+  return {
+    p0: { x: w / 2, y: h },
+    p1: { x: w / 2 + bow * (w / 2), y: h / 2 },
+    p2: { x: w / 2, y: 0 },
+  };
+}
+
+/** Fader curvo/arqueado: una franja de un extremo al otro de la capa que
+ *  sigue una curva suave, con la porción 0..value resaltada — el pariente
+ *  "banana" de un fader recto. */
+function drawCurveBar(ctx: Ctx, w: number, h: number, layer: Layer, value: number) {
+  const cfg = layer.curveBar;
+  if (!cfg) return;
+  const { p0, p1, p2 } = curveBarPoints(w, h, cfg);
+  const color = layer.fill ?? '#c9c9d0';
+  const litColor = cfg.litColor ?? color;
+  const width = Math.max(1, cfg.width ?? 6);
+  const steps = 48;
+
+  const sample = (tMax: number): Vec2[] => {
+    const pts: Vec2[] = [];
+    for (let i = 0; i <= steps; i++) pts.push(quadBezierPoint(p0, p1, p2, (i / steps) * tMax));
+    return pts;
+  };
+  const strokePts = (pts: Vec2[], style: string, alpha: number) => {
+    if (pts.length < 2) return;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = width;
+    ctx.globalAlpha = layer.opacity * alpha;
+    ctx.strokeStyle = style;
+    ctx.stroke();
+  };
+
+  ctx.save();
+  strokePts(sample(1), color, 0.22); // pista completa, atenuada
+  if (value > 0) {
+    ctx.shadowColor = litColor;
+    ctx.shadowBlur = width * 0.8;
+    strokePts(sample(value), litColor, 1);
+    ctx.shadowBlur = 0;
+  }
+  if (cfg.handle) {
+    const hp = quadBezierPoint(p0, p1, p2, value);
+    ctx.globalAlpha = layer.opacity;
+    ctx.fillStyle = litColor;
+    ctx.beginPath();
+    ctx.arc(hp.x, hp.y, Math.max(2, cfg.handleSize ?? width * 1.4), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 /** Dibuja `content` letra por letra respetando `letterSpacing` (no todos los
  *  navegadores lo aplican con `ctx.fillText` directo). `paint(ch, cx)` pinta
  *  un carácter en el x ya resuelto (com dx/dy propios, si hacen falta). */
@@ -369,6 +449,7 @@ function renderLayer(
 ) {
   if (!layer.visible) return;
   if (layer.shape === 'ticks') { drawTicks(ctx, w, h, layer, value); return; }
+  if (layer.shape === 'curveBar') { drawCurveBar(ctx, w, h, layer, value); return; }
   if (layer.kind === 'text') { drawText(ctx, w, h, layer, light, images); return; }
   const mode = layer.anim?.mode ?? 'none';
   const rotate = mode === 'rotate';
@@ -512,7 +593,7 @@ export function renderControlFrame(
   const bodyInset = Math.max(0, Math.min(0.4, Number(control.props.bodyInset ?? 0) || 0));
   const s = 1 - 2 * bodyInset;
   for (const layer of control.layers) {
-    if (layer.shape === 'ticks' || s >= 1) { renderLayer(ctx, w, h, layer, value, light, images, extraLights); continue; }
+    if (layer.shape === 'ticks' || layer.shape === 'curveBar' || s >= 1) { renderLayer(ctx, w, h, layer, value, light, images, extraLights); continue; }
     ctx.save();
     ctx.translate(w / 2, h / 2);
     ctx.scale(s, s);

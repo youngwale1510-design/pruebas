@@ -231,7 +231,7 @@ export function LayersPanel() {
               );
             })()}
 
-            {l.shape !== 'ticks' && l.kind !== 'text' && (
+            {l.shape !== 'ticks' && l.shape !== 'curveBar' && l.kind !== 'text' && (
             <label className="k3-field" style={{ marginTop: 8 }}>
               <span>Forma</span>
               <select value={l.shape ?? 'ellipse'} onChange={(e) => updateLayer(control.id, l.id, { shape: e.target.value as LayerShape })}>
@@ -293,7 +293,37 @@ export function LayersPanel() {
               </>
             )}
 
-            {l.shape !== 'ticks' && l.rectNorm == null && (
+            {l.shape === 'curveBar' && (() => {
+              const cb = l.curveBar ?? { axis: 'vertical' as const, bow: 0.35, width: 10, litColor: '#ff6a3d', handle: true, handleSize: 9 };
+              const setCurveBar = (patch: Partial<typeof cb>) => updateLayer(control.id, l.id, { curveBar: { ...cb, ...patch } });
+              return (
+                <>
+                  <label className="k3-field"><span>Eje</span>
+                    <select value={cb.axis} onChange={(e) => setCurveBar({ axis: e.target.value as 'vertical' | 'horizontal' })}>
+                      <option value="vertical">Vertical (abajo→arriba)</option>
+                      <option value="horizontal">Horizontal (izq→der)</option>
+                    </select></label>
+                  <label className="k3-field"><span>Arqueo <b>{Math.round(cb.bow * 100)}%</b></span>
+                    <input type="range" min={-1} max={1} step={0.02} value={cb.bow}
+                      onChange={(e) => setCurveBar({ bow: Number(e.target.value) })} /></label>
+                  <label className="k3-field"><span>Grosor <b>{cb.width}px</b></span>
+                    <input type="range" min={1} max={30} step={1} value={cb.width}
+                      onChange={(e) => setCurveBar({ width: Number(e.target.value) })} /></label>
+                  <label className="k3-field"><span>Color recorrido</span>
+                    <input type="color" value={cb.litColor ?? '#ff6a3d'}
+                      onChange={(e) => setCurveBar({ litColor: e.target.value })} /></label>
+                  <label className="chk"><input type="checkbox" checked={cb.handle}
+                    onChange={(e) => setCurveBar({ handle: e.target.checked })} /><span>Mango en la punta</span></label>
+                  {cb.handle && (
+                    <label className="k3-field"><span>Tamaño del mango <b>{cb.handleSize}px</b></span>
+                      <input type="range" min={2} max={24} step={1} value={cb.handleSize}
+                        onChange={(e) => setCurveBar({ handleSize: Number(e.target.value) })} /></label>
+                  )}
+                </>
+              );
+            })()}
+
+            {l.shape !== 'ticks' && l.shape !== 'curveBar' && l.rectNorm == null && (
               <label className="k3-field">
                 <span>Tamaño <b>{Math.round((1 - 2 * (l.inset ?? 0)) * 100)}%</b></span>
                 <input type="range" min={0} max={0.48} step={0.01} value={l.inset ?? 0}
@@ -313,7 +343,7 @@ export function LayersPanel() {
               </div>
             )}
 
-            {l.shape !== 'ticks' && l.kind !== 'text' && (<>
+            {l.shape !== 'ticks' && l.shape !== 'curveBar' && l.kind !== 'text' && (<>
             <label className="k3-field" style={{ marginTop: 6 }}>
               <span>Animación con el valor</span>
               <select value={l.anim?.mode ?? 'none'}
@@ -491,6 +521,12 @@ export function LayersPanel() {
           opacity: 1, shape: 'ticks', fill: '#c9c9d0', effects: [],
           ticks: { count: 11, style: 'dot', radius: 0.94, spanDeg: 270, size: 3 },
         }); }}>+ Marcas</button>
+        <button className="btn" title="Franja que va de un extremo al otro siguiendo una curva suave (banana), con relleno progresivo según el valor — para faders arqueados."
+          onClick={() => addLayer(control.id, {
+          id: makeId('lyr'), name: 'Fader curvo', kind: 'shape', visible: true, blendMode: 'normal',
+          opacity: 1, shape: 'curveBar', fill: '#4a4d56', effects: [],
+          curveBar: { axis: 'vertical', bow: 0.35, width: 10, litColor: '#ff6a3d', handle: true, handleSize: 9 },
+        })}>+ Fader curvo</button>
         <button className="btn" onClick={() => addLayer(control.id, {
           id: makeId('lyr'), name: 'Texto', kind: 'text', visible: true, blendMode: 'normal',
           opacity: 1, fill: '#d8dae0', rectNorm: { x: 0, y: 0.75, w: 1, h: 0.2 }, effects: [],
