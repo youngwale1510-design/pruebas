@@ -426,15 +426,22 @@ function renderLayer(
     ctx.rotate((deg * Math.PI) / 180);
     ctx.translate(-w / 2, -h / 2);
   }
-  // Sombra proyectada / glow: en el mismo espacio (ya rotado) que el resto de
-  // la capa, para que su silueta SIEMPRE coincida con la de la pieza. Si se
-  // calculara sin rotar (como antes) mientras la pieza sí gira, en formas
-  // asimétricas (p.ej. estriadas) los "dientes" del relleno opaco de la
-  // sombra —fijo— asoman por detrás de los dientes ya rotados de la pieza,
-  // dando un contorno "derretido"/duplicado. La dirección de la sombra sigue
-  // fija en el mundo porque usa `L` (la luz ya contra-rotada), igual que el
-  // bisel/domo.
-  applyEffectsBelow(ctx, pathFn, layer.effects, L, box, hints, paintTex);
+  // Sombra proyectada / glow: la SILUETA se dibuja en este mismo espacio ya
+  // rotado (mismo pathFn que el resto de la capa), para que coincida siempre
+  // con la pieza — si se calculara sin rotar mientras la pieza sí gira, en
+  // formas asimétricas (estriadas, cuña...) los "dientes" del relleno opaco
+  // de la sombra, fijo, asoman por detrás de los ya rotados, dando un
+  // contorno "derretido"/duplicado (ver commit anterior).
+  //
+  // OJO: para la DIRECCIÓN de la sombra hay que usar `light` SIN contrarrotar
+  // (no `L`). A diferencia de un trazo/relleno o un gradiente —que sí siguen
+  // la transformación del contexto—, `shadowOffsetX/Y` de Canvas2D NO respeta
+  // la rotación del contexto: es un offset en espacio de pantalla siempre. Si
+  // se le pasa `L` (ya contrarrotada) aquí, el ctx.rotate no la "deshace" como
+  // sí pasa con el bisel/domo (que son gradientes) y la sombra termina
+  // girando al revés que la pieza. Con `light` tal cual, el offset ya cae
+  // directo en la dirección de pantalla correcta, fija en el mundo.
+  applyEffectsBelow(ctx, pathFn, layer.effects, light, box, hints, paintTex);
 
   ctx.globalCompositeOperation = COMPOSITE[layer.blendMode] ?? 'source-over';
   if (tex && paintTex) {
